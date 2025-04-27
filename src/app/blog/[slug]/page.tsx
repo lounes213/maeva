@@ -5,6 +5,7 @@ import { FaTwitter, FaFacebook, FaLinkedin } from "react-icons/fa";
 import dynamic from "next/dynamic";
 import Header from "@/app/components/header";
 
+
 const CopyLinkButton = dynamic(() => import("@/app/components/CopyLinkButton"), { ssr: true });
 
 interface BlogPost {
@@ -23,7 +24,15 @@ interface BlogPost {
   readTime?: number;
 }
 
-export default async function BlogPostPage({ params: { slug } }: { params: { slug: string } }) {
+interface BlogPostPageProps {
+  params: {
+    slug: string;
+  };
+  searchParams?: { [key: string]: string | string[] | undefined };
+}
+
+export default async function BlogPostPage({ params }: BlogPostPageProps) {
+  const { slug } = params;
   const headersList = headers();
   const host = (await headersList).get("host");
   const protocol = process.env.NODE_ENV === "development" ? "http" : "https";
