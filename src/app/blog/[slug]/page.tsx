@@ -22,11 +22,8 @@ interface BlogPost {
   authorImage?: string;
   readTime?: number;
 }
-interface BlogPostPageProps {
-  params: { slug: string };
-}
 
-export default async function BlogPostPage({ params }: BlogPostPageProps) {
+export default async function BlogPostPage({ params }: any) {
   const { slug } = params;
 
   const headersList = headers();
