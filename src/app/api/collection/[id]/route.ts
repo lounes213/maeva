@@ -3,13 +3,14 @@ import dbConnect from '@/lib/mongo';
 import Collection from '@/app/models/collection';
 import { ObjectId } from 'mongodb';
 import toast from 'react-hot-toast';
+import { use } from 'react';
 
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }>} 
 ) {
-  const { id } = params;
+  const { id } = use (params);
   
   try {
     await dbConnect();
