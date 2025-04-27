@@ -17,7 +17,7 @@ export async function GET(request: Request) {
       );
     }
 
-    // 🚀 FIXED HERE
+    // 🚀 FIX: Ensuring it returns one order, not an array
     const order = await Order.findOne({ trackingCode: code }).lean();
 
     if (!order) {
