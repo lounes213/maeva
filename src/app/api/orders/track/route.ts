@@ -17,7 +17,7 @@ export async function GET(request: Request) {
       );
     }
 
-    const order = await Order.findByTrackingCode(code);
+    const order = await Order.findById(code);
 
     if (!order) {
       return NextResponse.json(
