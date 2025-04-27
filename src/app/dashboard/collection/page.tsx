@@ -5,7 +5,7 @@ import CollectionTable from './components/collectionTable'
 
 
 
-function page({user}: {user: any}) {
+function page() {
   return (
     <div>
     <DashboardHeader user={{}} />

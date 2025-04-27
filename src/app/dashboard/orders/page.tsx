@@ -3,11 +3,11 @@ import React from 'react'
 import OrderTable from './components/orderTable'
 
 
-export default function page ({ user }: { user: any })  {
+export default function page ()  {
   return (
     <div className="flex flex-col min-h-screen bg-gray-100">
     
-         <DashboardHeader user={user} />
+         <DashboardHeader user={{}} />
         
   
     

@@ -6,10 +6,10 @@ import React from 'react'
 import { User } from 'lucide-react';
 import ContactsTable from './components/contactTable';
 
-function page({user}: {user: any}) {
+function page() {
   return (
     <div>
-    <DashboardHeader user={{user}} />
+    <DashboardHeader user={{}} />
      <div className="p-10">
           <span className="flex items-center">
       <span className="shrink-0 pe-4 text-gray-900">Contact </span>

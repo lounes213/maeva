@@ -35,7 +35,7 @@ const ProductsPage = () => {
 
   return (
     <div className="bg-white lg:grid lg:h-screen ">
-          <DashboardHeader user={undefined}  />
+          <DashboardHeader user={{}}  />
 
       <div className="max-w-7xl mx-auto mt-16 px-4 sm:px-6 lg:px-8 py-6">
         <div className="flex justify-between items-center mb-6 mt-4">

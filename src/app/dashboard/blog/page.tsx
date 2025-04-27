@@ -79,7 +79,7 @@ export default function BlogAdminPage() {
 
   return (
     <div className="max-w-7xl mx-auto p-4 md:p-6">
-      <DashboardHeader user={User} />
+      <DashboardHeader user={{}} />
       
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mt-8 mb-6">
         <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Blog Management</h1>
