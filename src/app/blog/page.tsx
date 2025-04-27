@@ -103,18 +103,21 @@ export default function BlogPage() {
                 All
               </button>
             </li>
-            {allCategories.map((cat) => (
-              <li key={cat}>
-                <button
-                  className={`hover:text-blue-600 transition ${
-                    selectedCategory === cat ? 'text-blue-600 font-semibold' : ''
-                  }`}
-                  onClick={() => setSelectedCategory(cat)}
-                >
-                  {cat}
-                </button>
-              </li>
-            ))}
+           {allCategories.map((cat) => (
+  cat && (
+    <li key={cat}>
+      <button
+        className={`hover:text-blue-600 transition ${
+          selectedCategory === cat ? 'text-blue-600 font-semibold' : ''
+        }`}
+        onClick={() => setSelectedCategory(cat)}
+      >
+        {cat}
+      </button>
+    </li>
+  )
+))}
+
           </ul>
         </div>
 
