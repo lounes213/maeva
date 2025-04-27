@@ -53,15 +53,18 @@ export default async function CollectionsPage() {
       {/* Collections Grid with subtle fade-in */}
       <div className="animate-fade-in">
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 px-4 sm:px-6 lg:px-8 py-8">
-          {collections.length > 0 ? (
-            collections.map((collection: { _id: any; name?: string; description?: string | undefined; image?: string | string[] | undefined; tags?: string[] | undefined; isFeatured?: boolean | undefined; }) => (
-              <CollectionCard key={collection._id} collection={collection} />
-            ))
-          ) : (
-            <div className="col-span-full text-center text-gray-500">
-              <p>No collections available at the moment.</p>
-            </div>
-          )}
+         {collections.length > 0 ? (
+  collections
+    .filter((collection: { name: any; }) => collection.name) // filter out bad ones
+    .map((collection: { _id: any; name?: string; description?: string | undefined; image?: string | string[] | undefined; tags?: string[] | undefined; isFeatured?: boolean | undefined; }) => (
+      <CollectionCard key={collection._id} collection={collection as { _id: string; name: string; description?: string; image?: string | string[]; tags?: string[]; isFeatured?: boolean }} />
+    ))
+) : (
+  <div className="col-span-full text-center text-gray-500">
+    <p>No collections available at the moment.</p>
+  </div>
+)}
+
         </div>
       </div>
     </main>
