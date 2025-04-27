@@ -17,8 +17,7 @@ export async function GET(request: Request) {
       );
     }
 
-    // 🚀 FIX: Ensuring it returns one order, not an array
-    const order = await Order.findOne({ trackingCode: code }).lean();
+    const order = await Order.findByTrackingCode(code);
 
     if (!order) {
       return NextResponse.json(
@@ -41,11 +40,10 @@ export async function GET(request: Request) {
         progress,
         isDelivered: order.deliveryStatus === 'delivered',
         isCancelled: order.deliveryStatus === 'cancelled',
-        estimatedDelivery: order.shipping?.estimatedDelivery || null,
+        estimatedDelivery: order.shipping.estimatedDelivery
       }
     });
   } catch (error) {
-    console.error('Error fetching order:', error);
     return NextResponse.json(
       { success: false, message: 'Internal server error' },
       { status: 500 }
