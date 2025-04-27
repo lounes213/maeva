@@ -101,18 +101,19 @@ if (post.image && !post.image.startsWith("http")) {
             {post.readTime && <span>· {post.readTime} min read</span>}
           </div>
 
-          {post.tags?.length > 0 && (
-            <div className="flex flex-wrap gap-2 mb-6">
-              {post.tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="bg-blue-50 text-blue-700 px-3 py-1 text-xs rounded-full font-medium uppercase tracking-wider"
-                >
-                  #{tag}
-                </span>
-              ))}
-            </div>
-          )}
+          {post.tags && post.tags.length > 0 && (
+  <div className="flex flex-wrap gap-2 mb-6">
+    {post.tags.map((tag) => (
+      <span
+        key={tag}
+        className="bg-blue-50 text-blue-700 px-3 py-1 text-xs rounded-full font-medium uppercase tracking-wider"
+      >
+        #{tag}
+      </span>
+    ))}
+  </div>
+)}
+
 
           {/* Share */}
           <div className="flex items-center gap-4 mb-6 bg-gray-50 p-4 rounded-xl border">
