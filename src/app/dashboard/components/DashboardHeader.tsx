@@ -1,0 +1,110 @@
+'use client';
+
+import { usePathname } from 'next/navigation';
+import Link from 'next/link';
+import { useState, useRef, useEffect } from 'react';
+
+function DashboardHeader({ user }: { user: any }) {
+  const pathname = usePathname();
+
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const navLinks = [
+    { href: '/dashboard', label: 'Dashboard' },
+    { href: '/dashboard/products', label: 'Products' },
+    { href: '/dashboard/collection', label: 'Collection' },
+    { href: '/dashboard/contact', label: 'Contact' },
+    { href: '/dashboard/blog', label: 'Blog' },
+    { href: '/dashboard/orders', label: 'Orders' },
+  ];
+
+  return (
+    <header className="bg-white shadow fixed top-0 left-0 right-0 z-50">
+      <div className="mx-auto max-w-screen-xl px-4 sm:px-6 lg:px-8">
+        <div className="flex h-16 items-center justify-between">
+          <Link className="flex items-center gap-2 text-teal-600" href="/">
+            <img className="h-20 w-30 rounded-lg" src="/logo.png" alt="Logo Maiva" />
+          </Link>
+
+          <div className="md:flex md:items-center md:gap-12">
+            <nav aria-label="Global" className="hidden md:block">
+              <ul className="flex items-center gap-6 text-sm">
+                {navLinks.map((link) => (
+                  <li key={link.href}>
+                    <Link
+                      href={link.href}
+                      className={`transition hover:text-gray-800 ${
+                        pathname === link.href ? 'text-black font-semibold' : 'text-gray-500'
+                      }`}
+                    >
+                      {link.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+
+            <div className="flex items-center space-x-4">
+              <div className="relative" ref={dropdownRef}>
+                <button
+                  onClick={() => setIsOpen((prev) => !prev)}
+                  className="overflow-hidden rounded-full border border-gray-300 shadow-inner"
+                >
+                   <img
+    src={user?.picture || '/logo.png'}
+    alt="User avatar"
+    className="size-10 object-cover"
+  />
+                </button>
+
+                {isOpen && (
+                  <div className="absolute right-0 z-10 mt-2 w-56 divide-y divide-gray-100 rounded-md border bg-white shadow-lg">
+                    <div className="p-4">
+                      <p className="text-sm font-medium text-gray-900">{user?.given_name}</p>
+                      <p className="text-sm text-gray-500">{user?.email}</p>
+                    </div>
+
+                  
+
+                    <div className="p-2">
+                      <form method="POST" action="/api/auth/logout">
+                        <button
+                          type="submit"
+                          className="flex w-full items-center gap-2 rounded-lg px-4 py-2 text-sm text-red-700 hover:bg-red-50"
+                        >
+                          <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth="1.5"
+                              d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 0 1 0 12h-3"
+                            />
+                          </svg>
+                          Se déconnecter
+                        </button>
+                      </form>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+export default DashboardHeader;
