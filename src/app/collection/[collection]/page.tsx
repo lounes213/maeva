@@ -24,7 +24,7 @@ interface Collection {
   updatedAt: string;
 }
 
-export default function CollectionDetails({ params }: { params: { collection: string } }) {
+export default function CollectionDetails({ params }:  any) {
   const collectionId = params.collection;
   const [collection, setCollection] = useState<Collection | null>(null);
   const [loading, setLoading] = useState(true);
