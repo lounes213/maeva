@@ -4,8 +4,12 @@ import Collection from '@/app/models/collection';
 import { ObjectId } from 'mongodb';
 import toast from 'react-hot-toast';
 
-export async function GET(request: NextRequest, context: { params: { id: string } }) {
-  const { id } = context.params;
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  const { id } = params;
   
   try {
     await dbConnect();
