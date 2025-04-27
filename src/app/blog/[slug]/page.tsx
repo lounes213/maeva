@@ -4,6 +4,7 @@ import { FiCalendar, FiUser, FiTag, FiArrowLeft } from "react-icons/fi";
 import { FaTwitter, FaFacebook, FaLinkedin } from "react-icons/fa";
 import dynamic from "next/dynamic";
 import Header from "@/app/components/header";
+import { PageProps } from "../../../../.next/types/app/blog/page";
 
 
 const CopyLinkButton = dynamic(() => import("@/app/components/CopyLinkButton"), { ssr: true });
@@ -23,8 +24,11 @@ interface BlogPost {
   authorImage?: string;
   readTime?: number;
 }
-interface BlogPostPageProps {
-  params: { slug: string };
+
+interface BlogPostPageProps extends PageProps {
+  params: {
+    slug: string;
+  };
 }
 
 export default async function BlogPostPage({ params }: BlogPostPageProps) {
