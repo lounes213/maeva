@@ -23,12 +23,8 @@ interface BlogPost {
   authorImage?: string;
   readTime?: number;
 }
-
 interface BlogPostPageProps {
-  params: {
-    slug: string;
-  };
-  searchParams?: { [key: string]: string | string[] | undefined };
+  params: { slug: string };
 }
 
 export default async function BlogPostPage({ params }: BlogPostPageProps) {
