@@ -1,3 +1,4 @@
+import { IBlogPost } from "@/app/types/blog";
 import { useRouter } from "next/navigation";
 import { Key, ReactElement, JSXElementConstructor, ReactNode, ReactPortal, useEffect, useState } from "react";
 
@@ -27,18 +28,19 @@ export function BlogList() {
         Create New Post
       </button>
       
-      {posts.map((post: { _id: Key | null | undefined; title: string | number | bigint | boolean | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | Promise<string | number | bigint | boolean | ReactPortal | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | null | undefined> | null | undefined; excerpt: string | number | bigint | boolean | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | Promise<string | number | bigint | boolean | ReactPortal | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | null | undefined> | null | undefined; slug: any; }) => (
-        <div key={post._id} className="border-b pb-6 mb-6">
-          <h2 className="text-2xl font-bold">{post.title}</h2>
-          <p>{post.excerpt}</p>
-          <button 
-            onClick={() => router.push(`/blog/${post.slug}`)}
-            className="mt-2 text-blue-500"
-          >
-            Read More
-          </button>
-        </div>
-      ))}
+     {posts.map((post) => (
+  <div key={post._id} className="border-b pb-6 mb-6">
+    <h2 className="text-2xl font-bold">{post.title}</h2>
+    <p>{post.excerpt}</p>
+    <button 
+      onClick={() => router.push(`/blog/${post.slug}`)}
+      className="mt-2 text-blue-500"
+    >
+      Read More
+    </button>
+  </div>
+))}
+
     </div>
   );
 }
