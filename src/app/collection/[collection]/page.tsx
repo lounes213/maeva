@@ -24,21 +24,21 @@ interface Collection {
   updatedAt: string;
 }
 
-export default function CollectionDetails({ params }: { params: { id: string } }) {
-  const { collection: id } = useParams();
+export default function CollectionDetails({ params }: { params: { collection: string } }) {
+  const collectionId = params.collection;
   const [collection, setCollection] = useState<Collection | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!id) return;
+    if (!collectionId) return;
 
     const fetchCollection = async () => {
       try {
         setLoading(true);
         setError(null);
 
-        const response = await fetch(`/api/collection/${id}`);
+        const response = await fetch(`/api/collection/${{collectionId}}`);
 
         if (!response.ok) {
           const errorData = await response.json();
@@ -55,7 +55,7 @@ export default function CollectionDetails({ params }: { params: { id: string } }
     };
 
     fetchCollection();
-  }, [id]);
+  }, [{collectionId}]);
 
   if (loading) {
     return (
