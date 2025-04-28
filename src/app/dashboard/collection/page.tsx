@@ -2,6 +2,7 @@ import DashboardHeader from '@/app/dashboard/components/DashboardHeader'
 import React from 'react'
 
 import CollectionTable from './components/collectionTable'
+import { Collection } from 'mongoose'
 
 
 
@@ -20,7 +21,7 @@ function page() {
           </div>
     
     <section>
-    <CollectionTable/>
+    <CollectionTable />
     </section>
     </div>
   )

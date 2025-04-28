@@ -2,21 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongo';
 import Collection from '@/app/models/collection';
 import { ObjectId } from 'mongodb';
-import toast from 'react-hot-toast';
-import { use } from 'react';
-
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }>} 
+  { params }: { params: { id: string } }
 ) {
-  const { id } = use (params);
-  
+  const { id } = params;
+
   try {
     await dbConnect();
-    
-    
-    
+
     if (!ObjectId.isValid(id)) {
       return NextResponse.json(
         { error: 'Invalid collection ID format' },
@@ -25,7 +20,6 @@ export async function GET(
     }
 
     const collection = await Collection.findById(new ObjectId(id));
-    
     
     if (!collection) {
       return NextResponse.json(
@@ -36,10 +30,10 @@ export async function GET(
 
     return NextResponse.json(collection.toObject());
   } catch (error: any) {
-    toast.error('API error:', error);
+    console.error('API error:', error);
     return NextResponse.json(
       { error: error.message || 'Server error' },
       { status: 500 }
     );
   }
-} 
+}

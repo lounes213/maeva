@@ -26,7 +26,60 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
-export default function CreateCollectionModal() {
+// DnD Kit imports
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+
+// Sortable Image component
+function SortableImage({ id, src, index, removeImage }: { id: string; src: string; index: number; removeImage: (index: number) => void }) {
+  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className="relative w-24 h-24 rounded-md overflow-hidden group cursor-move"
+    >
+      <img
+        src={src}
+        alt={`Preview ${index}`}
+        className="object-cover w-full h-full"
+      />
+      <button
+        type="button"
+        onClick={() => removeImage(index)}
+        className="absolute top-1 right-1 bg-white rounded-full p-1 shadow hover:bg-red-500 hover:text-white transition-all opacity-80 group-hover:opacity-100"
+      >
+        <FiTrash2 className="w-4 h-4" />
+      </button>
+    </div>
+  );
+}
+
+type CreateCollectionModalProps = {
+  onCreateSuccess?: (newCollection: any) => string;
+};
+
+export default function CreateCollectionModal({ onCreateSuccess }: CreateCollectionModalProps) {
   const [open, setOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [tags, setTags] = useState<string[]>([]);
@@ -80,47 +133,53 @@ export default function CreateCollectionModal() {
     setPreview(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = async () => {
-    if (!form.name.trim()) {
-      toast.error('Collection name is required');
-      return;
-    }
+ const handleSubmit = async () => {
+  if (!form.name.trim()) {
+    toast.error('Collection name is required');
+    return;
+  }
 
-    setIsLoading(true);
-    const formData = new FormData();
-    formData.append('name', form.name);
-    formData.append('description', form.description);
-    formData.append('status', form.status);
-    formData.append('isFeatured', String(form.isFeatured));
-    if (tags.length > 0) {
-      formData.append('tags', JSON.stringify(tags));
-    }
-    form.images.forEach((image) => {
-      formData.append('images', image);
+  setIsLoading(true);
+  const formData = new FormData();
+  formData.append('name', form.name);
+  formData.append('description', form.description);
+  formData.append('status', form.status);
+  formData.append('isFeatured', String(form.isFeatured));
+  if (tags.length > 0) {
+    formData.append('tags', JSON.stringify(tags));
+  }
+  form.images.forEach((image) => {
+    formData.append('images', image);
+  });
+
+  try {
+    const res = await fetch('/api/collection', {
+      method: 'POST',
+      body: formData,
     });
 
-    try {
-      const res = await fetch('/api/collection', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!res.ok) {
-        throw new Error('Failed to create collection');
-      }
-
-      const data = await res.json();
-      toast.success('Collection created successfully!');
-      resetForm();
-      setOpen(false);
-      return data;
-    } catch (error) {
-      console.error('Error creating collection:', error);
-      toast.error('Failed to create collection');
-    } finally {
-      setIsLoading(false);
+    if (!res.ok) {
+      throw new Error('Failed to create collection');
     }
-  };
+
+    const data = await res.json();
+    toast.success('Collection created successfully!');
+    
+    if (onCreateSuccess) {
+      onCreateSuccess(data); // Call the parent function
+    }
+    
+    resetForm();
+    setOpen(false);
+    return data;
+  } catch (error) {
+    console.error('Error creating collection:', error);
+    toast.error('Failed to create collection');
+  } finally {
+    setIsLoading(false);
+  }
+};
+
 
   const resetForm = () => {
     setForm({
@@ -134,6 +193,9 @@ export default function CreateCollectionModal() {
     setTagInput('');
     setPreview([]);
   };
+
+  // Sensors for DnD Kit
+  const sensors = useSensors(useSensor(PointerSensor));
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -206,26 +268,36 @@ export default function CreateCollectionModal() {
               </div>
             </div>
 
-            {/* Preview Images */}
+            {/* Sortable Preview Images */}
             {preview.length > 0 && (
-              <div className="flex flex-wrap gap-4 mt-4">
-                {preview.map((src, index) => (
-                  <div key={index} className="relative w-24 h-24 rounded-md overflow-hidden group">
-                    <img
-                      src={src}
-                      alt={`Preview ${index}`}
-                      className="object-cover w-full h-full"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removeImage(index)}
-                      className="absolute top-1 right-1 bg-white rounded-full p-1 shadow hover:bg-red-500 hover:text-white transition-all opacity-80 group-hover:opacity-100"
-                    >
-                      <FiTrash2 className="w-4 h-4" />
-                    </button>
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={(event) => {
+                  const { active, over } = event;
+                  if (active.id !== over?.id) {
+                    const oldIndex = preview.findIndex((_, i) => i.toString() === active.id);
+                    const newIndex = preview.findIndex((_, i) => i.toString() === over?.id);
+                    
+                    setPreview((prev) => arrayMove(prev, oldIndex, newIndex));
+                    setForm((prev) => ({
+                      ...prev,
+                      images: arrayMove(prev.images, oldIndex, newIndex),
+                    }));
+                  }
+                }}
+              >
+                <SortableContext
+                  items={preview.map((_, index) => index.toString())}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <div className="flex flex-wrap gap-4 mt-4">
+                    {preview.map((src, index) => (
+                      <SortableImage key={index} id={index.toString()} src={src} index={index} removeImage={removeImage} />
+                    ))}
                   </div>
-                ))}
-              </div>
+                </SortableContext>
+              </DndContext>
             )}
           </div>
 
