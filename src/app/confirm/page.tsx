@@ -1,8 +1,9 @@
 'use client';
+
 import { useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { FiShoppingCart, FiCheckCircle, FiChevronDown } from 'react-icons/fi';
+import { FiCheckCircle } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import { useCart } from '../context/cartContext';
 
@@ -18,7 +19,6 @@ interface Product {
 
 export default function ConfirmPage() {
   const { cartItems, totalPrice, clearCart } = useCart();
-  const searchParams = useSearchParams();
   const router = useRouter();
 
   const [loading, setLoading] = useState(true);
@@ -34,7 +34,6 @@ export default function ConfirmPage() {
   const [couponError, setCouponError] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Shipping options (same as in your cart page)
   const shippingOptions = [
     { id: 'free', name: 'Free Shipping', price: 0, days: '5-7 Business Days' },
     { id: 'standard', name: 'Standard Shipping', price: 5.99, days: '3-5 Business Days' },
@@ -43,39 +42,26 @@ export default function ConfirmPage() {
 
   const selectedShipping = shippingOptions.find(option => option.id === shippingMethod) || shippingOptions[0];
 
-  // Handle coupon application
-  const applyCoupon = () => {
-    setIsApplyingCoupon(true);
-    setCouponError('');
-    
-    // Simulate coupon verification
-    setTimeout(() => {
-      if (couponCode.toLowerCase() === 'save10') {
-        setCouponDiscount(totalPrice * 0.1);
-      } else {
-        setCouponError('Invalid or expired coupon code');
-        setCouponDiscount(0);
-      }
-      setIsApplyingCoupon(false);
-    }, 800);
-  };
-
+  // Fetch products when cartItems change
   useEffect(() => {
     if (cartItems.length === 0) {
       router.push('/cart');
       return;
     }
 
-    // Fetch product details for all items in cart
     const fetchProducts = async () => {
       try {
-        const productPromises = cartItems.map(item => 
-          fetch(`/api/products?id=${item._id}`).then(res => res.json())
-        );
+        const productPromises = cartItems.map(async (item) => {
+          const res = await fetch(`/api/products?id=${item._id}`);
+          if (!res.ok) throw new Error('Erreur de récupération produit');
+          const data = await res.json();
+          return data.data;
+        });
+
         const productData = await Promise.all(productPromises);
-        setProducts(productData.map(p => p.data));
+        setProducts(productData);
       } catch (error) {
-        toast.error('Error loading product details');
+        toast.error('Erreur lors du chargement des produits.');
       } finally {
         setLoading(false);
       }
@@ -86,64 +72,79 @@ export default function ConfirmPage() {
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
-    
-    if (!name) newErrors.name = 'Le nom est requis';
-    if (!address) newErrors.address = 'L\'adresse est requise';
-    if (!contact) newErrors.contact = 'Un contact est requis';
+
+    if (!name.trim()) newErrors.name = 'Le nom est requis';
+    if (!address.trim()) newErrors.address = 'L\'adresse est requise';
+    if (!contact.trim()) newErrors.contact = 'Un contact est requis';
     if (email && !/^\S+@\S+\.\S+$/.test(email)) newErrors.email = 'Email invalide';
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
 
-  if (!validateForm()) return;
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
 
-  try {
-    const orderItems = cartItems.map(item => ({
-      productId: item._id,
-      name: item.name,
-      price: item.price,
-      quantity: item.quantity,
-      imageUrl: item.imageUrl,
-      size: item.size,
-      color: item.color
-    }));
+    if (!validateForm()) return;
 
-    const response = await fetch('/api/orders', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        items: orderItems,
-        customer: { name, address, contact, email },
-        shipping: {
-          method: selectedShipping.name,
-          cost: selectedShipping.price,
-          estimatedDelivery: selectedShipping.days
-        },
-        couponDiscount
-      }),
-    });
+    try {
+      const orderItems = cartItems.map(item => ({
+        productId: item._id,
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity,
+        imageUrl: item.imageUrl,
+        size: item.size,
+        color: item.color,
+      }));
 
-    const data = await response.json();
-    
-    if (!response.ok) {
-      throw new Error(data.message || 'Error creating order');
+      const response = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: orderItems,
+          customer: { name, address, contact, email },
+          shipping: {
+            method: selectedShipping.name,
+            cost: selectedShipping.price,
+            estimatedDelivery: selectedShipping.days,
+          },
+          couponDiscount,
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Erreur lors de la création de la commande');
+      }
+
+      clearCart();
+      router.push(`/trackOrder?code=${data.data.trackingCode}`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Échec de la commande, réessayez.');
+    }
+  };
+
+  const applyCoupon = () => {
+    if (!couponCode.trim()) {
+      setCouponError('Veuillez entrer un code promo.');
+      return;
     }
 
-    clearCart();
-    router.push(`/trackOrder?code=${data.data.trackingCode}`);
+    setIsApplyingCoupon(true);
+    setCouponError('');
 
-  } catch (error) {
-    toast.error(error instanceof Error ? error.message : 'Failed to place order. Please try again.');
-  }
-};
-
-
-           const handleConfirmOrder = () => {
-  router.push('/confirm');
-};
+    setTimeout(() => {
+      if (couponCode.trim().toLowerCase() === 'save10') {
+        setCouponDiscount(totalPrice * 0.1);
+      } else {
+        setCouponError('Code promo invalide ou expiré.');
+        setCouponDiscount(0);
+      }
+      setIsApplyingCoupon(false);
+    }, 800);
+  };
 
   if (loading) {
     return (
@@ -172,13 +173,14 @@ const handleSubmit = async (e: React.FormEvent) => {
       </h1>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        
         {/* Order Summary */}
         <div className="border rounded-lg p-6 shadow-sm bg-white">
           <h2 className="text-xl font-semibold mb-4">Récapitulatif de la commande</h2>
-          
+
           <div className="space-y-4">
             {cartItems.map((item, index) => {
-              const product = products.find(p => p?._id === item._id);
+              const product = products.find(p => p._id === item._id);
               return (
                 <div key={`${item._id}-${index}`} className="flex gap-4 pb-4 border-b last:border-b-0">
                   <div className="w-20 h-20 relative rounded-md overflow-hidden bg-gray-100">
@@ -263,71 +265,53 @@ const handleSubmit = async (e: React.FormEvent) => {
         {/* Delivery Form */}
         <div className="bg-white border rounded-lg p-6 shadow-sm">
           <h2 className="text-xl font-semibold mb-4">Informations de livraison</h2>
-          
+
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Nom complet*</label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className={`w-full border rounded px-4 py-2 ${errors.name ? 'border-red-500' : 'border-gray-300'}`}
-                placeholder="Jean Dupont"
-              />
-              {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Adresse complète*</label>
-              <textarea
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                className={`w-full border rounded px-4 py-2 ${errors.address ? 'border-red-500' : 'border-gray-300'}`}
-                placeholder="123 Rue de Paris, 75001 Paris"
-                rows={3}
-              />
-              {errors.address && <p className="mt-1 text-sm text-red-600">{errors.address}</p>}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Téléphone*</label>
-              <input
-                type="tel"
-                value={contact}
-                onChange={(e) => setContact(e.target.value)}
-                className={`w-full border rounded px-4 py-2 ${errors.contact ? 'border-red-500' : 'border-gray-300'}`}
-                placeholder="06 12 34 56 78"
-              />
-              {errors.contact && <p className="mt-1 text-sm text-red-600">{errors.contact}</p>}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email (facultatif)</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className={`w-full border rounded px-4 py-2 ${errors.email ? 'border-red-500' : 'border-gray-300'}`}
-                placeholder="votre@email.com"
-              />
-              {errors.email && <p className="mt-1 text-sm text-red-600">{errors.email}</p>}
-            </div>
+            {/* Fields */}
+            {[
+              { label: "Nom complet*", value: name, setter: setName, error: errors.name, placeholder: "Jean Dupont" },
+              { label: "Adresse complète*", value: address, setter: setAddress, error: errors.address, placeholder: "123 Rue de Paris, 75001 Paris", type: "textarea" },
+              { label: "Téléphone*", value: contact, setter: setContact, error: errors.contact, placeholder: "06 12 34 56 78" },
+              { label: "Email (facultatif)", value: email, setter: setEmail, error: errors.email, placeholder: "votre@email.com" },
+            ].map(({ label, value, setter, error, placeholder, type }, idx) => (
+              <div key={idx}>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+                {type === "textarea" ? (
+                  <textarea
+                    value={value}
+                    onChange={(e) => setter(e.target.value)}
+                    className={`w-full border rounded px-4 py-2 ${error ? 'border-red-500' : 'border-gray-300'}`}
+                    placeholder={placeholder}
+                    rows={3}
+                  />
+                ) : (
+                  <input
+                    type={type || "text"}
+                    value={value}
+                    onChange={(e) => setter(e.target.value)}
+                    className={`w-full border rounded px-4 py-2 ${error ? 'border-red-500' : 'border-gray-300'}`}
+                    placeholder={placeholder}
+                  />
+                )}
+                {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
+              </div>
+            ))}
 
             {/* Coupon Code */}
-            <div className="mt-4">
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Code promo</label>
               <div className="flex">
                 <input
                   type="text"
                   value={couponCode}
                   onChange={(e) => setCouponCode(e.target.value)}
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-l-md"
                   placeholder="Entrez un code promo"
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-l-md focus:ring-blue-500 focus:border-blue-500"
                 />
                 <button
                   type="button"
                   onClick={applyCoupon}
-                  disabled={isApplyingCoupon || !couponCode}
+                  disabled={isApplyingCoupon}
                   className="bg-gray-800 text-white px-4 py-2 rounded-r-md hover:bg-gray-700 disabled:bg-gray-400"
                 >
                   {isApplyingCoupon ? 'Application...' : 'Appliquer'}
@@ -335,20 +319,18 @@ const handleSubmit = async (e: React.FormEvent) => {
               </div>
               {couponError && <p className="text-sm text-red-500 mt-2">{couponError}</p>}
               {couponDiscount > 0 && <p className="text-sm text-green-600 mt-2">Code promo appliqué!</p>}
-              <p className="text-xs text-gray-500 mt-2">Essayez le code "SAVE10" pour 10% de réduction</p>
             </div>
 
- 
-
-<div className="pt-4">
-  <button
-    onClick={handleConfirmOrder}
-    className="w-full bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 flex items-center justify-center gap-2 transition-colors"
-  >
-    <FiCheckCircle size={18} />
-    Confirmer la commande
-  </button>
-</div>
+            {/* Submit */}
+            <div className="pt-4">
+              <button
+                type="submit"
+                className="w-full bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 flex items-center justify-center gap-2 transition-colors"
+              >
+                <FiCheckCircle size={18} />
+                Confirmer la commande
+              </button>
+            </div>
 
             <div className="text-xs text-gray-500 mt-4">
               <p>En confirmant, vous acceptez nos conditions générales de vente.</p>
