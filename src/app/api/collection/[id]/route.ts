@@ -5,9 +5,10 @@ import { ObjectId } from 'mongodb';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> } // <- params is a Promise
 ) {
-  const { id } = params;
+  const { params } = context;
+  const { id } = await params;  // <- await here!!
 
   try {
     await dbConnect();

@@ -75,11 +75,8 @@ function SortableImage({ id, src, index, removeImage }: { id: string; src: strin
   );
 }
 
-type CreateCollectionModalProps = {
-  onCreateSuccess?: (newCollection: any) => string;
-};
 
-export default function CreateCollectionModal({ onCreateSuccess }: CreateCollectionModalProps) {
+export default function CreateCollectionModal({ onCreateSuccess}:any) {
   const [open, setOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [tags, setTags] = useState<string[]>([]);
