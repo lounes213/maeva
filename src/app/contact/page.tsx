@@ -76,7 +76,7 @@ const onSubmit = async (data: FormData) => {
       
     <section className="relative overflow-hidden bg-gradient-to-br from-amber-500 via-amber-100 to-amber-50 py-24 md:py-32 text-gray-900">
   {/* Decorative Algerian pattern (light and subtle) */}
-  <div className="absolute inset-0 bg-[url('/images/algerian-pattern-light.png')] bg-repeat opacity-5 z-0" />
+  <div className="absolute inset-0 bg-[url('/images/geometric-pattern.png')] bg-repeat opacity-5 z-0" />
 
   <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-12">
     

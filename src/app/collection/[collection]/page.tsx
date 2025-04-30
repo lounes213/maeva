@@ -24,7 +24,13 @@ interface Collection {
   updatedAt: string;
 }
 
-export default function CollectionDetails({ params }:  any) {
+export default function CollectionDetails() {
+  const params = useParams();
+
+  if (!params || !params.collection) {
+    throw new Error("Le paramètre 'collection' est manquant dans les paramètres de la route.");
+  }
+
   const collectionId = params.collection;
   const [collection, setCollection] = useState<Collection | null>(null);
   const [loading, setLoading] = useState(true);
@@ -38,7 +44,7 @@ export default function CollectionDetails({ params }:  any) {
         setLoading(true);
         setError(null);
 
-        const response = await fetch(`/api/collection/${{collectionId}}`);
+        const response = await fetch(`/api/collection/${collectionId}`);
 
         if (!response.ok) {
           const errorData = await response.json();
@@ -55,7 +61,7 @@ export default function CollectionDetails({ params }:  any) {
     };
 
     fetchCollection();
-  }, [{collectionId}]);
+  }, [collectionId]);
 
   if (loading) {
     return (

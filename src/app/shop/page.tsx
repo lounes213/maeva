@@ -207,7 +207,7 @@ const filteredProducts = products.filter(product => {
     <div className="bg-white">
       <Header/>
       <div className="relative bg-gradient-to-b from-amber-50 to-white overflow-hidden">
-        <div className="absolute inset-0 bg-[url('/images/algerian-pattern-light.png')] bg-repeat opacity-10"></div>
+        <div className="absolute inset-0 bg-[url('/images/geometric-pattern.png.png')] bg-repeat opacity-10"></div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24 relative z-10 text-center">
           <h1 className="text-4xl md:text-5xl font-bold text-gray-900 font-serif mb-4">
             Boutique <span className="text-amber-600">MAEVA</span>

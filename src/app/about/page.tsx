@@ -51,7 +51,7 @@ export default function AboutPage() {
     {/* Hero Section with Algerian Pattern and Decorative Shape */}
 <div className="relative h-[100vh] overflow-hidden bg-gradient-to-r from-amber-900 to-amber-700 text-white">
   {/* Background Pattern */}
-  <div className="absolute inset-0 bg-[url('/images/algerian-pattern-light.png')] opacity-10 z-0" />
+  <div className="absolute inset-0 bg-[url('/images/geometric-pattern.png')] opacity-10 z-0" />
 
   {/* Overlay Image */}
   <Image 

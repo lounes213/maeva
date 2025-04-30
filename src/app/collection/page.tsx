@@ -40,7 +40,7 @@ export default async function CollectionsPage() {
         </svg>
 
         {/* Animated Algerian pattern */}
-        <div className="absolute inset-0 bg-[url('/images/algerian-pattern.png')] bg-repeat opacity-10 z-0 animate-pattern-move" />
+        <div className="absolute inset-0 bg-[url('/images/geometric-pattern.png')] bg-repeat opacity-10 z-0 animate-pattern-move" />
 
         {/* Glowing Content Container */}
         <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center transform transition-all duration-300 hover:scale-[1.01]">
