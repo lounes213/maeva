@@ -27,8 +27,9 @@ interface Collection {
 export default function CollectionDetails() {
   const params = useParams();
 
-  if (!params || !params.collection) {
-    throw new Error("Le paramètre 'collection' est manquant dans les paramètres de la route.");
+  if (!params || typeof params.collection !== 'string') {
+    console.error("Invalid or missing 'collection' parameter in route.");
+    return <div>Invalid collection ID</div>;
   }
 
   const collectionId = params.collection;
@@ -37,14 +38,18 @@ export default function CollectionDetails() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!collectionId) return;
+    if (!collectionId) {
+      setError('Collection ID is missing.');
+      setLoading(false);
+      return;
+    }
 
     const fetchCollection = async () => {
       try {
         setLoading(true);
         setError(null);
 
-        const response = await fetch(`/api/collection/${collectionId}`);
+        const response = await fetch(`/api/collection/${encodeURIComponent(collectionId)}`);
 
         if (!response.ok) {
           const errorData = await response.json();
