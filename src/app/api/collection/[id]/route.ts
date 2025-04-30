@@ -5,9 +5,9 @@ import { ObjectId } from 'mongodb';
 
 export async function GET(
   request: NextRequest,
-  context: { params: { id: string } } // Correction: params is no longer a Promise
+  { params }: { params: { id: string } } // Correction du type pour correspondre aux exigences de Next.js
 ) {
-  const { id } = context.params; // Directly access params
+  const { id } = params; // Accès direct à params
 
   try {
     await dbConnect();
