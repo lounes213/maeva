@@ -1,38 +1,24 @@
 import { NextApiRequest, NextApiResponse } from 'next';
+import dotenv from 'dotenv';
 
-import User from '@/app/models/user';
-import dbConnect from '@/lib/mongo';
-import jwt from 'jsonwebtoken';
+dotenv.config();
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'POST') {
+  if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { email, password } = req.body;
+  const adminRoute = process.env.ADMIN_ROUTE || '/admin';
 
-  if (!email || !password) {
-    return res.status(400).json({ error: 'Email and password are required' });
+  if (!req.headers.authorization) {
+    return res.status(401).json({ error: 'Unauthorized' });
   }
 
-  try {
-    await dbConnect();
+  const userRole = req.headers['x-user-role']; // Assuming role is passed in headers
 
-    const user = await User.findOne({ email });
-
-    if (!user) {
-      return res.status(401).json({ error: 'Invalid email or password' });
-    }
-
-    const isPasswordValid = await crypto.compare(password, user.passwordHash);
-
-    const token = jwt.sign({ id: user._id, email: user.email, role: user.role }, 'your-secret-key', { expiresIn: '1h' });
-
-    res.setHeader('Set-Cookie', `token=${token}; HttpOnly; Path=/; Max-Age=3600; Secure; SameSite=Strict`);
-
-    res.status(200).json({ message: 'Login successful' });
-  } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+  if (userRole !== 'admin') {
+    return res.status(403).json({ error: 'Access denied' });
   }
+
+  res.status(200).json({ message: `Welcome to the admin route: ${adminRoute}` });
 }
