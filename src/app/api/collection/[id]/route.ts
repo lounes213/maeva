@@ -5,10 +5,9 @@ import { ObjectId } from 'mongodb';
 
 export async function GET(
   request: NextRequest,
-  context: { params: Promise<{ id: string }> } // <- params is a Promise
+  context: { params: { id: string } } // Correction: params is no longer a Promise
 ) {
-  const { params } = context;
-  const { id } = await params;  // <- await here!!
+  const { id } = context.params; // Directly access params
 
   try {
     await dbConnect();
@@ -21,7 +20,7 @@ export async function GET(
     }
 
     const collection = await Collection.findById(new ObjectId(id));
-    
+
     if (!collection) {
       return NextResponse.json(
         { error: 'Collection not found' },

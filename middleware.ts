@@ -1,22 +1,33 @@
-import { NextResponse } from 'next/server';
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import jwt from 'jsonwebtoken';
 
-// This is your middleware configuration
-export function middleware(request: NextRequest) {
-  const url = request.nextUrl;
+export async function middleware(req: NextRequest) {
+  const token = req.cookies.get('token');
 
-  // Exclude the images folder
-  if (url.pathname.startsWith('/images')) {
-    return NextResponse.next(); // Allow image requests to bypass middleware
+  const publicPaths = ['/api/auth/login', '/api/auth/register'];
+  if (publicPaths.includes(req.nextUrl.pathname)) {
+    return NextResponse.next();
   }
 
-  // Your existing middleware logic for other requests
-  // For example, add authentication or other checks here
+  if (!token) {
+    return NextResponse.redirect(new URL('/admin/login', req.url));
+  }
 
-  return NextResponse.next(); // Allow other requests to proceed
+  try {
+    const decodedToken = jwt.verify(token, 'your-secret-key');
+
+    // Vérification du rôle pour les routes d'administration
+    if (req.nextUrl.pathname.startsWith('/admin') && decodedToken.role !== 'admin') {
+      return NextResponse.redirect(new URL('/admin/login', req.url));
+    }
+
+    return NextResponse.next();
+  } catch (err) {
+    console.error('Invalid token:', err);
+    return NextResponse.redirect(new URL('/admin/login', req.url));
+  }
 }
 
-// Specify the paths where middleware should run (optional)
 export const config = {
-  matcher: ['/api/:path*', '/:path*'], // Add paths that should be processed by middleware
+  matcher: ['/api/:path*', '/admin/:path*'],
 };
