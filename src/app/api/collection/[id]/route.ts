@@ -1,17 +1,16 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongo';
 import Collection from '@/app/models/collection';
 import { ObjectId } from 'mongodb';
+import toast from 'react-hot-toast';
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } } // Correction du type pour correspondre aux exigences de Next.js
-) {
-  const { id } = params; // Accès direct à params
-
+export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
     await dbConnect();
-
+    
+    const { id } = params;
+    
+    
     if (!ObjectId.isValid(id)) {
       return NextResponse.json(
         { error: 'Invalid collection ID format' },
@@ -20,7 +19,8 @@ export async function GET(
     }
 
     const collection = await Collection.findById(new ObjectId(id));
-
+    
+    
     if (!collection) {
       return NextResponse.json(
         { error: 'Collection not found' },
@@ -30,10 +30,10 @@ export async function GET(
 
     return NextResponse.json(collection.toObject());
   } catch (error: any) {
-    console.error('API error:', error);
+    toast.error('API error:', error);
     return NextResponse.json(
       { error: error.message || 'Server error' },
       { status: 500 }
     );
   }
-}
+} 
