@@ -40,10 +40,10 @@ const ProductsPage = () => {
       <div className="max-w-7xl mx-auto mt-16 px-4 sm:px-6 lg:px-8 py-6">
         <div className="flex justify-between items-center mb-6 mt-4">
           <h1 className="text-2xl font-bold text-gray-800">Products</h1>
-          <Button onClick={() => setIsFormModalOpen(true)} className=" hover:bg-indigo-700 justify-center items-center flex">
+          <button onClick={() => setIsFormModalOpen(true)} className="hover:bg-indigo-700 justify-center items-center flex">
            <IoAddCircle className="text-2xl" />
             <span className="ml-2">Ajouter un Produit</span>
-          </Button>
+          </button>
         </div>
 
         {isLoading ? (
