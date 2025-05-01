@@ -13,6 +13,15 @@ const errorResponse = (message: string, status: number = 500) => {
   );
 };
 
+// Helper function for detailed error logging
+const logError = (error: any) => {
+  console.error('Erreur API:', error);
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return 'Erreur inconnue';
+};
+
 // GET all products or single product
 export async function GET(req: Request) {
   try {
@@ -102,7 +111,8 @@ export async function POST(req: Request) {
     });
 
   } catch (error) {
-    return errorResponse('Échec de la création du produit');
+    const errorMessage = logError(error);
+    return errorResponse(`Échec de la création du produit: ${errorMessage}`);
   }
 }
 
@@ -175,6 +185,10 @@ export async function PUT(req: Request) {
       { new: true, runValidators: true }
     );
 
+    if (!updatedProduct) {
+      return errorResponse('Échec de la mise à jour du produit', 500);
+    }
+
     return NextResponse.json({ 
       success: true, 
       data: updatedProduct,
@@ -182,6 +196,7 @@ export async function PUT(req: Request) {
     });
 
   } catch (error) {
+    console.error('Erreur lors de la mise à jour du produit:', error);
     return errorResponse('Échec de la mise à jour du produit');
   }
 }
@@ -217,7 +232,8 @@ export async function DELETE(req: Request) {
     });
 
   } catch (error) {
-    return errorResponse('Échec de la suppression du produit');
+    const errorMessage = logError(error);
+    return errorResponse(`Échec de la suppression du produit: ${errorMessage}`);
   }
 }
 
