@@ -5,10 +5,10 @@ import User from '@/models/User';
 
 export async function PUT(
   req: Request,
-  context: { params: { id: string } }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = context.params;
+    const { id } = params;
     const { email, password, role } = await req.json();
 
     await dbConnect();
@@ -56,10 +56,10 @@ export async function PUT(
 
 export async function DELETE(
   req: Request,
-  context: { params: { id: string } }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = context.params;
+    const { id } = params;
     
     await dbConnect();
 
