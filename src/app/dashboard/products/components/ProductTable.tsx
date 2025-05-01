@@ -28,7 +28,10 @@ const ProductTable: React.FC<ProductTableProps> = ({ products, refreshProducts }
   };
 
   const confirmDelete = async () => {
-    if (!selectedProduct?._id) return;
+    if (!selectedProduct?._id) {
+      toast.error('ID du produit manquant. Impossible de supprimer.');
+      return;
+    }
 
     setIsLoading(true);
     try {
@@ -37,7 +40,9 @@ const ProductTable: React.FC<ProductTableProps> = ({ products, refreshProducts }
       });
 
       if (!response.ok) {
-        throw new Error('Échec de la suppression du produit');
+        const errorData = await response.json();
+        console.error('Erreur de suppression:', errorData);
+        throw new Error(errorData.message || 'Échec de la suppression du produit');
       }
 
       toast.success('Produit supprimé avec succès');
@@ -45,7 +50,7 @@ const ProductTable: React.FC<ProductTableProps> = ({ products, refreshProducts }
       setIsDeleteModalOpen(false);
     } catch (error) {
       console.error('Erreur de suppression:', error);
-      toast.error('Échec de la suppression du produit');
+      toast.error(error.message || 'Une erreur est survenue lors de la suppression du produit');
     } finally {
       setIsLoading(false);
     }
