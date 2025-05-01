@@ -50,7 +50,12 @@ const ProductTable: React.FC<ProductTableProps> = ({ products, refreshProducts }
       setIsDeleteModalOpen(false);
     } catch (error) {
       console.error('Erreur de suppression:', error);
-      toast.error(error.message || 'Une erreur est survenue lors de la suppression du produit');
+
+      if (error instanceof Error) {
+        toast.error(error.message || 'Une erreur est survenue lors de la suppression du produit');
+      } else {
+        toast.error('Une erreur inconnue est survenue lors de la suppression du produit');
+      }
     } finally {
       setIsLoading(false);
     }
