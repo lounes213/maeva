@@ -25,6 +25,7 @@ function DashboardHeader({ user }: { user: any }) {
     { href: '/dashboard', label: 'Dashboard' },
     { href: '/dashboard/products', label: 'Products' },
     { href: '/dashboard/collection', label: 'Collection' },
+    { href: '/dashboard/users', label: 'Utilisateurs' },
     { href: '/dashboard/contact', label: 'Contact' },
     { href: '/dashboard/blog', label: 'Blog' },
     { href: '/dashboard/orders', label: 'Orders' },
@@ -35,7 +36,7 @@ function DashboardHeader({ user }: { user: any }) {
       <div className="mx-auto max-w-screen-xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
           <Link className="flex items-center gap-2 text-teal-600" href="/">
-            <img className="h-20 w-30 rounded-lg" src="/logo.png" alt="Logo Maiva" />
+            <img className="h-20 w-30 rounded-full" src="/logo.png" alt="Logo Maiva" />
           </Link>
 
           <div className="md:flex md:items-center md:gap-12">
