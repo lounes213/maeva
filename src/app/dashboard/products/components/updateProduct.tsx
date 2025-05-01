@@ -3,7 +3,7 @@ import toast from 'react-hot-toast';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'danger';
-  children: React.ReactNode;
+  children: React.ReactNode; // Ajout de la propriété children
 }
 
 const Button: React.FC<ButtonProps> = ({
