@@ -3,18 +3,16 @@ import dbConnect from '@/lib/mongo';
 import Collection from '@/app/models/collection';
 import { ObjectId } from 'mongodb';
 
-export async function GET(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: Request) {
   try {
     await dbConnect();
 
-    const { id } = params;
+    const url = new URL(request.url);
+    const id = url.pathname.split('/').pop(); // Get last part of the path
 
-    if (!ObjectId.isValid(id)) {
+    if (!id || !ObjectId.isValid(id)) {
       return NextResponse.json(
-        { error: 'Invalid collection ID format' },
+        { error: 'Invalid or missing collection ID' },
         { status: 400 }
       );
     }
@@ -30,7 +28,7 @@ export async function GET(
 
     return NextResponse.json(collection.toObject());
   } catch (error: any) {
-    console.error('API error:', error); // ✅ Use console instead of toast in backend
+    console.error('API error:', error);
     return NextResponse.json(
       { error: error.message || 'Server error' },
       { status: 500 }
