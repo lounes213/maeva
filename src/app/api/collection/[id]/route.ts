@@ -2,15 +2,16 @@ import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongo';
 import Collection from '@/app/models/collection';
 import { ObjectId } from 'mongodb';
-import toast from 'react-hot-toast';
 
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
   try {
     await dbConnect();
-    
+
     const { id } = params;
-    
-    
+
     if (!ObjectId.isValid(id)) {
       return NextResponse.json(
         { error: 'Invalid collection ID format' },
@@ -19,8 +20,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
     }
 
     const collection = await Collection.findById(new ObjectId(id));
-    
-    
+
     if (!collection) {
       return NextResponse.json(
         { error: 'Collection not found' },
@@ -30,10 +30,10 @@ export async function GET(request: Request, { params }: { params: { id: string }
 
     return NextResponse.json(collection.toObject());
   } catch (error: any) {
-    toast.error('API error:', error);
+    console.error('API error:', error); // ✅ Use console instead of toast in backend
     return NextResponse.json(
       { error: error.message || 'Server error' },
       { status: 500 }
     );
   }
-} 
+}
