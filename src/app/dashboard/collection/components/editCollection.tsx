@@ -50,14 +50,33 @@ export default function EditCollectionModal({
   const [tagInput, setTagInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
+  const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+  const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+
   const onDrop = useCallback((acceptedFiles: File[]) => {
-    if (acceptedFiles.length > 0) {
-      const newImageFiles = [...imageFiles, ...acceptedFiles];
+    const validFiles = acceptedFiles.filter(file => {
+      if (file.size > MAX_FILE_SIZE) {
+        toast.error(`Le fichier ${file.name} est trop volumineux. Maximum 5MB`);
+        return false;
+      }
+      if (!ALLOWED_TYPES.includes(file.type)) {
+        toast.error(`Le type de fichier ${file.type} n'est pas supporté`);
+        return false;
+      }
+      return true;
+    });
+
+    if (validFiles.length > 0) {
+      const newImageFiles = [...imageFiles, ...validFiles];
       setImageFiles(newImageFiles);
       
-      // Create object URLs for previewing the new images
-      const newImageUrls = acceptedFiles.map(file => URL.createObjectURL(file));
-      setImages(prev => [...prev, ...newImageUrls]);
+      // Création des URLs pour la prévisualisation
+      const newImageUrls = validFiles.map(file => ({
+        url: URL.createObjectURL(file),
+        isNew: true
+      }));
+      
+      setImages(prev => [...prev, ...newImageUrls.map(img => img.url)]);
     }
   }, [imageFiles]);
 
@@ -94,23 +113,26 @@ export default function EditCollectionModal({
   const removeImage = (index: number) => {
     const imageToRemove = images[index];
     
-    // If it's an existing image (not a blob URL), add to removal list
-    if (!imageToRemove.startsWith('blob:') && collection.images?.includes(imageToRemove)) {
+    // Si c'est une image existante (pas une URL blob), l'ajouter à la liste de suppression
+    if (!imageToRemove.startsWith('blob:')) {
       setImagesToRemove(prev => [...prev, imageToRemove]);
+      // Révocation de l'URL si c'est une nouvelle image
+      URL.revokeObjectURL(imageToRemove);
     }
     
-    // If it's a new file, remove from imageFiles array
+    // Pour les nouvelles images, supprimer le fichier correspondant
     if (imageToRemove.startsWith('blob:')) {
-      const fileIndex = imageFiles.findIndex((_, i) => 
-        URL.createObjectURL(imageFiles[i]) === imageToRemove
-      );
+      const fileIndex = imageFiles.findIndex((_, i) => {
+        const fileUrl = URL.createObjectURL(imageFiles[i]);
+        URL.revokeObjectURL(fileUrl); // Nettoyage immédiat
+        return fileUrl === imageToRemove;
+      });
+      
       if (fileIndex !== -1) {
         setImageFiles(prev => prev.filter((_, i) => i !== fileIndex));
-        URL.revokeObjectURL(imageToRemove);
       }
     }
     
-    // Remove from images array
     setImages(prev => prev.filter((_, i) => i !== index));
   };
 

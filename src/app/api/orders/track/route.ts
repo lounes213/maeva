@@ -12,21 +12,21 @@ export async function GET(request: Request) {
     
     if (!code) {
       return NextResponse.json(
-        { success: false, message: 'Tracking code is required' },
+        { success: false, message: 'Le code de suivi est requis' },
         { status: 400 }
       );
     }
 
-    const order = await Order.findById(code);
+    const order = await Order.findOne({ trackingCode: code });
 
     if (!order) {
       return NextResponse.json(
-        { success: false, message: 'Order not found' },
+        { success: false, message: 'Commande non trouvée' },
         { status: 404 }
       );
     }
 
-    // Calculate delivery progress
+    // Calcul de la progression de la livraison
     const statusOrder = ['processing', 'shipped', 'in_transit', 'out_for_delivery', 'delivered'];
     const currentStatusIndex = statusOrder.indexOf(order.deliveryStatus);
     const progress = currentStatusIndex >= 0 
@@ -36,7 +36,7 @@ export async function GET(request: Request) {
     return NextResponse.json({
       success: true,
       data: {
-        ...order,
+        ...order.toObject(),
         progress,
         isDelivered: order.deliveryStatus === 'delivered',
         isCancelled: order.deliveryStatus === 'cancelled',
@@ -44,8 +44,9 @@ export async function GET(request: Request) {
       }
     });
   } catch (error) {
+    console.error('Erreur lors du suivi de la commande:', error);
     return NextResponse.json(
-      { success: false, message: 'Internal server error' },
+      { success: false, message: 'Erreur interne du serveur' },
       { status: 500 }
     );
   }

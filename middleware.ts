@@ -1,39 +1,41 @@
 import { NextRequest, NextResponse } from 'next/server';
+import jwt from 'jsonwebtoken';
+
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
 export async function middleware(req: NextRequest) {
-  const token = req.cookies.get('token')?.value; // Extraction de la valeur du cookie
+  const token = req.cookies.get('token')?.value;
+  const isAuthRoute = req.nextUrl.pathname === '/api/auth/login' || 
+                     req.nextUrl.pathname === '/api/auth/register';
 
-  const publicPaths = ['/api/auth/login', '/api/auth/register'];
-  if (publicPaths.includes(req.nextUrl.pathname)) {
+  // Ne pas vérifier le token pour les routes d'authentification
+  if (isAuthRoute) {
     return NextResponse.next();
   }
 
-  if (!token) {
-    return NextResponse.redirect(new URL('/admin/login', req.url));
-  }
-
-  try {
-    // Vérification simple basée sur Kinde Auth
-    const user = await fetch('https://your-kinde-auth-endpoint.com/validate', {
-      headers: { Authorization: `Bearer ${token}` },
-    }).then((res) => res.json());
-
-    if (!user || !user.isAuthenticated) {
+  // Vérifier si la route nécessite une authentification
+  if (req.nextUrl.pathname.startsWith('/dashboard') || req.nextUrl.pathname.startsWith('/api/')) {
+    if (!token) {
+      if (req.nextUrl.pathname.startsWith('/api/')) {
+        return NextResponse.json({ message: 'Non authentifié' }, { status: 401 });
+      }
       return NextResponse.redirect(new URL('/admin/login', req.url));
     }
 
-    // Vérification du rôle pour les routes d'administration
-    if (req.nextUrl.pathname.startsWith('/admin') && user.role !== 'admin') {
+    try {
+      jwt.verify(token, JWT_SECRET);
+      return NextResponse.next();
+    } catch (error) {
+      if (req.nextUrl.pathname.startsWith('/api/')) {
+        return NextResponse.json({ message: 'Token invalide' }, { status: 401 });
+      }
       return NextResponse.redirect(new URL('/admin/login', req.url));
     }
-
-    return NextResponse.next();
-  } catch (err) {
-    console.error('Authentication error:', err);
-    return NextResponse.redirect(new URL('/admin/login', req.url));
   }
+
+  return NextResponse.next();
 }
 
 export const config = {
-  matcher: ['/api/:path*', '/admin/:path*'],
+  matcher: ['/dashboard/:path*', '/api/:path*']
 };

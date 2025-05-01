@@ -275,50 +275,66 @@ export default function TrackOrderPage() {
               </div>
             </div>
 
-            <div className="border rounded-lg p-4">
-              <h3 className="font-semibold mb-3">Order Summary</h3>
-              <div className="space-y-3">
+            <div className="border rounded-lg p-6 bg-gray-50">
+              <h3 className="font-semibold text-lg mb-4 text-gray-800">Order Summary</h3>
+              <div className="space-y-4">
                 {order.items.map((item: any) => (
-                  <div key={item.productId} className="flex gap-3">
-                    <div className="relative w-16 h-16 bg-gray-100 rounded">
+                  <div key={item.productId} className="flex gap-4 bg-white p-4 rounded-lg shadow-sm">
+                    <div className="relative w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
                       {item.imageUrl && (
                         <Image
                           src={item.imageUrl}
                           alt={item.name}
                           fill
-                          className="object-cover rounded"
+                          className="object-cover"
                         />
                       )}
                     </div>
-                    <div>
-                      <p className="font-medium">{item.name}</p>
-                      <p className="text-sm text-gray-500">
-                        {item.quantity} × ${item.price.toFixed(2)}
-                        {item.size && ` • Size: ${item.size}`}
-                        {item.color && ` • Color: ${item.color}`}
-                      </p>
+                    <div className="flex-1">
+                      <p className="font-medium text-gray-900 mb-1">{item.name}</p>
+                      <div className="flex flex-wrap gap-2 text-sm text-gray-600">
+                        <span className="bg-gray-100 px-2 py-1 rounded-full">
+                          {item.quantity} × DZA{item.price.toFixed(2)}
+                        </span>
+                        {item.size && (
+                          <span className="bg-gray-100 px-2 py-1 rounded-full">
+                            Size: {item.size}
+                          </span>
+                        )}
+                        {item.color && (
+                          <span className="bg-gray-100 px-2 py-1 rounded-full flex items-center gap-1">
+                            <span 
+                              className="inline-block w-4 h-4 rounded-full border border-gray-200"
+                              style={{ backgroundColor: item.color }}
+                            />
+                            Color
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}
               </div>
-              <div className="mt-4 pt-4 border-t space-y-2">
-                <div className="flex justify-between">
-                  <span>Subtotal:</span>
-                  <span>${order.payment.subtotal.toFixed(2)}</span>
-                </div>
-                {order.payment.discount > 0 && (
-                  <div className="flex justify-between text-green-600">
-                    <span>Discount:</span>
-                    <span>-${order.payment.discount.toFixed(2)}</span>
+              <div className="mt-6 pt-4 border-t border-gray-200">
+                <div className="space-y-3">
+                  <div className="flex justify-between text-gray-600">
+                    <span>Subtotal:</span>
+                    <span>DZA{order.payment.subtotal.toFixed(2)}</span>
                   </div>
-                )}
-                <div className="flex justify-between">
-                  <span>Shipping:</span>
-                  <span>${order.payment.shipping.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between font-bold pt-2 border-t">
-                  <span>Total:</span>
-                  <span>${order.payment.total.toFixed(2)}</span>
+                  {order.payment.discount > 0 && (
+                    <div className="flex justify-between text-green-600">
+                      <span>Discount:</span>
+                      <span>-DZA{order.payment.discount.toFixed(2)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-gray-600">
+                    <span>Shipping:</span>
+                    <span>DZA{order.payment.shipping.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between font-bold text-lg pt-3 border-t border-gray-200 text-gray-900">
+                    <span>Total:</span>
+                    <span>DZA{order.payment.total.toFixed(2)}</span>
+                  </div>
                 </div>
               </div>
             </div>

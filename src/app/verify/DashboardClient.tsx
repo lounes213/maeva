@@ -383,10 +383,10 @@ export default function DashboardClient({ user }: { user: any }) {
             <span className="h-px flex-1 bg-gradient-to-l from-transparent to-gray-300"></span>
            
             <a
-              className="inline-block rounded-sm border border-indigo-600 px-4 md:px-12 py-2 md:py-3 text-sm font-medium text-indigo-600 hover:bg-indigo-600 hover:text-white focus:outline-hidden"
+              className="inline-block rounded-sm border border-amber-600 px-4 md:px-12 py-2 md:py-3 text-sm font-medium text-amber-600 hover:bg-amber-600 hover:text-white focus:outline-hidden"
               href="/"
             >
-              <EyeIcon className="inline-block h-5 w-5 mr-1 text-indigo-600 hover:text-white" aria-hidden="true" />
+              <EyeIcon className="inline-block h-5 w-5 mr-1 text-amber-600 hover:text-white" aria-hidden="true" />
               Voir La boutique
             </a>
           </span>
@@ -417,7 +417,7 @@ export default function DashboardClient({ user }: { user: any }) {
 
         {isLoading ? (
           <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-600"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-amber-600"></div>
           </div>
         ) : (
           <>

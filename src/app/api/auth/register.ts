@@ -1,41 +1,39 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import bcrypt from 'bcrypt';
-import User from '@/app/models/user';
 import dbConnect from '@/lib/mongo';
+import User from '@/models/User';
+
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
+  await dbConnect(); // Connect to MongoDB
 
-  const { email, password, role } = req.body;
+  const { method } = req;
 
-  if (!email || !password) {
-    return res.status(400).json({ error: 'Email and password are required' });
-  }
+  if (method === 'POST') {
+    const { email, password } = req.body;
 
-  try {
-    await dbConnect();
+    if (!email || !password) {
+      return res.status(400).json({ message: 'Email and password are required' });
+    }
 
     const existingUser = await User.findOne({ email });
 
     if (existingUser) {
-      return res.status(409).json({ error: 'Email is already in use' });
+      return res.status(400).json({ message: 'User already exists' });
     }
 
-    const passwordHash = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(password, 10);
 
     const newUser = new User({
       email,
-      passwordHash,
-      role: role || 'user', // Default role is 'user'
+      password: hashedPassword,
     });
 
     await newUser.save();
 
-    res.status(201).json({ message: 'User registered successfully' });
-  } catch (error) {
-    console.error('Registration error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    return res.status(201).json({ message: 'User registered successfully', userId: newUser._id });
+  } else {
+    res.setHeader('Allow', ['POST']);
+    res.status(405).end(`Method ${method} Not Allowed`);
   }
 }

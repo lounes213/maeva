@@ -1,15 +1,33 @@
 'use client';
 
-import {
-  LoginLink,
-  LogoutLink,
-  RegisterLink,
-  useKindeAuth,
-} from '@kinde-oss/kinde-auth-nextjs';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
+import axios from 'axios';
+import Link from 'next/link';
 
 export default function Home() {
-  const { isAuthenticated, user } = useKindeAuth();
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  interface User {
+    given_name: string;
+    [key: string]: any; // Add this if there are additional properties
+  }
+
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const response = await axios.get('/api/auth/me'); // Endpoint to get user info
+        setIsAuthenticated(true);
+        setUser(response.data);
+      } catch (error) {
+        setIsAuthenticated(false);
+        setUser(null);
+      }
+    };
+
+    fetchUser();
+  }, []);
 
   return (
     <section className="min-h-screen bg-gradient-to-br from-white to-gray-100 flex items-center justify-center px-6 py-12">
@@ -28,18 +46,31 @@ export default function Home() {
 
           <div className="flex flex-wrap gap-4">
             {isAuthenticated ? (
-              <LogoutLink className="inline-flex items-center justify-center rounded-lg bg-red-600 px-6 py-3 text-white font-semibold shadow-md hover:bg-red-700 transition">
+              <button
+                onClick={async () => {
+                  await axios.post('/api/auth/logout'); // Endpoint to log out
+                  setIsAuthenticated(false);
+                  setUser(null);
+                }}
+                className="inline-flex items-center justify-center rounded-lg bg-red-600 px-6 py-3 text-white font-semibold shadow-md hover:bg-red-700 transition"
+              >
                 Se déconnecter
-              </LogoutLink>
+              </button>
             ) : (
               <>
-                <LoginLink className="inline-flex items-center justify-center rounded-lg bg-amber-600 px-6 py-3 text-white font-semibold shadow-md hover:bg-amber-300 transition">
+                <button
+                  onClick={() => (window.location.href = '/admin/login')}
+                  className="inline-flex items-center justify-center rounded-lg bg-amber-600 px-6 py-3 text-white font-semibold shadow-md hover:bg-amber-300 transition"
+                >
                   Se connecter
-                </LoginLink>
+                </button>
 
-                <RegisterLink className="inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-6 py-3 text-gray-700 font-semibold shadow-md hover:bg-gray-100 transition">
+                <button
+                  onClick={() => (window.location.href = '/admin/register')}
+                  className="inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-6 py-3 text-gray-700 font-semibold shadow-md hover:bg-gray-100 transition"
+                >
                   Créer un compte
-                </RegisterLink>
+                </button>
               </>
             )}
           </div>
@@ -60,3 +91,4 @@ export default function Home() {
     </section>
   );
 }
+
