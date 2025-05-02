@@ -15,6 +15,7 @@ export const config = {
   },
 };
 
+// Amélioration des messages d'erreur avec des toasts spécifiques
 export async function POST(req: NextRequest) {
   try {
     await dbConnect();
@@ -32,6 +33,7 @@ export async function POST(req: NextRequest) {
       const tags = formData.get('tags')?.toString().split(',').map(t => t.trim()) || [];
 
       if (!title || !content) {
+        toast.error("Le titre et le contenu sont obligatoires.");
         return NextResponse.json({ error: "Title and content are required" }, { status: 400 });
       }
 
@@ -72,13 +74,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(savedPost, { status: 201 });
     }
 
+    toast.error("Type de contenu non pris en charge.");
     return NextResponse.json({ error: "Unsupported Content-Type" }, { status: 415 });
   } catch (error: any) {
-    toast.error("Error creating blog post:", error);
+    toast.error("Erreur lors de la création de l'article de blog.");
     return NextResponse.json({ error: error.message || "Failed to create blog post" }, { status: 500 });
   }
 }
 
+// Amélioration des messages d'erreur avec des toasts spécifiques
 export async function GET(req: NextRequest) {
   try {
     await dbConnect();
@@ -89,6 +93,7 @@ export async function GET(req: NextRequest) {
     if (slug) {
       const post = await BlogPost.findOne({ slug });
       if (!post) {
+        toast.error("Article de blog introuvable.");
         return NextResponse.json({ error: 'Blog post not found' }, { status: 404 });
       }
       return NextResponse.json(post);
@@ -121,7 +126,7 @@ export async function GET(req: NextRequest) {
       }
     });
   } catch (error: any) {
-    toast.error("Error getting blog posts:", error);
+    toast.error("Erreur lors de la récupération des articles de blog.");
     return NextResponse.json({ error: error.message || "Failed to get blog posts" }, { status: 500 });
   }
 }
