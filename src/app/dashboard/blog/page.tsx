@@ -29,13 +29,18 @@ export default function BlogAdminPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingBlog, setEditingBlog] = useState<BlogPost | null>(null);
 
+  // Amélioration de la gestion des erreurs pour éviter l'erreur "Unexpected end of JSON input"
   const fetchBlogs = async () => {
     setLoading(true);
     try {
       const response = await fetch(`${window.location.origin}/api/blog`);
-      if (!response.ok) throw new Error("Failed to fetch blogs");
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || "Failed to fetch blogs");
+      }
+
       const data = await response.json();
-      console.log('Blogs fetched:', data.posts);
       setBlogs(data.posts || []);
     } catch (err: any) {
       setError(err.message);
@@ -79,7 +84,7 @@ export default function BlogAdminPage() {
   }, []);
 
   return (
-    <div className="max-w-7xl mx-auto p-4 md:p-6">
+    <div className="max-w-7xl mx-auto p-4 mt-12 md:p-6">
       <DashboardHeader user={{}} />
       
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mt-8 mb-6">
