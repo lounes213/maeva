@@ -8,6 +8,7 @@ function DashboardHeader({ user }: { user: any }) {
   const pathname = usePathname();
 
   const [isOpen, setIsOpen] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -20,6 +21,10 @@ function DashboardHeader({ user }: { user: any }) {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  const toggleMenu = () => {
+    setIsMenuOpen(!isMenuOpen);
+  };
 
   const navLinks = [
     { href: '/dashboard', label: 'Dashboard' },
@@ -40,8 +45,41 @@ function DashboardHeader({ user }: { user: any }) {
           </Link>
 
           <div className="md:flex md:items-center md:gap-12">
-            <nav aria-label="Global" className="hidden md:block">
-              <ul className="flex items-center gap-6 text-sm">
+            <button
+              onClick={toggleMenu}
+              className="text-gray-800 md:hidden focus:outline-none"
+            >
+              <svg
+                className="w-6 h-6"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                {isMenuOpen ? (
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                ) : (
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M4 6h16M4 12h16m-7 6h7"
+                  />
+                )}
+              </svg>
+            </button>
+
+            <nav
+              className={`${
+                isMenuOpen ? "block" : "hidden"
+              } md:block mt-4 md:mt-0`}
+            >
+              <ul className="space-y-4 md:space-y-0 md:flex md:space-x-6">
                 {navLinks.map((link) => (
                   <li key={link.href}>
                     <Link
