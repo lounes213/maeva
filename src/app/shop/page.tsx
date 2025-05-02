@@ -329,20 +329,26 @@ const filteredProducts = products.filter(product => {
               {sizes.length > 0 && (
                 <div className="border-b border-gray-200 pb-6">
                   <h3 className="font-medium text-gray-900 mb-4">Tailles</h3>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="space-y-3">
                     {sizes.map((size) => (
-                      <button
-                        key={size}
-                        type="button"
-                        onClick={() => toggleSize(size)}
-                        className={`px-3 py-1 border rounded-md text-sm ${
-                          selectedSizes.includes(size)
-                            ? 'bg-amber-600 text-white border-amber-600'
-                            : 'bg-white text-gray-900 border-gray-300 hover:bg-gray-50'
-                        }`}
-                      >
-                        {size}
-                      </button>
+                      <div key={size} className="flex items-center">
+                        <button
+                          onClick={() => toggleSize(size)}
+                          className={`flex items-center justify-center w-5 h-5 rounded border ${
+                            selectedSizes.includes(size)
+                              ? 'bg-amber-600 border-amber-600 text-white'
+                              : 'border-gray-300 text-transparent'
+                          }`}
+                        >
+                          <FiCheck className="w-3 h-3" />
+                        </button>
+                        <label 
+                          onClick={() => toggleSize(size)}
+                          className="ml-3 text-sm text-gray-600 capitalize cursor-pointer"
+                        >
+                          {size}
+                        </label>
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -586,20 +592,26 @@ const filteredProducts = products.filter(product => {
                 {sizes.length > 0 && (
                   <div className="border-b border-gray-200 pb-6">
                     <h3 className="font-medium text-gray-900 mb-4">Tailles</h3>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="space-y-3">
                       {sizes.map((size) => (
-                        <button
-                          key={size}
-                          type="button"
-                          onClick={() => toggleSize(size)}
-                          className={`px-3 py-1 border rounded-md text-sm ${
-                            selectedSizes.includes(size)
-                              ? 'bg-amber-600 text-white border-amber-600'
-                              : 'bg-white text-gray-900 border-gray-300 hover:bg-gray-50'
-                          }`}
-                        >
-                          {size}
-                        </button>
+                        <div key={size} className="flex items-center">
+                          <button
+                            onClick={() => toggleSize(size)}
+                            className={`flex items-center justify-center w-5 h-5 rounded border ${
+                              selectedSizes.includes(size)
+                                ? 'bg-amber-600 border-amber-600 text-white'
+                                : 'border-gray-300 text-transparent'
+                            }`}
+                          >
+                            <FiCheck className="w-3 h-3" />
+                          </button>
+                          <label 
+                            onClick={() => toggleSize(size)}
+                            className="ml-3 text-sm text-gray-600 capitalize cursor-pointer"
+                          >
+                            {size}
+                          </label>
+                        </div>
                       ))}
                     </div>
                   </div>

@@ -7,14 +7,25 @@ export function BlogList() {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
+  const refreshPosts = async () => {
+    setLoading(true);
+    const res = await fetch('/api/blog');
+    const data = await res.json();
+    setPosts(data.posts);
+    setLoading(false);
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      await fetch(`/api/blog/${id}`, { method: 'DELETE' });
+      await refreshPosts();
+    } catch (error) {
+      console.error('Failed to delete post:', error);
+    }
+  };
+
   useEffect(() => {
-    const fetchPosts = async () => {
-      const res = await fetch('/api/blog');
-      const data = await res.json();
-      setPosts(data.posts);
-      setLoading(false);
-    };
-    fetchPosts();
+    refreshPosts();
   }, []);
 
   if (loading) return <div>Loading...</div>;
@@ -37,6 +48,12 @@ export function BlogList() {
       className="mt-2 text-blue-500"
     >
       Read More
+    </button>
+    <button 
+      onClick={() => handleDelete(post._id)}
+      className="mt-2 text-red-500"
+    >
+      Delete
     </button>
   </div>
 ))}
