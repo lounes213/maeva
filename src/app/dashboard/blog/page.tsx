@@ -40,11 +40,22 @@ export default function BlogAdminPage() {
         throw new Error(errorText || "Failed to fetch blogs");
       }
 
-      const data = await response.json();
-      setBlogs(data.posts || []);
+      let data;
+      const text = await response.text();
+      try {
+        data = JSON.parse(text);
+      } catch (parseError) {
+        throw new Error("La réponse du serveur n'est pas au format JSON valide");
+      }
+
+      if (!data || !Array.isArray(data.posts)) {
+        throw new Error("Format de réponse invalide");
+      }
+
+      setBlogs(data.posts);
     } catch (err: any) {
-      setError(err.message);
-      toast.error(err.message);
+      setError(err.message || "Une erreur s'est produite lors de la récupération des blogs");
+      toast.error(err.message || "Une erreur s'est produite lors de la récupération des blogs");
     } finally {
       setLoading(false);
     }
