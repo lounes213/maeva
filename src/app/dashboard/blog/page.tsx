@@ -35,6 +35,7 @@ export default function BlogAdminPage() {
       const response = await fetch(`${window.location.origin}/api/blog`);
       if (!response.ok) throw new Error("Failed to fetch blogs");
       const data = await response.json();
+      console.log('Blogs fetched:', data.posts);
       setBlogs(data.posts || []);
     } catch (err: any) {
       setError(err.message);
