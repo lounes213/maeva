@@ -48,7 +48,7 @@ export default function Home() {
             {isAuthenticated ? (
               <button
                 onClick={async () => {
-                  await axios.post('/api/auth/logout'); // Endpoint to log out
+                  await axios.post('/api/auth/merci'); // Endpoint to log out
                   setIsAuthenticated(false);
                   setUser(null);
                 }}
