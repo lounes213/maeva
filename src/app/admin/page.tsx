@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import axios from 'axios';
-import Link from 'next/link';
 
 export default function Home() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -48,7 +47,7 @@ export default function Home() {
             {isAuthenticated ? (
               <button
                 onClick={async () => {
-                  await axios.post('/api/auth/merci'); // Endpoint to log out
+                  await axios.post('/admin/merci'); // Endpoint to log out
                   setIsAuthenticated(false);
                   setUser(null);
                 }}
