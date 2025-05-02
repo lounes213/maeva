@@ -107,19 +107,9 @@ export default function ShopPage() {
 
   const processSizes = (sizes: string[] | undefined) => {
     if (!sizes || sizes.length === 0) return [];
-    
-    const processedSizes: string[] = [];
-    sizes.forEach(sizeItem => {
-      if (sizeItem.includes(',')) {
-        sizeItem.split(',').forEach(size => {
-          if (size.trim()) processedSizes.push(size.trim());
-        });
-      } else {
-        processedSizes.push(sizeItem);
-      }
-    });
-    
-    return processedSizes;
+
+    // Séparer chaque taille individuellement, même si elles sont groupées
+    return sizes.flatMap(sizeItem => sizeItem.split(',').map(size => size.trim()));
   };
 
   useEffect(() => {
