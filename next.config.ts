@@ -6,7 +6,7 @@ const nextConfig: NextConfig = {
 };
 module.exports = {
   images: {
-    domains: ['localhost'], // Correction du domaine pour autoriser les images locales
+    domains: ['https://maevashop.netlify.app/'], // Correction du domaine pour autoriser les images locales
   },
 };
 export default nextConfig;
