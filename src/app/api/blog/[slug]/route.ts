@@ -2,15 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "@/lib/mongo";
 import BlogPost from "@/app/models/blog";
 
-type ParamsType = {
-  params: {
-    slug: string;
-  }
-}
-
 export async function PUT(
-  req: NextRequest,
-  { params }: ParamsType
+  request: NextRequest,
+  { params }: { params: { slug: string } }
 ) {
   try {
     await dbConnect();
@@ -19,12 +13,12 @@ export async function PUT(
       return NextResponse.json({ error: "Slug parameter is required" }, { status: 400 });
     }
 
-    const contentType = req.headers.get("content-type") || "";
+    const contentType = request.headers.get("content-type") || "";
     if (!contentType.includes("application/json")) {
       return NextResponse.json({ error: "Unsupported Content-Type" }, { status: 415 });
     }
 
-    const body = await req.json();
+    const body = await request.json();
     const updatedPost = await BlogPost.findOneAndUpdate(
       { slug },
       body,
