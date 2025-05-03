@@ -1,6 +1,6 @@
 'use client';
 import React, { useState } from 'react';
-import { useForm, useWatch } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import Image from 'next/image';
 import { Product } from '@/app/types/product';
@@ -18,6 +18,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData, onSuccess, onCan
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>(initialData?.images || []);
   const [selectedColors, setSelectedColors] = useState<string[]>(initialData?.couleurs || []);
+  const [submissionError, setSubmissionError] = useState<string | null>(null);
 
   const { register, handleSubmit, formState: { errors }, watch, setValue } = useForm({
     defaultValues: initialData || {
@@ -39,7 +40,16 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData, onSuccess, onCan
   });
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
+    if (!e.target.files || e.target.files.length === 0) return;
+    
+    // Check file sizes - limit to 5MB per file as an example
+    const oversizedFiles = Array.from(e.target.files).filter(file => file.size > 5 * 1024 * 1024);
+    if (oversizedFiles.length > 0) {
+      toast.error('Certaines images sont trop volumineuses (max 5 MB)');
+      return;
+    }
+    
+    const files = Array.from(e.target.files);
     setSelectedImages(prev => [...prev, ...files]);
     
     const newPreviewUrls = files.map(file => URL.createObjectURL(file));
@@ -47,8 +57,15 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData, onSuccess, onCan
   };
 
   const removeImage = (index: number) => {
-    setSelectedImages(prev => prev.filter((_, i) => i !== index));
-    setPreviewUrls(prev => prev.filter((_, i) => i !== index));
+    const updatedImages = [...selectedImages];
+    updatedImages.splice(index, 1);
+    setSelectedImages(updatedImages);
+    
+    // Also clean up preview URL object URLs to prevent memory leaks
+    URL.revokeObjectURL(previewUrls[index]);
+    const updatedPreviews = [...previewUrls];
+    updatedPreviews.splice(index, 1);
+    setPreviewUrls(updatedPreviews);
   };
 
   const handleColorsChange = (colors: string[]) => {
@@ -57,39 +74,59 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData, onSuccess, onCan
   };
 
   const onSubmit = async (data: any) => {
-    setIsLoading(true);
-    const formData = new FormData();
-
-    // Vérifier que le champ 'category' est renseigné
-    if (!data.category || data.category.trim() === '') {
-      toast.error('Le champ catégorie est requis.');
-      setIsLoading(false);
-      return;
-    }
-
-    // Convertir les champs numériques en nombres
-    const processedData = {
-      ...data,
-      price: parseFloat(data.price),
-      reviewCount: parseInt(data.reviewCount, 10),
-      sold: parseInt(data.sold, 10),
-      stock: parseInt(data.stock, 10),
-    };
-
-    // Ajouter les données au FormData
-    Object.keys(processedData).forEach(key => {
-      if (key === 'promoPrice' && !processedData.promotion) {
-        return; // Ne pas inclure promoPrice si promotion est false
-      }
-      formData.append(key, processedData[key]);
-    });
-
-    // Ajouter les fichiers d'images
-    selectedImages.forEach(image => {
-      formData.append('images', image);
-    });
-
     try {
+      setIsLoading(true);
+      setSubmissionError(null);
+      const formData = new FormData();
+
+      // Vérifier que le champ 'category' est renseigné
+      if (!data.category || data.category.trim() === '') {
+        toast.error('Le champ catégorie est requis.');
+        setIsLoading(false);
+        return;
+      }
+
+      // Handle array fields properly
+      if (typeof data.taille === 'string') {
+        // Convert comma-separated string to array
+        const tailles = data.taille.split(',').map((t: string) => t.trim()).filter(Boolean);
+        formData.append('taille', JSON.stringify(tailles));
+      } else if (Array.isArray(data.taille)) {
+        formData.append('taille', JSON.stringify(data.taille));
+      }
+
+      // Handle colors array
+      formData.append('couleurs', JSON.stringify(selectedColors));
+
+      // Convertir les champs numériques en nombres
+      const numericFields = ['price', 'stock', 'sold', 'rating', 'reviewCount'];
+      numericFields.forEach(field => {
+        const value = parseFloat(data[field]);
+        formData.append(field, isNaN(value) ? '0' : value.toString());
+      });
+
+      // Handle promotion and promo price
+      formData.append('promotion', data.promotion ? 'true' : 'false');
+      if (data.promotion) {
+        const promoPrice = parseFloat(data.promoPrice);
+        formData.append('promoPrice', isNaN(promoPrice) ? '0' : promoPrice.toString());
+      }
+
+      // Add text fields
+      ['name', 'reference', 'description', 'category', 'tissu'].forEach(field => {
+        if (data[field]) formData.append(field, data[field]);
+      });
+
+      // Add the existing images from initialData if any
+      if (initialData?.images && initialData.images.length > 0) {
+        formData.append('existingImages', JSON.stringify(initialData.images));
+      }
+
+      // Ajouter les fichiers d'images
+      selectedImages.forEach(image => {
+        formData.append('images', image);
+      });
+
       const url = initialData ? `/api/products?id=${initialData._id}` : '/api/products';
       const method = initialData ? 'PUT' : 'POST';
 
@@ -99,14 +136,18 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData, onSuccess, onCan
       });
 
       if (!response.ok) {
-        throw new Error('Erreur lors de l\'enregistrement du produit');
+        const errorData = await response.json().catch(() => null);
+        const errorMessage = errorData?.message || 'Erreur lors de l\'enregistrement du produit';
+        throw new Error(errorMessage);
       }
 
       toast.success(initialData ? 'Produit mis à jour avec succès' : 'Produit créé avec succès');
       onSuccess();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erreur lors de l\'enregistrement :', error);
-      toast.error('Une erreur est survenue');
+      const errorMessage = error.message || 'Une erreur est survenue';
+      setSubmissionError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -114,6 +155,12 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData, onSuccess, onCan
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      {submissionError && (
+        <div className="bg-red-50 p-4 rounded-md">
+          <p className="text-red-700">{submissionError}</p>
+        </div>
+      )}
+      
       <div className="grid grid-cols-2 gap-6">
         <div>
           <label className="block text-sm font-medium text-gray-700">Nom</label>
@@ -294,7 +341,9 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData, onSuccess, onCan
                 <Image
                   src={url}
                   alt={`Preview ${index + 1}`}
-                  layout="fill"
+                  width={100}
+                  height={100}
+                  layout="responsive"
                   objectFit="cover"
                   className="object-center"
                 />
