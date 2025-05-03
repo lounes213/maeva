@@ -1,18 +1,49 @@
-import Image from 'next/image';
+'use client';
 
-export default function Page() {
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+
+export default function MerciPage() {
+  const router = useRouter();
+
+  useEffect(() => {
+    // Redirection automatique vers la page d'accueil après 5 secondes
+    const timer = setTimeout(() => {
+      router.push('/');
+    }, 5000);
+
+    return () => clearTimeout(timer);
+  }, [router]);
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
-      <div className="bg-white rounded-lg shadow-lg p-8 max-w-md text-center">
-        <Image src="/logo.png" alt="Logo" width={100} height={100} className="mx-auto mb-4" />
-        <h1 className="text-2xl font-bold text-amber-600 mb-4">Merci pour votre visite !</h1>
-        <p className="text-gray-700 mb-6">Nous espérons vous revoir très bientôt dans notre boutique. À très bientôt !</p>
-        <a
-          href="/"
-          className="inline-block bg-amber-600 text-white px-6 py-3 rounded-lg shadow-md hover:bg-amber-700 transition"
-        >
-          Retour à la boutique
-        </a>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-amber-50 to-white px-4">
+      <div className="text-center max-w-md mx-auto">
+        <img src="/logo.png" alt="Logo Maiva" className="w-24 h-24 mx-auto mb-8 rounded-full shadow-lg" />
+        
+        <h1 className="text-3xl font-bold text-gray-900 mb-4">
+          Merci de votre visite !
+        </h1>
+        
+        <p className="text-gray-600 mb-8">
+          Vous avez été déconnecté avec succès. Vous serez redirigé vers la page d'accueil dans quelques secondes.
+        </p>
+
+        <div className="space-y-4">
+          <Link 
+            href="/admin/login"
+            className="inline-block w-full px-6 py-3 text-sm font-medium text-white bg-amber-600 rounded-lg hover:bg-amber-700 transition-colors duration-200"
+          >
+            Se reconnecter
+          </Link>
+          
+          <Link 
+            href="/"
+            className="inline-block w-full px-6 py-3 text-sm font-medium text-amber-600 bg-amber-50 rounded-lg hover:bg-amber-100 transition-colors duration-200"
+          >
+            Retour à l'accueil
+          </Link>
+        </div>
       </div>
     </div>
   );

@@ -1,11 +1,12 @@
 'use client';
 
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useState, useRef, useEffect } from 'react';
 
 function DashboardHeader({ user }: { user: any }) {
   const pathname = usePathname();
+  const router = useRouter();
 
   const [isOpen, setIsOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -35,6 +36,23 @@ function DashboardHeader({ user }: { user: any }) {
     { href: '/dashboard/blog', label: 'Blog' },
     { href: '/dashboard/orders', label: 'Orders' },
   ];
+
+  const handleLogout = async () => {
+    try {
+      const response = await fetch('/api/auth/logout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        router.push('/admin/merci'); // Redirection vers la page de remerciement
+      }
+    } catch (error) {
+      console.error('Erreur lors de la déconnexion:', error);
+    }
+  };
 
   return (
     <header className="bg-white shadow fixed top-0 left-0 right-0 z-50">
@@ -118,22 +136,20 @@ function DashboardHeader({ user }: { user: any }) {
                     </div>
 
                     <div className="p-2">
-                      <form method="POST" action="/api/auth/logout">
-                        <button
-                          type="submit"
-                          className="flex w-full items-center gap-2 rounded-lg px-4 py-2 text-sm text-red-700 hover:bg-red-50"
-                        >
-                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth="1.5"
-                              d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 0 1 0 12h-3"
-                            />
-                          </svg>
-                          Se déconnecter
-                        </button>
-                      </form>
+                      <button
+                        onClick={handleLogout}
+                        className="flex w-full items-center gap-2 rounded-lg px-4 py-2 text-sm text-red-700 hover:bg-red-50"
+                      >
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="1.5"
+                            d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 0 1 0 12h-3"
+                          />
+                        </svg>
+                        Se déconnecter
+                      </button>
                     </div>
                   </div>
                 )}
