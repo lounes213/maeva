@@ -1,6 +1,6 @@
 'use client';
 import React, { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import Image from 'next/image';
 import { Product } from '@/app/types/product';
@@ -16,7 +16,7 @@ interface ProductFormProps {
 const ProductForm: React.FC<ProductFormProps> = ({ initialData, onSuccess, onCancel }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
-  const [previewUrls, setPreviewUrls] = useState<string[]>(initialData?.images || initialData?.imageUrls || []);
+  const [previewUrls, setPreviewUrls] = useState<string[]>(initialData?.images || []);
   const [selectedColors, setSelectedColors] = useState<string[]>(initialData?.couleurs || []);
 
   const { register, handleSubmit, formState: { errors }, watch, setValue } = useForm({
@@ -39,9 +39,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData, onSuccess, onCan
   });
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || e.target.files.length === 0) return;
-    
-    const files = Array.from(e.target.files);
+    const files = Array.from(e.target.files || []);
     setSelectedImages(prev => [...prev, ...files]);
     
     const newPreviewUrls = files.map(file => URL.createObjectURL(file));
@@ -50,12 +48,6 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData, onSuccess, onCan
 
   const removeImage = (index: number) => {
     setSelectedImages(prev => prev.filter((_, i) => i !== index));
-    
-    // Revoke object URL to avoid memory leaks
-    if (previewUrls[index] && previewUrls[index].startsWith('blob:')) {
-      URL.revokeObjectURL(previewUrls[index]);
-    }
-    
     setPreviewUrls(prev => prev.filter((_, i) => i !== index));
   };
 
@@ -65,91 +57,56 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData, onSuccess, onCan
   };
 
   const onSubmit = async (data: any) => {
+    setIsLoading(true);
+    const formData = new FormData();
+
+    // Vérifier que le champ 'category' est renseigné
+    if (!data.category || data.category.trim() === '') {
+      toast.error('Le champ catégorie est requis.');
+      setIsLoading(false);
+      return;
+    }
+
+    // Convertir les champs numériques en nombres
+    const processedData = {
+      ...data,
+      price: parseFloat(data.price),
+      reviewCount: parseInt(data.reviewCount, 10),
+      sold: parseInt(data.sold, 10),
+      stock: parseInt(data.stock, 10),
+    };
+
+    // Ajouter les données au FormData
+    Object.keys(processedData).forEach(key => {
+      if (key === 'promoPrice' && !processedData.promotion) {
+        return; // Ne pas inclure promoPrice si promotion est false
+      }
+      formData.append(key, processedData[key]);
+    });
+
+    // Ajouter les fichiers d'images
+    selectedImages.forEach(image => {
+      formData.append('images', image);
+    });
+
     try {
-      setIsLoading(true);
-      
-      // Input validation
-      if (!data.category || data.category.trim() === '') {
-        toast.error('Le champ catégorie est requis.');
-        setIsLoading(false);
-        return;
-      }
-      
-      if (!data.name || data.name.trim() === '') {
-        toast.error('Le nom du produit est requis.');
-        setIsLoading(false);
-        return;
-      }
-
-      // Create FormData object
-      const formData = new FormData();
-
-      // Add basic fields
-      formData.append('name', data.name);
-      formData.append('reference', data.reference || '');
-      formData.append('description', data.description || '');
-      formData.append('price', data.price.toString());
-      formData.append('stock', data.stock.toString());
-      formData.append('category', data.category);
-      formData.append('tissu', data.tissu || '');
-      
-      // Handle taille (size) - convert array to string if needed
-      if (Array.isArray(data.taille)) {
-        formData.append('taille', data.taille.join(','));
-      } else {
-        formData.append('taille', data.taille || '');
-      }
-      
-      // Handle promotion fields
-      formData.append('promotion', data.promotion ? 'true' : 'false');
-      if (data.promotion && data.promoPrice) {
-        formData.append('promoPrice', data.promoPrice.toString());
-      }
-      
-      // Add other numeric fields
-      formData.append('sold', (data.sold || 0).toString());
-      formData.append('rating', (data.rating || 0).toString());
-      formData.append('reviewCount', (data.reviewCount || 0).toString());
-      
-      // Add colors
-      if (selectedColors && selectedColors.length > 0) {
-        selectedColors.forEach(color => {
-          formData.append('couleurs', color);
-        });
-      }
-
-      // Add images
-      selectedImages.forEach(image => {
-        formData.append('images', image);
-      });
-
-      // Determine API URL and method
       const url = initialData ? `/api/products?id=${initialData._id}` : '/api/products';
       const method = initialData ? 'PUT' : 'POST';
 
-      // Make API request
-      console.log(`Sending ${method} request to ${url}`);
       const response = await fetch(url, {
         method,
         body: formData
       });
 
-      // Handle response
       if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        const errorMessage = errorData?.message || 'Erreur lors de l\'enregistrement du produit';
-        console.error('API response error:', response.status, errorMessage);
-        throw new Error(errorMessage);
+        throw new Error('Erreur lors de l\'enregistrement du produit');
       }
 
-      const result = await response.json();
-      console.log('API response success:', result);
-      
       toast.success(initialData ? 'Produit mis à jour avec succès' : 'Produit créé avec succès');
       onSuccess();
     } catch (error) {
       console.error('Erreur lors de l\'enregistrement :', error);
-      toast.error(error instanceof Error ? error.message : 'Une erreur est survenue');
+      toast.error('Une erreur est survenue');
     } finally {
       setIsLoading(false);
     }
@@ -306,7 +263,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData, onSuccess, onCan
       </div>
 
       <div>
-        <CouleursPicker onChange={handleColorsChange} initialColors={selectedColors} />
+        <CouleursPicker onChange={handleColorsChange} />
         {selectedColors.length > 0 && (
           <div className="mt-2">
             <p className="text-sm text-gray-500">Couleurs sélectionnées:</p>
@@ -334,15 +291,13 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData, onSuccess, onCan
           {previewUrls.map((url, index) => (
             <div key={index} className="relative group">
               <div className="aspect-w-1 aspect-h-1 w-full overflow-hidden rounded-lg bg-gray-100">
-                <div className="relative w-full h-32">
-                  <Image
-                    src={url}
-                    alt={`Preview ${index + 1}`}
-                    fill
-                    style={{ objectFit: 'cover' }}
-                    className="object-center"
-                  />
-                </div>
+                <Image
+                  src={url}
+                  alt={`Preview ${index + 1}`}
+                  layout="fill"
+                  objectFit="cover"
+                  className="object-center"
+                />
               </div>
               <button
                 type="button"
