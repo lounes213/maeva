@@ -7,7 +7,6 @@ import { promises as fsp } from 'fs';
 import { v4 as uuidv4 } from 'uuid';
 import dbConnect from "@/lib/mongo";
 import slugify from "@/lib/utils";
-import toast from "react-hot-toast";
 
 export const config = {
   api: {
@@ -15,7 +14,6 @@ export const config = {
   },
 };
 
-// Amélioration des messages d'erreur avec des toasts spécifiques
 export async function POST(req: NextRequest) {
   try {
     await dbConnect();
@@ -33,7 +31,6 @@ export async function POST(req: NextRequest) {
       const tags = formData.get('tags')?.toString().split(',').map(t => t.trim()) || [];
 
       if (!title || !content) {
-        toast.error("Le titre et le contenu sont obligatoires.");
         return NextResponse.json({ error: "Title and content are required" }, { status: 400 });
       }
 
@@ -74,15 +71,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(savedPost, { status: 201 });
     }
 
-    toast.error("Type de contenu non pris en charge.");
     return NextResponse.json({ error: "Unsupported Content-Type" }, { status: 415 });
   } catch (error: any) {
-    toast.error("Erreur lors de la création de l'article de blog.");
+    console.error("API Error:", error);
     return NextResponse.json({ error: error.message || "Failed to create blog post" }, { status: 500 });
   }
 }
 
-// Amélioration des messages d'erreur avec des toasts spécifiques
 export async function GET(req: NextRequest) {
   try {
     await dbConnect();
@@ -126,6 +121,7 @@ export async function GET(req: NextRequest) {
       }
     });
   } catch (error: any) {
+    console.error("API Error:", error);
     return NextResponse.json({ error: error.message || "Failed to get blog posts" }, { status: 500 });
   }
 }
@@ -138,35 +134,35 @@ export async function PUT(req: NextRequest) {
     const slug = searchParams.get('slug');
 
     if (!slug) {
-      return NextResponse.json({ error: "Le slug est requis" }, { status: 400 });
+      return NextResponse.json({ error: "Slug parameter is required" }, { status: 400 });
     }
 
     const existingPost = await BlogPost.findOne({ slug });
     if (!existingPost) {
-      return NextResponse.json({ error: "Article non trouvé" }, { status: 404 });
+      return NextResponse.json({ error: "Blog post not found" }, { status: 404 });
     }
 
     const formData = await req.formData();
     const fields: any = {};
 
-    // Traitement des champs textuels
+    // Process text fields
     for (const [key, value] of formData.entries()) {
       if (typeof value === 'string') {
         fields[key] = value;
       }
     }
 
-    // Traitement des tags s'ils sont présents
+    // Process tags if present
     if (fields.tags) {
       fields.tags = fields.tags.split(',').map((tag: string) => tag.trim());
     }
 
-    // Génération du nouveau slug si le titre est modifié
+    // Generate new slug if title is modified
     if (fields.title && !fields.slug) {
       fields.slug = slugify(fields.title);
     }
 
-    // Traitement des images
+    // Process images
     const images = formData.getAll('images') as File[];
     if (images.length > 0) {
       const uploadDir = path.join(process.cwd(), 'public/uploads/blog');
@@ -202,17 +198,19 @@ export async function PUT(req: NextRequest) {
     );
 
     if (!updatedPost) {
-      return NextResponse.json({ error: "Erreur lors de la mise à jour" }, { status: 500 });
+      return NextResponse.json({ error: "Error updating blog post" }, { status: 500 });
     }
 
     return NextResponse.json(updatedPost);
   } catch (error: any) {
+    console.error("API Error:", error);
     return NextResponse.json(
-      { error: error.message || "Erreur lors de la mise à jour de l'article" },
+      { error: error.message || "Failed to update blog post" },
       { status: 500 }
     );
   }
 }
+
 export async function DELETE(req: NextRequest) {
   try {
     await dbConnect();

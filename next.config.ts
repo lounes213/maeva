@@ -1,12 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
-  
-};
-module.exports = {
+  /* other config options here */
   images: {
-    domains: ['https://maevashop.netlify.app/'], // Correction du domaine pour autoriser les images locales
+    domains: ['localhost', 'maevashop.netlify.app'], // Added your Netlify domain
   },
+  // Add any other configuration options here
 };
-export default nextConfig;
+
+module.exports = nextConfig;

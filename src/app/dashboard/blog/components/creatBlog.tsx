@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, FormEvent, ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 import slugify from "@/lib/utils";
+import toast from "react-hot-toast"; // Toast should only be used in client components
 
 interface FormDataState {
   title: string;
@@ -44,12 +45,12 @@ export default function CreateBlogForm({ blog, onCreated, onEdited }: CreateBlog
         content: blog.content || "",
         excerpt: blog.excerpt || "",
         category: blog.category || "Uncategorized",
-        tags: blog.tags || "",
+        tags: blog.tags ? blog.tags.join(", ") : "", // Join array to string
         images: [],
       });
 
-      if (blog.imageUrls?.length) {
-        setImagePreviews(blog.imageUrls);
+      if (blog.image) {
+        setImagePreviews([blog.image]);
       }
     }
   }, [blog]);
@@ -66,8 +67,7 @@ export default function CreateBlogForm({ blog, onCreated, onEdited }: CreateBlog
     if (!files) return;
 
     const selectedFiles = Array.from(files);
-    const newPreviews: string[] = [];
-
+    
     selectedFiles.forEach((file) => {
       const reader = new FileReader();
       reader.onload = () => {
@@ -97,6 +97,7 @@ export default function CreateBlogForm({ blog, onCreated, onEdited }: CreateBlog
 
     try {
       if (!formData.title || !formData.content) {
+        toast.error("Title and content are required");
         throw new Error("Title and content are required");
       }
 
@@ -120,12 +121,15 @@ export default function CreateBlogForm({ blog, onCreated, onEdited }: CreateBlog
         body: postData,
       });
 
+      const data = await response.json();
+      
       if (!response.ok) {
-        const data = await response.json();
+        toast.error(data.error || "Failed to save blog post");
         throw new Error(data.error || "Failed to save blog post");
       }
 
-      const result = await response.json();
+      // Success handling
+      toast.success(blog ? "Blog post updated!" : "Blog post created!");
       setSuccessMessage(blog ? "Blog post updated!" : "Blog post created!");
 
       if (!blog) {
@@ -141,8 +145,8 @@ export default function CreateBlogForm({ blog, onCreated, onEdited }: CreateBlog
         if (fileInputRef.current) fileInputRef.current.value = "";
       }
 
-      if (blog && onEdited) onEdited(result);
-      if (!blog && onCreated) onCreated(result);
+      if (blog && onEdited) onEdited(data);
+      if (!blog && onCreated) onCreated(data);
 
       setTimeout(() => {
         router.push("/dashboard/blog");
