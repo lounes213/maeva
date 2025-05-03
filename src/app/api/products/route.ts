@@ -209,24 +209,37 @@ export async function PUT(req: Request) {
   }
 }
 
-// DELETE - Remove product
+
+
 export async function DELETE(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
-    if (!id) return errorResponse('ID du produit est requis', 400);
+    if (!id) {
+      return NextResponse.json(
+        { error: 'ID du produit est requis' },
+        { status: 400 }
+      );
+    }
 
     await dbConnect();
     const product = await Product.findById(id);
-    if (!product) return errorResponse('Produit non trouvé', 404);
+    if (!product) {
+      return NextResponse.json(
+        { error: 'Produit non trouvé' },
+        { status: 404 }
+      );
+    }
 
-    // Delete associated images
-    if (product.imageUrls && product.imageUrls.length > 0) {
+    // Check if running locally (skip deletion on Netlify/Vercel)
+    const isLocal = process.env.NODE_ENV === 'development';
+
+    if (isLocal && product.imageUrls && product.imageUrls.length > 0) {
       for (const imageUrl of product.imageUrls) {
         const fileName = imageUrl.split('/').pop();
         if (!fileName) continue;
 
-        const filePath = path.join(process.cwd(), 'public', imageUrl);
+        const filePath = path.join(process.cwd(), 'public', 'uploads', 'products', fileName);
         if (fs.existsSync(filePath)) {
           await fs.promises.unlink(filePath);
         }
@@ -234,21 +247,16 @@ export async function DELETE(req: Request) {
     }
 
     await Product.findByIdAndDelete(id);
-    return NextResponse.json({ 
-      success: true, 
-      message: 'Produit supprimé avec succès' 
-    });
 
-  } catch (error) {
-    const errorMessage = logError(error);
-    return errorResponse(`Échec de la suppression du produit: ${errorMessage}`);
+    return NextResponse.json({
+      success: true,
+      message: 'Produit supprimé avec succès',
+    });
+  } catch (error: any) {
+    console.error('Erreur de suppression:', error);
+    return NextResponse.json(
+      { error: error.message || 'Échec de la suppression du produit' },
+      { status: 500 }
+    );
   }
 }
-
-
-
-
-
-
-
-
