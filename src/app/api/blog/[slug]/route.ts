@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongo';
 import BlogPost from '@/app/models/blog';
-
 export async function PUT(request: NextRequest) {
   try {
     await dbConnect();
 
     const url = new URL(request.url);
-    const slug = url.pathname.split('/').pop();
+    const slug = url.searchParams.get('slug');
 
     if (!slug) {
       return NextResponse.json({ error: 'Slug parameter is required' }, { status: 400 });
