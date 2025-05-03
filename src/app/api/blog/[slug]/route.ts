@@ -1,21 +1,21 @@
-import { NextRequest, NextResponse } from "next/server";
-import dbConnect from "@/lib/mongo";
-import BlogPost from "@/app/models/blog";
+import { NextRequest, NextResponse } from 'next/server';
+import dbConnect from '@/lib/mongo';
+import BlogPost from '@/app/models/blog';
 
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: { slug: string } }
-) {
+export async function PUT(request: NextRequest) {
   try {
     await dbConnect();
-    const { slug } = params;
+
+    const url = new URL(request.url);
+    const slug = url.pathname.split('/').pop();
+
     if (!slug) {
-      return NextResponse.json({ error: "Slug parameter is required" }, { status: 400 });
+      return NextResponse.json({ error: 'Slug parameter is required' }, { status: 400 });
     }
 
-    const contentType = request.headers.get("content-type") || "";
-    if (!contentType.includes("application/json")) {
-      return NextResponse.json({ error: "Unsupported Content-Type" }, { status: 415 });
+    const contentType = request.headers.get('content-type') || '';
+    if (!contentType.includes('application/json')) {
+      return NextResponse.json({ error: 'Unsupported Content-Type' }, { status: 415 });
     }
 
     const body = await request.json();
@@ -26,11 +26,11 @@ export async function PUT(
     );
 
     if (!updatedPost) {
-      return NextResponse.json({ error: "Blog post not found" }, { status: 404 });
+      return NextResponse.json({ error: 'Blog post not found' }, { status: 404 });
     }
 
     return NextResponse.json(updatedPost);
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || "Failed to update blog post" }, { status: 500 });
+    return NextResponse.json({ error: error.message || 'Failed to update blog post' }, { status: 500 });
   }
 }
