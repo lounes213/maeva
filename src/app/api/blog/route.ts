@@ -213,7 +213,6 @@ export async function PUT(req: NextRequest) {
     );
   }
 }
-
 export async function DELETE(req: NextRequest) {
   try {
     await dbConnect();
@@ -230,21 +229,25 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: 'Blog post not found' }, { status: 404 });
     }
 
+    // Delete the database record
     await BlogPost.findOneAndDelete({ slug });
 
-    if (post.image && post.image.startsWith('/uploads/')) {
-      try {
-        const imagePath = path.join(process.cwd(), 'public', post.image);
-        if (fs.existsSync(imagePath)) {
+    // Only attempt to delete local image files if in development mode
+    const isLocal = process.env.NODE_ENV === 'development';
+    if (isLocal && post.image && post.image.startsWith('/uploads/')) {
+      const imagePath = path.join(process.cwd(), 'public', post.image);
+      if (fs.existsSync(imagePath)) {
+        try {
           await fsp.unlink(imagePath);
+        } catch (error) {
+          console.error("Error deleting image file:", error);
         }
-      } catch (error) {
-        toast.error("Error deleting image file:");
       }
     }
 
     return NextResponse.json({ message: 'Blog post deleted successfully' });
   } catch (error: any) {
+    console.error("Error in DELETE handler:", error);
     return NextResponse.json({ error: error.message || "Failed to delete blog post" }, { status: 500 });
   }
 }
