@@ -197,7 +197,7 @@ const filteredProducts = products.filter(product => {
     <div className="bg-white">
       <Header/>
       <div className="relative bg-gradient-to-b from-amber-50 to-white overflow-hidden">
-        <div className="absolute inset-0 bg-[url('/images/geometric-pattern.png.png')] bg-repeat opacity-10"></div>
+        <div className="absolute inset-0 bg-[url('/images/geometric-pattern.png')] bg-repeat opacity-10"></div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24 relative z-10 text-center">
           <h1 className="text-4xl md:text-5xl font-bold text-gray-900 font-serif mb-4">
             Boutique <span className="text-amber-600">MAEVA</span>
@@ -329,26 +329,24 @@ const filteredProducts = products.filter(product => {
               {sizes.length > 0 && (
                 <div className="border-b border-gray-200 pb-6">
                   <h3 className="font-medium text-gray-900 mb-4">Tailles</h3>
-                  <div className="space-y-3">
-                    {sizes.map((size) => (
-                      <div key={size} className="flex items-center">
-                        <button
-                          onClick={() => toggleSize(size)}
-                          className={`flex items-center justify-center w-5 h-5 rounded border ${
-                            selectedSizes.includes(size)
-                              ? 'bg-amber-600 border-amber-600 text-white'
-                              : 'border-gray-300 text-transparent'
-                          }`}
-                        >
-                          <FiCheck className="w-3 h-3" />
-                        </button>
-                        <label 
-                          onClick={() => toggleSize(size)}
-                          className="ml-3 text-sm text-gray-600 capitalize cursor-pointer"
-                        >
-                          {size}
-                        </label>
-                      </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    {Array.from(new Set(sizes.flatMap(size => 
+                      size.split(',').map(s => s.trim())
+                    ))).sort().map((size) => (
+                      <button
+                        key={size}
+                        onClick={() => toggleSize(size)}
+                        className={`
+                          flex items-center justify-center px-3 py-2 rounded-md text-sm
+                          ${selectedSizes.includes(size)
+                            ? 'bg-amber-600 text-white border-amber-600'
+                            : 'bg-white text-gray-600 border border-gray-300 hover:border-amber-600 hover:text-amber-600'
+                          }
+                          transition-all duration-200
+                        `}
+                      >
+                        {size}
+                      </button>
                     ))}
                   </div>
                 </div>
@@ -400,93 +398,151 @@ const filteredProducts = products.filter(product => {
                 </div>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-8">
                 {sortedProducts.map((product) => (
-                  <div key={product._id} className="group relative bg-white border border-gray-100 rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
-                    <Link href={`/product/${product._id}`} className="block">
-                      <div className="aspect-square relative bg-gray-50">
+                  <div 
+                    key={product._id} 
+                    className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2"
+                  >
+                    <Link href={`/product/${product._id}`} className="block relative">
+                      <div className="aspect-[3/4] relative bg-gray-50 overflow-hidden">
                         {product.imageUrls?.[0] ? (
                           <Image
                             src={product.imageUrls[0]}
                             alt={product.name}
                             fill
-                            className="object-cover group-hover:opacity-90 transition-opacity"
-                            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                            className="object-cover transform group-hover:scale-110 transition-transform duration-700 ease-in-out"
+                            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                            priority
                           />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-gray-400">
-                            <FiShoppingBag className="w-8 h-8" />
+                            <FiShoppingBag className="w-12 h-12" />
                           </div>
                         )}
-                        {product.promotion && (
-                          <span className="absolute top-2 left-2 bg-amber-600 text-white text-xs font-bold px-2 py-1 rounded-full shadow-sm">
-                            PROMO
-                          </span>
-                        )}
-                        {product.sold && product.sold > 5 && (
-                          <span className="absolute top-2 right-2 bg-white text-amber-600 text-xs font-bold px-2 py-1 rounded-full shadow-sm">
-                            {product.sold}+ vendus
-                          </span>
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                        <div className="absolute top-0 left-0 w-full p-4 space-y-2">
+                          {product.promotion && (
+                            <span className="inline-block bg-gradient-to-r from-red-500 to-rose-600 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg animate-pulse">
+                              PROMO
+                            </span>
+                          )}
+                          {product.sold && product.sold > 5 && (
+                            <div className="inline-flex items-center bg-white/95 backdrop-blur-sm text-amber-600 text-xs font-medium px-3 py-1.5 rounded-full shadow-sm">
+                              <FiStar className="w-3 h-3 mr-1" fill="currentColor" />
+                              {product.sold}+ vendus
+                            </div>
+                          )}
+                        </div>
+                        {product.stock <= 5 && product.stock > 0 && (
+                          <div className="absolute bottom-0 left-0 w-full p-4">
+                            <div className="bg-orange-500/90 backdrop-blur-sm text-white text-xs font-medium px-3 py-1.5 rounded-full text-center animate-pulse">
+                              Plus que {product.stock} en stock !
+                            </div>
+                          </div>
                         )}
                       </div>
-                      <div className="p-4">
-                        <h3 className="font-medium text-gray-900 mb-1 line-clamp-1">{product.name}</h3>
-                        <p className="text-sm text-gray-500 mb-2 capitalize">{product.category.toLowerCase()}</p>
+                      
+                      <div className="p-6">
+                        <div className="mb-4">
+                          <h3 className="font-semibold text-gray-900 text-lg mb-2 line-clamp-1 group-hover:text-amber-600 transition-colors">
+                            {product.name}
+                          </h3>
+                          <p className="text-sm text-gray-500 capitalize flex items-center">
+                            <span className="w-1.5 h-1.5 bg-amber-500 rounded-full mr-2"></span>
+                            {product.category.toLowerCase()}
+                          </p>
+                        </div>
                         
-                        <div className="flex justify-between items-center mb-2">
-                          <div>
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="space-y-1">
                             {product.promotion && product.promoPrice ? (
                               <>
-                                <span className="font-bold text-amber-600">{product.promoPrice.toFixed(2)} DA</span>
-                                <span className="ml-2 text-xs text-gray-500 line-through">{product.price.toFixed(2)} DA</span>
+                                <div className="font-bold text-xl text-red-500">{product.promoPrice.toLocaleString()} DA</div>
+                                <div className="text-sm text-gray-400 line-through">{product.price.toLocaleString()} DA</div>
+                                <div className="text-xs text-green-600 font-medium">
+                                  -{Math.round(((product.price - product.promoPrice) / product.price) * 100)}%
+                                </div>
                               </>
                             ) : (
-                              <span className="font-bold text-amber-600">{product.price.toFixed(2)} DA</span>
+                              <div className="font-bold text-xl text-amber-600">{product.price.toLocaleString()} DA</div>
                             )}
                           </div>
                           {product.rating && (
-                            <div className="flex items-center">
-                              <FiStar className="text-amber-400 w-3 h-3" fill="currentColor" />
-                              <span className="ml-1 text-xs text-gray-600">{product.rating.toFixed(1)}</span>
+                            <div className="flex items-center bg-amber-50 px-3 py-2 rounded-lg">
+                              <FiStar className="text-amber-500 w-4 h-4" fill="currentColor" />
+                              <span className="ml-1.5 font-semibold text-amber-700">{product.rating.toFixed(1)}</span>
                             </div>
                           )}
                         </div>
                         
-                        {product.tissu && (
-                          <p className="text-xs text-gray-500 mb-2">Tissu: {product.tissu}</p>
-                        )}
-                        
-                      {product.couleurs && product.couleurs.length > 0 && (
-  <div className="flex gap-1 mt-2">
-    {processColors(product.couleurs).slice(0, 4).map((color) => {
-      const colorInfo = getColorModel(color);
-      return (
-        <span
-          key={color}
-          className="w-4 h-4 rounded-full border border-gray-200"
-          style={{ backgroundColor: colorInfo.hex }}
-          title={colorInfo.french}
-        />
-      );
-    })}
-    {processColors(product.couleurs).length > 4 && (
-      <span className="text-xs text-gray-400">+{processColors(product.couleurs).length - 4}</span>
-    )}
-  </div>
-)}
+                        <div className="space-y-3">
+                          {product.tissu && (
+                            <p className="text-sm text-gray-600 flex items-center">
+                              <span className="w-2 h-2 bg-amber-600 rounded-full mr-2"></span>
+                              Tissu: <span className="font-medium ml-1">{product.tissu}</span>
+                            </p>
+                          )}
+                          
+                          {product.couleurs && product.couleurs.length > 0 && (
+                            <div className="flex items-center gap-3">
+                              <span className="text-sm text-gray-500">Couleurs:</span>
+                              <div className="flex -space-x-2 hover:space-x-1 transition-all duration-200">
+                                {processColors(product.couleurs).slice(0, 4).map((color) => {
+                                  const colorInfo = getColorModel(color);
+                                  return (
+                                    <span
+                                      key={color}
+                                      className="w-7 h-7 rounded-full border-2 border-white ring-2 ring-gray-200 transition-transform hover:scale-110 hover:z-10"
+                                      style={{ backgroundColor: colorInfo.hex }}
+                                      title={colorInfo.french}
+                                    />
+                                  );
+                                })}
+                                {processColors(product.couleurs).length > 4 && (
+                                  <span className="w-7 h-7 rounded-full bg-gray-100 border-2 border-white ring-2 ring-gray-200 flex items-center justify-center text-xs font-medium text-gray-600 hover:scale-110 hover:z-10 transition-transform">
+                                    +{processColors(product.couleurs).length - 4}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          {product.taille && product.taille.length > 0 && (
+                            <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
+                              <span className="text-sm text-gray-500 flex-shrink-0">Tailles:</span>
+                              <div className="flex gap-1.5">
+                                {processSizes(product.taille).map((size) => (
+                                  <span
+                                    key={size}
+                                    className="px-2 py-1 text-xs font-medium text-gray-600 bg-gray-100 rounded-md"
+                                  >
+                                    {size}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </Link>
-                    <button 
-                      className={`w-full mt-2 flex items-center justify-center gap-2 py-2 text-sm ${
-                        product.stock > 0
-                          ? 'bg-amber-600 text-white hover:bg-amber-700'
-                          : 'bg-gray-200 text-gray-600 cursor-not-allowed'
-                      }`}
-                      disabled={product.stock <= 0}
-                    >
-                      <FiShoppingBag size={14} />
-                      {product.stock > 0 ? 'Ajouter au panier' : 'En rupture'}
-                    </button>
+
+                    <div className="p-6 pt-0">
+                      <button 
+                        className={`
+                          w-full flex items-center justify-center gap-2 py-3.5 px-4 rounded-xl text-sm font-medium
+                          transition-all duration-300 transform hover:scale-[1.02]
+                          ${product.stock > 0
+                            ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-white hover:from-amber-600 hover:to-amber-700 shadow-lg hover:shadow-xl hover:shadow-amber-200'
+                            : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                          }
+                        `}
+                        disabled={product.stock <= 0}
+                      >
+                        <FiShoppingBag className={product.stock > 0 ? 'text-white' : 'text-gray-400'} size={18} />
+                        {product.stock > 0 ? 'Ajouter au panier' : 'En rupture'}
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -592,26 +648,24 @@ const filteredProducts = products.filter(product => {
                 {sizes.length > 0 && (
                   <div className="border-b border-gray-200 pb-6">
                     <h3 className="font-medium text-gray-900 mb-4">Tailles</h3>
-                    <div className="space-y-3">
-                      {sizes.map((size) => (
-                        <div key={size} className="flex items-center">
-                          <button
-                            onClick={() => toggleSize(size)}
-                            className={`flex items-center justify-center w-5 h-5 rounded border ${
-                              selectedSizes.includes(size)
-                                ? 'bg-amber-600 border-amber-600 text-white'
-                                : 'border-gray-300 text-transparent'
-                            }`}
-                          >
-                            <FiCheck className="w-3 h-3" />
-                          </button>
-                          <label 
-                            onClick={() => toggleSize(size)}
-                            className="ml-3 text-sm text-gray-600 capitalize cursor-pointer"
-                          >
-                            {size}
-                          </label>
-                        </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      {Array.from(new Set(sizes.flatMap(size => 
+                        size.split(',').map(s => s.trim())
+                      ))).sort().map((size) => (
+                        <button
+                          key={size}
+                          onClick={() => toggleSize(size)}
+                          className={`
+                            flex items-center justify-center px-3 py-2 rounded-md text-sm
+                            ${selectedSizes.includes(size)
+                              ? 'bg-amber-600 text-white border-amber-600'
+                              : 'bg-white text-gray-600 border border-gray-300 hover:border-amber-600 hover:text-amber-600'
+                            }
+                            transition-all duration-200
+                          `}
+                        >
+                          {size}
+                        </button>
                       ))}
                     </div>
                   </div>

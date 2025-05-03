@@ -1,10 +1,12 @@
 'use client';
 import React, { useState } from 'react';
-import { FiAlertCircle, FiCheckCircle, FiClock, FiEdit, FiTrash2, FiTruck, FiXCircle } from 'react-icons/fi';
+import { FiAlertCircle, FiCheckCircle, FiClock, FiEdit, FiTrash2, FiTruck, FiXCircle, FiStar } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import { Product } from '@/app/types/product';
 import ProductForm from './NewProductForm';
 import Modal from './modal';
+import Image from 'next/image';
+import { FiEdit2, FiEye } from 'react-icons/fi';
 
 interface ProductTableProps {
   products: Product[];
@@ -15,7 +17,14 @@ const ProductTable: React.FC<ProductTableProps> = ({ products, refreshProducts }
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [hoveredRow, setHoveredRow] = useState<number | null>(null);
+
+  const handleView = (product: Product) => {
+    setSelectedProduct(product);
+    setIsViewModalOpen(true);
+  };
 
   const handleEdit = (product: Product) => {
     setSelectedProduct(product);
@@ -61,157 +70,310 @@ const ProductTable: React.FC<ProductTableProps> = ({ products, refreshProducts }
     }
   };
 
-  const getDeliveryStatusStyle = (status: string) => {
-    switch (status) {
-      case 'en attente':
-        return { bg: 'bg-yellow-100', text: 'text-yellow-800', icon: <FiClock className="text-sm" /> };
-      case 'expédié':
-        return { bg: 'bg-blue-100', text: 'text-blue-800', icon: <FiTruck className="text-sm" /> };
-      case 'livré':
-        return { bg: 'bg-green-100', text: 'text-green-800', icon: <FiCheckCircle className="text-sm" /> };
-      case 'annulé':
-        return { bg: 'bg-red-100', text: 'text-red-800', icon: <FiXCircle className="text-sm" /> };
-      case 'retourné':
-        return { bg: 'bg-purple-100', text: 'text-purple-800', icon: <FiAlertCircle className="text-sm" /> };
-      default:
-        return { bg: 'bg-gray-100', text: 'text-gray-600', icon: <FiAlertCircle className="text-sm" /> };
-    }
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('fr-FR', {
+      style: 'currency',
+      currency: 'EUR'
+    }).format(price);
   };
 
   return (
     <div className="overflow-x-auto">
-      <table className="min-w-full bg-white rounded-lg overflow-hidden">
-        <thead className="bg-gray-100 text-sm text-gray-600">
+      <table className="min-w-full divide-y divide-gray-200">
+        <thead className="bg-gray-50">
           <tr>
-            <th className="py-3 px-4 text-left">Image</th>
-            <th className="py-3 px-4 text-left">Nom</th>
-            <th className="py-3 px-4 text-left">Prix</th>
-            <th className="py-3 px-4 text-left">Stock</th>
-            <th className="py-3 px-4 text-left">Vendu</th>
-            <th className="py-3 px-4 text-left">Catégorie</th>
-            <th className="py-3 px-4 text-left">Tissu</th>
-            <th className="py-3 px-4 text-left">Couleurs</th>
-            <th className="py-3 px-4 text-left">Tailles</th>
-            <th className="py-3 px-4 text-left">Promotion</th>
-            <th className="py-3 px-4 text-left">Date Livraison</th>
-            <th className="py-3 px-4 text-left">Statut Livraison</th>
-            <th className="py-3 px-4 text-left">Créé le</th>
-            <th className="py-3 px-4 text-left">Actions</th>
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Produit
+            </th>
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Catégorie
+            </th>
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Prix
+            </th>
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Stock
+            </th>
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Vendus
+            </th>
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Promotion
+            </th>
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Avis
+            </th>
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Actions
+            </th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-gray-200 text-sm">
-          {products.map((product) => {
-            const statusStyle = getDeliveryStatusStyle(product.deliveryStatus || '');
-            
-            return (
-              <tr key={product._id} className="hover:bg-gray-50">
-                <td className="py-3 px-4">
-                  {product.imageUrls?.[0] ? (
-                    <img
-                      src={product.imageUrls[0]}
-                      alt={product.name}
-                      className="h-12 w-12 object-cover rounded"
-                    />
-                  ) : (
-                    <div className="h-12 w-12 bg-gray-200 rounded flex items-center justify-center">
-                      <span className="text-gray-500 text-xs">Aucune image</span>
-                    </div>
-                  )}
-                </td>
-                <td className="py-3 px-4">
-                  <div className="font-medium">{product.name}</div>
-                  <div className="text-gray-500 text-xs line-clamp-1">{product.description}</div>
-                </td>
-                <td className="py-3 px-4">{product.price.toFixed(2)}€</td>
-                <td className="py-3 px-4">{product.stock}</td>
-                <td className="py-3 px-4">{product.sold ?? 0}</td>
-                <td className="py-3 px-4 capitalize">{product.category}</td>
-                <td className="py-3 px-4 capitalize">{product.tissu || '—'}</td>
-                <td className="py-3 px-4">
-                  {product.couleurs?.length ? (
-                    <div className="flex flex-wrap gap-1">
-                      {product.couleurs.map((color, i) => (
-                        <span 
-                          key={i}
-                          className="px-2 py-1 text-xs rounded capitalize"
-                          style={{ backgroundColor: `${color}20`, color: color }}
-                        >
-                          {color}
-                        </span>
-                      ))}
-                    </div>
-                  ) : (
-                    '—'
-                  )}
-                </td>
-                <td className="py-3 px-4">
-                  {product.taille?.length ? (
-                    <div className="flex flex-wrap gap-1">
-                      {product.taille.map((size, i) => (
-                        <span 
-                          key={i}
-                          className="px-2 py-1 text-xs bg-gray-100 rounded"
-                        >
-                          {size}
-                        </span>
-                      ))}
-                    </div>
-                  ) : (
-                    '—'
-                  )}
-                </td>
-                <td className="py-3 px-4">
-                  {product.promotion ? (
-                    <span className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded">Oui</span>
-                  ) : (
-                    <span className="px-2 py-1 text-xs bg-gray-100 text-gray-500 rounded">Non</span>
-                  )}
-                </td>
-                <td className="py-3 px-4">
-                  {product.deliveryDate
-                    ? new Date(product.deliveryDate).toLocaleDateString('fr-FR')
-                    : '—'}
-                </td>
-                <td className="py-3 px-4 capitalize">
-                  {product.deliveryStatus ? (
-                    <span
-                      className={`inline-flex items-center gap-1 px-2 py-1 text-xs rounded font-medium ${statusStyle.bg} ${statusStyle.text}`}
-                    >
-                      {statusStyle.icon}
-                      {product.deliveryStatus}
-                    </span>
-                  ) : (
-                    '—'
-                  )}
-                </td>
-                <td className="py-3 px-4">
-                  {product.createdAt
-                    ? new Date(product.createdAt).toLocaleDateString('fr-FR')
-                    : '—'}
-                </td>
-                <td className="py-3 px-4">
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={() => handleEdit(product)}
-                      className="text-blue-600 hover:text-blue-800 p-1"
-                      title="Modifier"
-                    >
-                      <FiEdit size={18} />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(product)}
-                      className="text-red-600 hover:text-red-800 p-1"
-                      title="Supprimer"
-                    >
-                      <FiTrash2 size={18} />
-                    </button>
+        <tbody className="bg-white divide-y divide-gray-200">
+          {products.map((product, index) => (
+            <tr 
+              key={product._id}
+              onMouseEnter={() => setHoveredRow(index)}
+              onMouseLeave={() => setHoveredRow(null)}
+              className="hover:bg-gray-50 transition-colors duration-150 ease-in-out"
+            >
+              <td className="px-6 py-4 whitespace-nowrap">
+                <div className="flex items-center">
+                  <div className="h-12 w-12 flex-shrink-0 overflow-hidden rounded-lg bg-gray-100">
+                    {product.images?.[0] ? (
+                      <Image
+                        src={product.images[0]}
+                        alt={product.name}
+                        width={48}
+                        height={48}
+                        className="h-12 w-12 object-cover object-center"
+                      />
+                    ) : (
+                      <Image
+                        src="/images/image1.jpg" // Utilisation d'une image existante comme image par défaut
+                        alt="Image par défaut"
+                        width={48}
+                        height={48}
+                        className="h-12 w-12 object-cover object-center"
+                      />
+                    )}
                   </div>
-                </td>
-              </tr>
-            );
-          })}
+                  <div className="ml-4">
+                    <div className="text-sm font-medium text-gray-900">{product.name}</div>
+                    <div className="text-sm text-gray-500">{product.reference}</div>
+                  </div>
+                </div>
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap">
+                <span className="px-2 py-1 text-xs font-medium rounded-full bg-indigo-100 text-indigo-800">
+                  {product.category}
+                </span>
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap">
+                <div className="flex flex-col">
+                  <span className="text-sm text-gray-900 font-medium">
+                    {formatPrice(product.price)}
+                  </span>
+                  {product.promotion && product.promoPrice && (
+                    <span className="text-xs text-red-600">
+                      Promo: {formatPrice(product.promoPrice)}
+                    </span>
+                  )}
+                </div>
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap">
+                <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                  product.stock > 10 
+                    ? 'bg-green-100 text-green-800'
+                    : product.stock > 0 
+                    ? 'bg-yellow-100 text-yellow-800'
+                    : 'bg-red-100 text-red-800'
+                }`}>
+                  {product.stock} en stock
+                </span>
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap">
+                <span className="text-sm text-gray-900">
+                  {product.sold || 0}
+                </span>
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap">
+                <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${
+                  product.promotion
+                    ? 'bg-green-100 text-green-800'
+                    : 'bg-gray-100 text-gray-800'
+                }`}>
+                  {product.promotion ? 'Active' : 'Inactive'}
+                </span>
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap">
+                <div className="flex items-center">
+                  <div className="flex">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <FiStar
+                        key={i}
+                        className={`w-4 h-4 ${
+                          i < (product.rating || 0)
+                            ? 'text-yellow-400 fill-current'
+                            : 'text-gray-300'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  <span className="ml-2 text-sm text-gray-500">
+                    ({product.reviews ? JSON.parse(product.reviews).length : 0})
+                  </span>
+                </div>
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                <div className="flex space-x-3">
+                  <button 
+                    className="text-indigo-600 hover:text-indigo-900"
+                    onClick={() => handleView(product)}
+                  >
+                    <FiEye className="h-5 w-5" />
+                  </button>
+                  <button 
+                    className="text-blue-600 hover:text-blue-900"
+                    onClick={() => handleEdit(product)}
+                  >
+                    <FiEdit2 className="h-5 w-5" />
+                  </button>
+                  <button 
+                    className="text-red-600 hover:text-red-900"
+                    onClick={() => handleDelete(product)}
+                  >
+                    <FiTrash2 className="h-5 w-5" />
+                  </button>
+                </div>
+              </td>
+            </tr>
+          ))}
         </tbody>
       </table>
+
+      {/* View Modal */}
+      <Modal
+        isOpen={isViewModalOpen}
+        onClose={() => setIsViewModalOpen(false)}
+        title="Détails du produit"
+      >
+        {selectedProduct && (
+          <div className="space-y-6">
+            <div className="aspect-w-16 aspect-h-9 mb-4">
+              <div className="grid grid-cols-2 gap-2">
+                {selectedProduct.images?.map((image, index) => (
+                  <div key={index} className="relative aspect-square rounded-lg overflow-hidden bg-gray-100">
+                    <Image
+                      src={image}
+                      alt={`${selectedProduct.name} - image ${index + 1}`}
+                      layout="fill"
+                      objectFit="cover"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+              <div>
+                <span className="text-sm text-gray-500">Référence</span>
+                <p className="font-medium">{selectedProduct.reference}</p>
+              </div>
+              
+              <div>
+                <span className="text-sm text-gray-500">Catégorie</span>
+                <p className="font-medium">{selectedProduct.category}</p>
+              </div>
+
+              <div>
+                <span className="text-sm text-gray-500">Prix</span>
+                <p className="font-medium">{formatPrice(selectedProduct.price)}</p>
+              </div>
+
+              <div>
+                <span className="text-sm text-gray-500">Prix promotionnel</span>
+                <p className="font-medium">
+                  {selectedProduct.promotion && selectedProduct.promoPrice
+                    ? formatPrice(selectedProduct.promoPrice)
+                    : 'Pas de promotion'}
+                </p>
+              </div>
+
+              <div>
+                <span className="text-sm text-gray-500">Stock</span>
+                <p className={`font-medium ${
+                  selectedProduct.stock > 10 
+                    ? 'text-green-600'
+                    : selectedProduct.stock > 0 
+                    ? 'text-yellow-600'
+                    : 'text-red-600'
+                }`}>
+                  {selectedProduct.stock} unités
+                </p>
+              </div>
+
+              <div>
+                <span className="text-sm text-gray-500">Vendus</span>
+                <p className="font-medium">{selectedProduct.sold || 0} unités</p>
+              </div>
+
+              <div className="col-span-2">
+                <span className="text-sm text-gray-500">Note moyenne</span>
+                <div className="flex items-center">
+                  <div className="flex">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <FiStar
+                        key={i}
+                        className={`w-4 h-4 ${
+                          i < (selectedProduct.rating || 0)
+                            ? 'text-yellow-400 fill-current'
+                            : 'text-gray-300'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  <span className="ml-2 text-sm text-gray-600">
+                    ({selectedProduct.rating?.toFixed(1) || '0'}/5) • {selectedProduct.reviewCount || 0} avis
+                  </span>
+                </div>
+              </div>
+
+              <div className="col-span-2">
+                <span className="text-sm text-gray-500">Description</span>
+                <p className="mt-1 text-gray-700">{selectedProduct.description}</p>
+              </div>
+
+              {selectedProduct.tissu && (
+                <div className="col-span-2">
+                  <span className="text-sm text-gray-500">Tissu</span>
+                  <p className="font-medium">{selectedProduct.tissu}</p>
+                </div>
+              )}
+
+              {selectedProduct.couleurs && selectedProduct.couleurs.length > 0 && (
+                <div className="col-span-2">
+                  <span className="text-sm text-gray-500">Couleurs disponibles</span>
+                  <div className="flex gap-2 mt-1">
+                    {selectedProduct.couleurs.map((couleur, index) => (
+                      <div
+                        key={index}
+                        className="w-6 h-6 rounded-full"
+                        style={{ backgroundColor: couleur }}
+                        title={couleur}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {selectedProduct.taille && selectedProduct.taille.length > 0 && (
+                <div className="col-span-2">
+                  <span className="text-sm text-gray-500">Tailles disponibles</span>
+                  <div className="flex flex-wrap gap-2 mt-1">
+                    {selectedProduct.taille.map((taille, index) => (
+                      <span
+                        key={index}
+                        className="px-2 py-1 text-sm bg-gray-100 rounded"
+                      >
+                        {taille}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end pt-4">
+              <button
+                onClick={() => setIsViewModalOpen(false)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 border border-gray-300 rounded-md"
+              >
+                Fermer
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
 
       {/* Edit Modal */}
       <Modal

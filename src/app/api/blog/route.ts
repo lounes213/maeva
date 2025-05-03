@@ -93,7 +93,6 @@ export async function GET(req: NextRequest) {
     if (slug) {
       const post = await BlogPost.findOne({ slug });
       if (!post) {
-        toast.error("Article de blog introuvable.");
         return NextResponse.json({ error: 'Blog post not found' }, { status: 404 });
       }
       return NextResponse.json(post);
@@ -109,6 +108,7 @@ export async function GET(req: NextRequest) {
     if (tag) query.tags = tag;
 
     const skip = (page - 1) * limit;
+
     const posts = await BlogPost.find(query)
       .sort({ createdAt: -1 })
       .skip(skip)
@@ -126,7 +126,6 @@ export async function GET(req: NextRequest) {
       }
     });
   } catch (error: any) {
-    toast.error("Erreur lors de la récupération des articles de blog.");
     return NextResponse.json({ error: error.message || "Failed to get blog posts" }, { status: 500 });
   }
 }
@@ -139,72 +138,79 @@ export async function PUT(req: NextRequest) {
     const slug = searchParams.get('slug');
 
     if (!slug) {
-      return NextResponse.json({ error: "Slug parameter is required" }, { status: 400 });
+      return NextResponse.json({ error: "Le slug est requis" }, { status: 400 });
     }
 
-    const contentType = req.headers.get("content-type") || "";
-
-    if (contentType.includes("multipart/form-data")) {
-      const formData = await req.formData();
-
-      const fields: any = {};
-      for (const [key, value] of formData.entries()) {
-        if (typeof value === 'string') {
-          fields[key] = value;
-        }
-      }
-
-      if (fields.tags) {
-        fields.tags = fields.tags.split(',').map((tag: string) => tag.trim());
-      }
-
-      if (fields.title && !fields.slug) {
-        fields.slug = slugify(fields.title);
-      }
-
-      const images = formData.getAll('images') as File[];
-      const imageUrls: string[] = [];
-
-      if (images.length > 0) {
-        const uploadDir = path.join(process.cwd(), 'public/uploads/blog');
-        if (!fs.existsSync(uploadDir)) {
-          fs.mkdirSync(uploadDir, { recursive: true });
-        }
-
-        for (const image of images) {
-          if (image.size > 5 * 1024 * 1024) continue;
-
-          const buffer = await image.arrayBuffer();
-          const ext = image.name.split('.').pop();
-          const fileName = `${uuidv4()}.${ext}`;
-          const filePath = path.join(uploadDir, fileName);
-
-          await fs.promises.writeFile(filePath, Buffer.from(buffer));
-          imageUrls.push(`/uploads/blog/${fileName}`);
-        }
-
-        if (imageUrls.length > 0) {
-          fields.image = imageUrls[0];
-        }
-      }
-
-      const updatedPost = await BlogPost.findOneAndUpdate(
-        { slug },
-        fields,
-        { new: true, runValidators: true }
-      );
-
-      if (!updatedPost) {
-        return NextResponse.json({ error: 'Blog post not found' }, { status: 404 });
-      }
-
-      return NextResponse.json(updatedPost);
+    const existingPost = await BlogPost.findOne({ slug });
+    if (!existingPost) {
+      return NextResponse.json({ error: "Article non trouvé" }, { status: 404 });
     }
 
-    return NextResponse.json({ error: "Unsupported Content-Type" }, { status: 415 });
+    const formData = await req.formData();
+    const fields: any = {};
+
+    // Traitement des champs textuels
+    for (const [key, value] of formData.entries()) {
+      if (typeof value === 'string') {
+        fields[key] = value;
+      }
+    }
+
+    // Traitement des tags s'ils sont présents
+    if (fields.tags) {
+      fields.tags = fields.tags.split(',').map((tag: string) => tag.trim());
+    }
+
+    // Génération du nouveau slug si le titre est modifié
+    if (fields.title && !fields.slug) {
+      fields.slug = slugify(fields.title);
+    }
+
+    // Traitement des images
+    const images = formData.getAll('images') as File[];
+    if (images.length > 0) {
+      const uploadDir = path.join(process.cwd(), 'public/uploads/blog');
+      
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+
+      for (const image of images) {
+        if (image.size > 5 * 1024 * 1024) continue;
+
+        const buffer = await image.arrayBuffer();
+        const ext = image.name.split('.').pop();
+        const fileName = `${uuidv4()}.${ext}`;
+        const filePath = path.join(uploadDir, fileName);
+
+        await fs.promises.writeFile(filePath, Buffer.from(buffer));
+        fields.image = `/uploads/blog/${fileName}`;
+
+        if (existingPost.image && existingPost.image.startsWith('/uploads/')) {
+          const oldImagePath = path.join(process.cwd(), 'public', existingPost.image);
+          if (fs.existsSync(oldImagePath)) {
+            await fs.promises.unlink(oldImagePath);
+          }
+        }
+      }
+    }
+
+    const updatedPost = await BlogPost.findOneAndUpdate(
+      { slug },
+      fields,
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedPost) {
+      return NextResponse.json({ error: "Erreur lors de la mise à jour" }, { status: 500 });
+    }
+
+    return NextResponse.json(updatedPost);
   } catch (error: any) {
-    toast.error("Error updating blog post:", error);
-    return NextResponse.json({ error: error.message || "Failed to update blog post" }, { status: 500 });
+    return NextResponse.json(
+      { error: error.message || "Erreur lors de la mise à jour de l'article" },
+      { status: 500 }
+    );
   }
 }
 

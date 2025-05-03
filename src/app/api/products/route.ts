@@ -140,15 +140,23 @@ export async function PUT(req: Request) {
         fs.mkdirSync(uploadDir, { recursive: true });
       }
 
+      // Remplace l'utilisation de `arrayBuffer()` par une méthode compatible avec Node.js
       for (const image of newImages) {
+        if (!image || !image.name) {
+          console.warn('Image invalide ou sans nom, ignorée.');
+          continue;
+        }
+
         if (image.size > 5 * 1024 * 1024) continue;
 
-        const buffer = await image.arrayBuffer();
         const fileExtension = image.name.split('.').pop();
         const fileName = `${uuidv4()}.${fileExtension}`;
         const filePath = path.join(uploadDir, fileName);
 
-        await fs.promises.writeFile(filePath, Buffer.from(buffer));
+        // Lire le fichier en tant que Buffer
+        const buffer = Buffer.from(await image.arrayBuffer());
+        await fs.promises.writeFile(filePath, buffer);
+
         imageUrls.push(`/uploads/products/${fileName}`);
       }
     }

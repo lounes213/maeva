@@ -1,9 +1,9 @@
 import mongoose from 'mongoose';
 
-const MONGO_URI = process.env.MONGO_URI || '';
+const MONGO_URI = process.env.MONGODB_URI || process.env.MONGO_URI || '';
 
 if (!MONGO_URI) {
-  throw new Error('Please define the MONGODB_URI environment variable');
+  throw new Error('Veuillez définir la variable d\'environnement MONGODB_URI');
 }
 
 // Extend the global object to include mongoose
@@ -20,18 +20,33 @@ if (!globalWithMongoose.mongoose) {
 }
 
 async function dbConnect() {
-  if (globalWithMongoose.mongoose.conn) {
+  try {
+    if (globalWithMongoose.mongoose.conn) {
+      return globalWithMongoose.mongoose.conn;
+    }
+
+    if (!globalWithMongoose.mongoose.promise) {
+      const opts = {
+        bufferCommands: false,
+      };
+
+      globalWithMongoose.mongoose.promise = mongoose.connect(MONGO_URI, opts)
+        .then((mongoose) => {
+          const connected = true;
+          return mongoose;
+        })
+        .catch((error) => {
+          console.error('Erreur de connexion MongoDB:', error);
+          throw error;
+        });
+    }
+
+    globalWithMongoose.mongoose.conn = await globalWithMongoose.mongoose.promise;
     return globalWithMongoose.mongoose.conn;
+  } catch (error) {
+    console.error('Erreur lors de la connexion à MongoDB:', error);
+    throw error;
   }
-
-  if (!globalWithMongoose.mongoose.promise) {
-    globalWithMongoose.mongoose.promise = mongoose.connect(MONGO_URI, {
-      bufferCommands: false,
-    }).then((mongoose) => mongoose);
-  }
-
-  globalWithMongoose.mongoose.conn = await globalWithMongoose.mongoose.promise;
-  return globalWithMongoose.mongoose.conn;
 }
 
 export default dbConnect;

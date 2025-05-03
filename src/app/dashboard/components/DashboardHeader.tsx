@@ -37,15 +37,14 @@ function DashboardHeader({ user }: { user: any }) {
   ];
 
   return (
-    // Ajout de classes Tailwind responsives pour améliorer l'affichage mobile
     <header className="bg-white shadow fixed top-0 left-0 right-0 z-50">
       <div className="mx-auto max-w-screen-xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
-          <Link className="flex items-center gap-2 text-teal-600" href="/">
+          <Link className="hidden md:flex items-center gap-2 text-teal-600" href="/">
             <img className="h-10 w-auto rounded-full" src="/logo.png" alt="Logo Maiva" />
           </Link>
 
-          <div className="md:flex md:items-center md:gap-12">
+          <div className="w-full md:w-auto flex items-center justify-between md:justify-end md:gap-12">
             <button
               onClick={toggleMenu}
               className="text-gray-800 md:hidden focus:outline-none"
@@ -78,14 +77,14 @@ function DashboardHeader({ user }: { user: any }) {
             <nav
               className={`${
                 isMenuOpen ? "block" : "hidden"
-              } md:block mt-4 md:mt-0`}
+              } md:block absolute left-0 right-0 top-16 bg-white shadow-lg md:shadow-none md:relative md:top-0`}
             >
-              <ul className="space-y-4 md:space-y-0 md:flex md:space-x-6">
+              <ul className="space-y-4 md:space-y-0 md:flex md:space-x-6 p-4 md:p-0">
                 {navLinks.map((link) => (
                   <li key={link.href}>
                     <Link
                       href={link.href}
-                      className={`transition hover:text-gray-800 ${
+                      className={`block transition hover:text-gray-800 ${
                         pathname === link.href ? 'text-black font-semibold' : 'text-gray-500'
                       }`}
                     >
@@ -112,8 +111,10 @@ function DashboardHeader({ user }: { user: any }) {
                 {isOpen && (
                   <div className="absolute right-0 z-10 mt-2 w-56 divide-y divide-gray-100 rounded-md border bg-white shadow-lg">
                     <div className="p-4">
-                      <p className="text-sm font-medium text-gray-900">{user?.given_name}</p>
-                      <p className="text-sm text-gray-500">{user?.email}</p>
+                      <p className="text-sm text-gray-900 font-medium truncate">
+                        {user?.email ? user.email : 'Utilisateur'}
+                      </p>
+                      <p className="text-sm text-gray-500">{user?.role || 'Utilisateur'}</p>
                     </div>
 
                     <div className="p-2">

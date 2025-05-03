@@ -182,7 +182,9 @@ export default function UsersTable() {
             {users.map((user) => (
               <TableRow key={user._id}>
                 <TableCell>{user.email}</TableCell>
-                <TableCell>{user.role}</TableCell>
+                <TableCell>
+                  {user.role === 'admin' ? 'Administrateur' : 'Utilisateur'}
+                </TableCell>
                 <TableCell>
                   {new Date(user.createdAt).toLocaleDateString()}
                 </TableCell>

@@ -28,6 +28,7 @@ export default function BlogAdminPage() {
   const [error, setError] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [editingBlog, setEditingBlog] = useState<BlogPost | null>(null);
+  const [user, setUser] = useState(null);
 
   // Amélioration de la gestion des erreurs pour éviter l'erreur "Unexpected end of JSON input"
   const fetchBlogs = async () => {
@@ -78,6 +79,31 @@ export default function BlogAdminPage() {
     }
   };
 
+  const updateBlog = async (slug: string, updatedData: any) => {
+    try {
+      const formData = new FormData();
+      Object.keys(updatedData).forEach((key) => {
+        formData.append(key, updatedData[key]);
+      });
+
+      const response = await fetch(`/api/blog?slug=${slug}`, {
+        method: "PUT",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || "Failed to update blog post");
+      }
+
+      const data = await response.json();
+      toast.success("Blog updated successfully!");
+      return data;
+    } catch (err: any) {
+      toast.error(err.message || "Une erreur s'est produite lors de la mise à jour du blog");
+    }
+  };
+
   const handleNewBlogCreated = (newBlog: BlogPost) => {
     if (editingBlog) {
       setBlogs((prev) => prev.map(b => b._id === newBlog._id ? newBlog : b));
@@ -92,14 +118,28 @@ export default function BlogAdminPage() {
 
   useEffect(() => {
     fetchBlogs();
+    
+    const fetchUser = async () => {
+      try {
+        const response = await fetch('/api/auth/me');
+        if (response.ok) {
+          const userData = await response.json();
+          setUser(userData);
+        }
+      } catch (error) {
+        console.error('Erreur lors de la récupération de l\'utilisateur:', error);
+      }
+    };
+
+    fetchUser();
   }, []);
 
   return (
     <div className="max-w-7xl mx-auto p-4 mt-12 md:p-6">
-      <DashboardHeader user={{}} />
+      <DashboardHeader user={user} />
       
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mt-8 mb-6">
-        <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Blog Management</h1>
+        <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Gestion du Blog</h1>
         <button
           onClick={() => {
             setShowForm(true);
@@ -107,7 +147,7 @@ export default function BlogAdminPage() {
           }}
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
         >
-          <FaPlus /> Create New Blog
+          <FaPlus /> Créer un nouveau Post
         </button>
       </div>
 

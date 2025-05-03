@@ -1,12 +1,77 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
+import { useRouter } from 'next/navigation';
 
 const OrderStatusForm = () => {
   const [orderId, setOrderId] = useState('');
   const [orderStatus, setOrderStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [customerInfo, setCustomerInfo] = useState({
+    name: '',
+    address: '',
+    contact: '',
+    email: ''
+  });
+  const router = useRouter();
+
+  useEffect(() => {
+    // Vérifier s'il y a un achat direct dans le sessionStorage
+    const directBuyItem = sessionStorage.getItem('directBuyItem');
+    if (directBuyItem) {
+      const savedCustomerInfo = localStorage.getItem('customerInfo');
+      if (savedCustomerInfo) {
+        setCustomerInfo(JSON.parse(savedCustomerInfo));
+        handleDirectBuy(JSON.parse(directBuyItem), JSON.parse(savedCustomerInfo));
+      } else {
+        toast.error('Veuillez d\'abord remplir vos informations de livraison');
+        router.push('/cart');
+      }
+    }
+  }, []);
+
+  const handleDirectBuy = async (item: any, customerData: any) => {
+    if (!customerData.name || !customerData.address || !customerData.contact) {
+      toast.error('Veuillez remplir toutes les informations de livraison requises');
+      router.push('/cart');
+      return;
+    }
+
+    setLoading(true);
+    const toastId = toast.loading('Traitement de votre commande...');
+
+    try {
+      const response = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: [item],
+          customer: customerData,
+          shipping: {
+            method: 'standard',
+            cost: 0,
+            estimatedDelivery: '2-4 jours'
+          }
+        })
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || 'Erreur lors de la création de la commande');
+      }
+
+      // Rediriger vers la page de confirmation avec l'ID de la commande
+      sessionStorage.removeItem('directBuyItem');
+      router.push('/confirm?orderId=' + data.data._id);
+      toast.success('Commande créée avec succès', { id: toastId });
+    } catch (error: any) {
+      console.error(error);
+      toast.error(error.message || 'Erreur lors de la création de la commande', { id: toastId });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setOrderId(e.target.value);

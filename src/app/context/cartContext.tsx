@@ -22,6 +22,7 @@ const CartContext = createContext<{
   clearCart: () => void;
   totalItems: number;
   totalPrice: number;
+  setCartItems: (items: CartItem[]) => void;
 } | null>(null);
 
 // Provider component
@@ -101,7 +102,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
       updateQuantity,
       clearCart,
       totalItems,
-      totalPrice
+      totalPrice,
+      setCartItems
     }}>
       {children}
     </CartContext.Provider>

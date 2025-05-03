@@ -108,12 +108,12 @@ export default function CreateBlogForm({ blog, onCreated, onEdited }: CreateBlog
       if (formData.category) postData.append("category", formData.category);
       if (formData.tags) postData.append("tags", formData.tags);
 
-      formData.images.forEach((img, idx) => {
+      formData.images.forEach((img) => {
         postData.append("images", img);
       });
 
       const method = blog ? "PUT" : "POST";
-      const url = blog ? `/api/blog/${blog.slug}` : "/api/blog";
+      const url = blog ? `/api/blog?slug=${blog.slug}` : "/api/blog";
 
       const response = await fetch(url, {
         method,

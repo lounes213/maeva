@@ -2,20 +2,25 @@ import mongoose, { Schema, model, models } from 'mongoose';
 
 interface IProduct {
   name: string;
+  reference: string;
   description: string;
   price: number;
   stock: number;
   category: string;
-  tissu?: string; // Nouveau champ
-  couleurs?: string[]; // Nouveau champ
-  taille?: string[]; // Nouveau champ
+  tissu?: string;
+  couleurs?: string[];
+  taille?: string[];
   sold?: number;
   promotion?: boolean;
+  promoPrice?: number;
   reviews?: string;
+  rating?: number;
+  reviewCount?: number;
   deliveryDate?: Date | string;
   deliveryAddress?: string;
   deliveryStatus?: string;
   imageUrls?: string[];
+  images?: string[];
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -27,6 +32,12 @@ const productSchema = new Schema<IProduct>(
       required: [true, 'Le nom du produit est requis'],
       trim: true,
       maxlength: [100, 'Le nom du produit ne peut pas dépasser 100 caractères'],
+    },
+    reference: {
+      type: String,
+      required: [true, 'La référence du produit est requise'],
+      trim: true,
+      unique: true,
     },
     description: {
       type: String,
@@ -67,9 +78,23 @@ const productSchema = new Schema<IProduct>(
       type: Boolean,
       default: false,
     },
+    promoPrice: {
+      type: Number,
+    },
     reviews: {
       type: String,
       default: '',
+    },
+    rating: {
+      type: Number,
+      min: 0,
+      max: 5,
+      default: 0,
+    },
+    reviewCount: {
+      type: Number,
+      default: 0,
+      min: 0,
     },
     deliveryDate: {
       type: Date,
@@ -83,6 +108,9 @@ const productSchema = new Schema<IProduct>(
       default: '',
     },
     imageUrls: [{
+      type: String,
+    }],
+    images: [{
       type: String,
     }],
   },

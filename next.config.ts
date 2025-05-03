@@ -6,8 +6,7 @@ const nextConfig: NextConfig = {
 };
 module.exports = {
   images: {
-    domains: ['http://localhost:3000/'], // Add domains where your images are hosted
-    // Or use a loader if images are from an external service
+    domains: ['localhost'], // Correction du domaine pour autoriser les images locales
   },
-}
+};
 export default nextConfig;

@@ -1,8 +1,8 @@
-// app/api/orders/route.ts
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongo';
 import Order from '@/app/models/Order';
 import { Product } from '@/app/models/Product';
+import { generateTrackingCode } from '@/app/types/order';
 
 // Types
 interface OrderItem {
@@ -36,12 +36,6 @@ interface OrderRequest {
 }
 
 // Helpers
-const generateTrackingCode = (): string => {
-  const prefix = 'CMD';
-  const randomNum = Math.floor(100000 + Math.random() * 900000);
-  return `${prefix}${randomNum}`;
-};
-
 const validateOrderRequest = (body: any): { isValid: boolean; error?: string } => {
   if (!body?.items?.length) return { isValid: false, error: 'Cart items are required' };
   if (!body.customer?.name || !body.customer?.address || !body.customer?.contact) {
@@ -86,69 +80,80 @@ const createOrderResponse = (data: any, status = 200) => {
 };
 
 // API Endpoints
-// Update the POST endpoint in route.ts
-export async function POST(req: Request) {
+export async function POST(request: NextRequest) {
   try {
     await dbConnect();
-    const body: OrderRequest = await req.json();
 
-    // Validate request
-    const { isValid, error } = validateOrderRequest(body);
-    if (!isValid) {
-      return createOrderResponse({ message: error }, 400);
+    const body = await request.json();
+    const { items, customer, shipping, payment } = body;
+
+    if (!items?.length) {
+      return NextResponse.json(
+        { error: 'Les articles sont requis' },
+        { status: 400 }
+      );
     }
 
-    // Verify products exist (but don't check stock)
-    const verifiedItems = [];
-    let subtotal = 0;
-    
-    for (const item of body.items) {
-      const product = await Product.findById(item.productId);
-      if (!product) {
-        throw new Error(`Product not found: ${item.productId}`);
-      }
-      
-      subtotal += item.price * item.quantity;
-      verifiedItems.push({
-        productId: item.productId,
-        name: product.name,
-        price: item.price,
-        quantity: item.quantity,
-        imageUrl: item.imageUrl || product.imageUrls?.[0],
-        size: item.size,
-        color: item.color
-      });
+    if (!customer?.name || !customer?.address || !customer?.contact) {
+      return NextResponse.json(
+        { error: 'Informations client incomplètes' },
+        { status: 400 }
+      );
     }
 
-    const total = subtotal - (body.couponDiscount || 0) + body.shipping.cost;
+    if (!shipping?.method || shipping?.cost === undefined || !shipping?.estimatedDelivery) {
+      return NextResponse.json(
+        { error: 'Informations de livraison incomplètes' },
+        { status: 400 }
+      );
+    }
 
-    // Create new order with unique tracking code
-    const newOrder = await Order.create({
-      items: verifiedItems,
-      customer: body.customer,
-      shipping: body.shipping,
+    // Calculer les totaux
+    const subtotal = items.reduce((sum: number, item: { price: number; quantity: number; }) => sum + (item.price * item.quantity), 0);
+    const shippingCost = shipping.cost || 0;
+    const discount = payment?.discount || 0;
+    const total = subtotal + shippingCost - discount;
+
+    const order = new Order({
+      items,
+      customer,
+      shipping,
       payment: {
         subtotal,
-        discount: body.couponDiscount || 0,
-        shipping: body.shipping.cost,
-        total
+        shipping: shippingCost,
+        discount,
+        total,
+        method: payment?.method || 'card',
+        status: payment?.status || 'pending'
       },
       trackingCode: generateTrackingCode(),
-      deliveryStatus: 'processing'
+      deliveryStatus: 'processing',
+      statusUpdatedAt: new Date(),
+      trackingHistory: [{
+        status: 'processing',
+        date: new Date(),
+        notes: 'Commande reçue'
+      }]
     });
 
-    return createOrderResponse({
-      message: 'Order created successfully',
-      data: newOrder
-    }, 201);
+    await order.save();
 
-  } catch (error) {
-    console.error('Order creation error:', error);
-    return createOrderResponse({
-      message: error instanceof Error ? error.message : 'Error creating order'
-    }, 500);
+    return NextResponse.json({
+      success: true,
+      message: 'Commande créée avec succès',
+      orderId: order._id,
+      trackingCode: order.trackingCode
+    });
+
+  } catch (error: any) {
+    console.error('Erreur lors de la création de la commande:', error);
+    return NextResponse.json(
+      { error: error.message || 'Erreur lors de la création de la commande' },
+      { status: 500 }
+    );
   }
 }
+
 export async function GET(req: Request) {
   try {
     await dbConnect();
@@ -191,7 +196,6 @@ export async function PUT(request: Request) {
   try {
     await dbConnect();
     
-    // Get ID from query parameters
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     
@@ -204,8 +208,6 @@ export async function PUT(request: Request) {
 
     const body = await request.json();
     const { deliveryStatus } = body;
-
-    console.log(`Updating order ${id} to status ${deliveryStatus}`);
 
     const updatedOrder = await Order.findByIdAndUpdate(
       id,
