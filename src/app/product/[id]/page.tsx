@@ -93,23 +93,47 @@ export default function ProductDetailsPage() {
     return [];
   };
 
-  // Robust function to process colors that handles both arrays and strings
-  const processColors = (colors: string[] | string | undefined): string[] => {
-    if (!colors) return [];
+  // Helper function to process color strings from the database
+  const processColors = (colors: string[] | undefined) => {
+    if (!colors || colors.length === 0) return [];
+    
+    // Process each color entry which might contain comma-separated values
+    const processedColors: string[] = [];
+    colors.forEach(colorItem => {
+      // Check if the color string contains commas
+      if (colorItem.includes(',')) {
+        // Split by comma and add each color to the array
+        colorItem.split(',').forEach(color => {
+          if (color.trim()) processedColors.push(color.trim());
+        });
+      } else {
+        // Add the single color to the array
+        processedColors.push(colorItem);
+      }
+    });
+    
+    return processedColors;
+  };
+  const processArrayData = (data: string[] | string | undefined): string[] => {
+    if (!data) return [];
     
     // If it's already an array, return it
-    if (Array.isArray(colors)) return colors;
+    if (Array.isArray(data)) return data;
     
-    // If it's a string, split by comma and trim whitespace
-    if (typeof colors === 'string') {
-      return colors.split(',').map(color => color.trim()).filter(color => color.length > 0);
+    // If it's a string, try to parse as JSON first
+    if (typeof data === 'string') {
+      try {
+        const parsed = JSON.parse(data);
+        if (Array.isArray(parsed)) return parsed;
+      } catch (e) {
+        // If not valid JSON, split by comma
+        return data.split(',').map(item => item.trim()).filter(item => item.length > 0);
+      }
     }
     
     return [];
   };
-
-  // Helper function to determine text color based on background
-  const getTextColor = (bgColor: string) => {
+const getTextColor = (bgColor: string) => {
     const hex = bgColor.replace('#', '');
     const r = parseInt(hex.substring(0, 2), 16);
     const g = parseInt(hex.substring(2, 4), 16);
@@ -119,9 +143,41 @@ export default function ProductDetailsPage() {
   };
 
   useEffect(() => {
+    if (!id) return;
+    
+    const fetchProduct = async () => {
+      try {
+        const res = await fetch(`/api/products?id=${id}`);
+        const data = await res.json();
+        
+        if (data.success && data.data) {
+          // Process the product data to ensure consistent format
+          const processedProduct = {
+            ...data.data,
+            couleurs: processArrayData(data.data.couleurs),
+            taille: processArrayData(data.data.taille)
+          };
+          
+          setProduct(processedProduct);
+        } else {
+          setProduct(null);
+        }
+      } catch (error) {
+        console.error('Error fetching product:', error);
+        setProduct(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProduct();
+  }, [id]);
+
+  useEffect(() => {
     if (product) {
-      const colors = processColors(product.couleurs);
-      const sizes = processSizes(product.taille);
+      // Set initial selected values when product loads
+      const colors = processArrayData(product.couleurs);
+      const sizes = processArrayData(product.taille);
       
       if (colors.length > 0) setSelectedColor(colors[0]);
       if (sizes.length > 0) setSelectedSize(sizes[0]);
@@ -152,6 +208,7 @@ export default function ProductDetailsPage() {
   }
 
   const colors = processColors(product.couleurs);
+  const colorsArray = Array.isArray(colors) ? colors : [colors];
   const sizes = processSizes(product.taille);
   const originalPrice = product.price;
   const discountPrice = product.promotion ? product.price * 0.8 : null;
@@ -424,28 +481,28 @@ export default function ProductDetailsPage() {
             )}
             
             {/* Sizes */}
-            {sizes.length > 0 && (
-              <div>
-                <div className="flex justify-between items-center mb-2">
-                  <h3 className="text-sm font-medium text-gray-700">Taille</h3>
-                  <button className="text-sm text-indigo-600 hover:text-indigo-700">Guide des tailles</button>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {sizes.map((size, i) => (
-                    <button
-                      key={i}
-                      onClick={() => handleSizeSelect(size)}
-                      className={`px-4 py-2 rounded-md border text-sm font-medium
-                        ${selectedSize === size 
-                          ? 'border-indigo-600 bg-indigo-50 text-indigo-700' 
-                          : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'}`}
-                    >
-                      {size}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
+           {sizes.length > 0 && (
+    <div>
+      <div className="flex justify-between items-center mb-2">
+        <h3 className="text-sm font-medium text-gray-700">Taille</h3>
+        <button className="text-sm text-indigo-600 hover:text-indigo-700">Guide des tailles</button>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {sizes.map((size, i) => (
+          <button
+            key={i}
+            onClick={() => handleSizeSelect(size)}
+            className={`px-4 py-2 rounded-md border text-sm font-medium
+              ${selectedSize === size 
+                ? 'border-indigo-600 bg-indigo-50 text-indigo-700' 
+                : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'}`}
+          >
+            {size}
+          </button>
+        ))}
+      </div>
+    </div>
+  )}
             
             {/* Quantity */}
             <div>
