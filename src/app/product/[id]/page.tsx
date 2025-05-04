@@ -4,10 +4,9 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Heart, ShoppingCart, Truck, Clock, Check, ChevronDown, Star, Share2 } from 'lucide-react';
-import { useCart } from '@/app/context/cartContext';
+import { useCart } from '@/app/context/cartContext'; // Import our custom hook
 import Header from '@/app/components/header';
 import toast from 'react-hot-toast';
-import ReviewModal from '@/app/components/ReviewModal';
 
 interface Product {
   _id: string;
@@ -16,51 +15,35 @@ interface Product {
   price: number;
   stock: number;
   category: string;
-  reference: string;
   tissu?: string;
-  couleurs?: string[] | string; // Can be array or string
-  taille?: string[] | string;   // Can be array or string
+  couleurs?: string[];
+  taille?: string[];
   imageUrls: string[];
   deliveryDate?: string;
   deliveryAddress?: string;
   deliveryStatus?: string;
   reviews?: string;
-  rating?: number;
-  reviewCount?: number;
   sold?: number;
   promotion?: boolean;
-  promoPrice?: number;
 }
+
+
+
 
 export default function ProductDetailsPage() {
   const { id } = useParams();
   const router = useRouter();
-  const { addToCart } = useCart();
+  const { addToCart } = useCart(); // Get the addToCart function from our context
 
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(0);
-  const [activeTab, setActiveTab] = useState<'description' | 'livraison' | 'avis'>('description');
+  const [activeTab, setActiveTab] = useState<'description' | 'livraison'>('description');
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [addedToCart, setAddedToCart] = useState(false);
-  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
-
-  const handleReviewSubmitted = () => {
-    if (!id) return;
-    const fetchProduct = async () => {
-      try {
-        const res = await fetch(`/api/products?id=${id}`);
-        const data = await res.json();
-        setProduct(data.data);
-      } catch (error) {
-        console.error('Erreur lors du rafraîchissement des données:', error);
-      }
-    };
-    fetchProduct();
-  };
 
   useEffect(() => {
     if (!id) return;
@@ -77,21 +60,6 @@ export default function ProductDetailsPage() {
 
     fetchProduct();
   }, [id]);
-
-  // Simplified color processing - assumes colors are already an array
-  const processSizes = (sizes: string[] | string | undefined): string[] => {
-    if (!sizes) return [];
-    
-    // If it's already an array, return it
-    if (Array.isArray(sizes)) return sizes;
-    
-    // If it's a string, split by comma and trim whitespace
-    if (typeof sizes === 'string') {
-      return sizes.split(',').map(size => size.trim()).filter(size => size.length > 0);
-    }
-    
-    return [];
-  };
 
   // Helper function to process color strings from the database
   const processColors = (colors: string[] | undefined) => {
@@ -114,76 +82,54 @@ export default function ProductDetailsPage() {
     
     return processedColors;
   };
-  const processArrayData = (data: string[] | string | undefined): string[] => {
-    if (!data) return [];
+
+  // Helper function to process sizes from the database
+  const processSizes = (sizes: string[] | undefined) => {
+    if (!sizes || sizes.length === 0) return [];
     
-    // If it's already an array, return it
-    if (Array.isArray(data)) return data;
-    
-    // If it's a string, try to parse as JSON first
-    if (typeof data === 'string') {
-      try {
-        const parsed = JSON.parse(data);
-        if (Array.isArray(parsed)) return parsed;
-      } catch (e) {
-        // If not valid JSON, split by comma
-        return data.split(',').map(item => item.trim()).filter(item => item.length > 0);
+    // Process each size entry which might contain comma-separated values
+    const processedSizes: string[] = [];
+    sizes.forEach(sizeItem => {
+      // Check if the size string contains commas
+      if (sizeItem.includes(',')) {
+        // Split by comma and add each size to the array
+        sizeItem.split(',').forEach(size => {
+          if (size.trim()) processedSizes.push(size.trim());
+        });
+      } else {
+        // Add the single size to the array
+        processedSizes.push(sizeItem);
       }
-    }
+    });
     
-    return [];
+    return processedSizes;
   };
-const getTextColor = (bgColor: string) => {
+
+  // Helper function to determine text color based on background
+  const getTextColor = (bgColor: string) => {
+    // Convert hex to RGB
     const hex = bgColor.replace('#', '');
-    const r = parseInt(hex.substring(0, 2), 16);
-    const g = parseInt(hex.substring(2, 4), 16);
-    const b = parseInt(hex.substring(4, 6), 16);
+    const r = parseInt(hex.substr(0, 2), 16);
+    const g = parseInt(hex.substr(2, 2), 16);
+    const b = parseInt(hex.substr(4, 2), 16);
+    
+    // Calculate perceived brightness
     const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+    
+    // Return white for dark backgrounds, black for light backgrounds
     return brightness > 125 ? '#000000' : '#ffffff';
   };
 
   useEffect(() => {
-    if (!id) return;
-    
-    const fetchProduct = async () => {
-      try {
-        const res = await fetch(`/api/products?id=${id}`);
-        const data = await res.json();
-        
-        if (data.success && data.data) {
-          // Process the product data to ensure consistent format
-          const processedProduct = {
-            ...data.data,
-            couleurs: processArrayData(data.data.couleurs),
-            taille: processArrayData(data.data.taille)
-          };
-          
-          setProduct(processedProduct);
-        } else {
-          setProduct(null);
-        }
-      } catch (error) {
-        console.error('Error fetching product:', error);
-        setProduct(null);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProduct();
-  }, [id]);
-
-  useEffect(() => {
     if (product) {
       // Set initial selected values when product loads
-      const colors = processArrayData(product.couleurs);
-      const sizes = processArrayData(product.taille);
+      const colors = processColors(product.couleurs);
+      const sizes = processSizes(product.taille);
       
       if (colors.length > 0) setSelectedColor(colors[0]);
       if (sizes.length > 0) setSelectedSize(sizes[0]);
     }
   }, [product]);
-
 
   if (loading) {
     return (
@@ -207,9 +153,11 @@ const getTextColor = (bgColor: string) => {
     );
   }
 
+  // Process colors and sizes
   const colors = processColors(product.couleurs);
-  const colorsArray = Array.isArray(colors) ? colors : [colors];
   const sizes = processSizes(product.taille);
+  
+  // Calculate discount price if promotion is active
   const originalPrice = product.price;
   const discountPrice = product.promotion ? product.price * 0.8 : null;
 
@@ -231,10 +179,38 @@ const getTextColor = (bgColor: string) => {
   const handleAddToCart = () => {
     if (!product || !selectedColor || !selectedSize) return;
     
+    // Get the actual price (considering promotions)
     const actualPrice = discountPrice || originalPrice;
     
+    // Create cart item object
     const cartItem = {
       _id: product._id,
+      name: product.name,
+      price: actualPrice,
+      imageUrl: product.imageUrls[0], // Use first image as thumbnail
+      quantity: quantity,
+      color: selectedColor,
+      size: selectedSize
+    };
+    
+    // Add to cart using the context function
+    addToCart(cartItem);
+    
+    // Show success message
+    setAddedToCart(true);
+    setTimeout(() => setAddedToCart(false), 3000);
+  };
+
+  // Modified handleBuyNow function that skips adding to cart
+  const handleBuyNow = () => {
+    if (!product || !selectedColor || !selectedSize) return;
+    
+    // Get the actual price (considering promotions)
+    const actualPrice = discountPrice || originalPrice;
+    
+    // Store the order info in sessionStorage to access on the confirm page
+    const orderItem = {
+      id: product._id,
       name: product.name,
       price: actualPrice,
       imageUrl: product.imageUrls[0],
@@ -243,92 +219,11 @@ const getTextColor = (bgColor: string) => {
       size: selectedSize
     };
     
-    addToCart(cartItem);
-    setAddedToCart(true);
-    setTimeout(() => setAddedToCart(false), 3000);
-  };
-
-  const handleBuyNow = async () => {
-    if (!product || !selectedColor || !selectedSize) {
-      toast.error('Veuillez sélectionner une couleur et une taille');
-      return;
-    }
-
-    const customer = {
-      name: 'John Doe',
-      address: '123 Main Street',
-      contact: '1234567890',
-    };
-
-    if (!customer.name || !customer.address || !customer.contact) {
-      toast.error('Veuillez fournir des informations client complètes');
-      return;
-    }
-
-    const shipping = {
-      method: 'standard',
-      cost: 0,
-      estimatedDelivery: '2-4 jours',
-    };
-
-    const actualPrice = discountPrice || originalPrice;
-    const subtotal = actualPrice * quantity;
-    const shippingCost = shipping.cost;
-    const discount = discountPrice ? (originalPrice - discountPrice) * quantity : 0;
-
-    const payment = {
-      subtotal: subtotal,
-      discount: discount,
-      shipping: shippingCost,
-      total: subtotal - discount + shippingCost,
-      method: 'card',
-      status: 'pending'
-    };
-
-    const orderItem = {
-      productId: product._id,
-      name: product.name,
-      price: actualPrice,
-      imageUrl: product.imageUrls[0],
-      quantity: quantity,
-      color: selectedColor,
-      size: selectedSize,
-    };
-
-    try {
-      const response = await fetch('/api/orders', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          items: [orderItem],
-          customer,
-          shipping,
-          payment
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Une erreur est survenue');
-      }
-
-      localStorage.setItem('lastOrder', JSON.stringify({
-        ...data,
-        customer,
-        shipping,
-        items: [orderItem],
-        trackingCode: data.trackingCode
-      }));
-
-      toast.success('Commande créée avec succès !');
-      router.push('/confirm');
-    } catch (error: any) {
-      console.error('Erreur lors de la création de la commande:', error);
-      toast.error(error.message || 'Une erreur est survenue lors de la création de la commande');
-    }
+    // Save to sessionStorage so the confirm page can access it
+    sessionStorage.setItem('directOrderItem', JSON.stringify(orderItem));
+    
+    // Navigate directly to confirm page
+    router.push('/confirm');
   };
 
   const toggleWishlist = () => {
@@ -337,18 +232,19 @@ const getTextColor = (bgColor: string) => {
 
   return (
     <>
-      <Header/> 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 pt-32">
-        {addedToCart && (
-          <div className="fixed top-20 right-4 bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded shadow-md z-50 animate-fade-in-out">
-            <div className="flex items-center">
-              <Check className="h-5 w-5 mr-2" />
-              <p>Produit ajouté au panier avec succès!</p>
-            </div>
+    <Header/> 
+   
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 pt-32">
+    
+      {/* Success message */}
+      {addedToCart && (
+        <div className="fixed top-20 right-4 bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded shadow-md z-50 animate-fade-in-out">
+          <div className="flex items-center">
+            <Check className="h-5 w-5 mr-2" />
+            <p>Produit ajouté au panier avec succès!</p>
           </div>
-        )}
-        
-     
+        </div>
+      )}
       
       {/* Breadcrumb */}
       <div className="mb-6 text-sm text-gray-500">
@@ -433,7 +329,7 @@ const getTextColor = (bgColor: string) => {
             </div>
             
             <div className="flex items-center gap-2 mt-2 text-sm">
-              <div className={`px-2 py-1 rounded ${product.stock > 10 ? 'bg-green-100 text-green-700' : product.stock > 0 ? `Plus que ${product.stock} en stock` : 'bg-red-100 text-red-700'}`}>
+              <div className={`px-2 py-1 rounded ${product.stock > 10 ? 'bg-green-100 text-green-700' : product.stock > 0 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>
                 {product.stock > 10 ? 'En stock' : product.stock > 0 ? `Plus que ${product.stock} en stock` : 'Rupture de stock'}
               </div>
               
@@ -481,28 +377,28 @@ const getTextColor = (bgColor: string) => {
             )}
             
             {/* Sizes */}
-           {sizes.length > 0 && (
-    <div>
-      <div className="flex justify-between items-center mb-2">
-        <h3 className="text-sm font-medium text-gray-700">Taille</h3>
-        <button className="text-sm text-indigo-600 hover:text-indigo-700">Guide des tailles</button>
-      </div>
-      <div className="flex flex-wrap gap-2">
-        {sizes.map((size, i) => (
-          <button
-            key={i}
-            onClick={() => handleSizeSelect(size)}
-            className={`px-4 py-2 rounded-md border text-sm font-medium
-              ${selectedSize === size 
-                ? 'border-indigo-600 bg-indigo-50 text-indigo-700' 
-                : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'}`}
-          >
-            {size}
-          </button>
-        ))}
-      </div>
-    </div>
-  )}
+            {sizes.length > 0 && (
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="text-sm font-medium text-gray-700">Taille</h3>
+                  <button className="text-sm text-indigo-600 hover:text-indigo-700">Guide des tailles</button>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {sizes.map((size, i) => (
+                    <button
+                      key={i}
+                      onClick={() => handleSizeSelect(size)}
+                      className={`px-4 py-2 rounded-md border text-sm font-medium
+                        ${selectedSize === size 
+                          ? 'border-indigo-600 bg-indigo-50 text-indigo-700' 
+                          : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'}`}
+                    >
+                      {size}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             
             {/* Quantity */}
             <div>
@@ -610,17 +506,6 @@ const getTextColor = (bgColor: string) => {
             >
               Livraison et retours
             </button>
-
-            <button
-              onClick={() => setActiveTab('avis')}
-              className={`px-6 py-3 font-medium text-sm whitespace-nowrap ${
-                activeTab === 'avis'
-                  ? 'border-b-2 border-indigo-600 text-indigo-600'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              Avis ({product.reviewCount || 0})
-            </button>
           </div>
         </div>
 
@@ -631,140 +516,7 @@ const getTextColor = (bgColor: string) => {
             </div>
           )}
 
-          {activeTab === 'avis' && (
-            <div className="space-y-8">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-lg font-medium text-gray-900">Avis clients</h3>
-                  <p className="text-sm text-gray-500 mt-1">
-                    Voir ce que nos clients pensent de ce produit
-                  </p>
-                </div>
-                <button
-                  onClick={() => setIsReviewModalOpen(true)}
-                  className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition"
-                >
-                  Donner mon avis
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                {/* Rating summary */}
-                <div className="lg:col-span-4">
-                  <div className="bg-gray-50 rounded-lg p-6">
-                    <div className="text-center mb-4">
-                      <div className="text-5xl font-bold text-gray-900 mb-2">
-                        {product.rating ? product.rating.toFixed(1) : '0.0'}
-                      </div>
-                      <div className="flex justify-center mb-2">
-                        {Array.from({ length: 5 }).map((_, i) => (
-                          <Star
-                            key={i}
-                            className={`w-5 h-5 ${
-                              i < Math.round(product.rating || 0)
-                                ? 'text-yellow-400 fill-current'
-                                : 'text-gray-300'
-                            }`}
-                          />
-                        ))}
-                      </div>
-                      <p className="text-sm text-gray-500">
-                        Basé sur {product.reviewCount || 0} avis
-                      </p>
-                    </div>
-
-                    {/* Rating bars */}
-                    <div className="space-y-3">
-                      {[5, 4, 3, 2, 1].map((rating) => {
-                        const reviews = product.reviews ? JSON.parse(product.reviews) : [];
-                        const count = reviews.filter((r: any) => r.rating === rating).length;
-                        const percentage = product.reviewCount ? (count / product.reviewCount) * 100 : 0;
-                        
-                        return (
-                          <div key={rating} className="flex items-center">
-                            <div className="w-12 text-sm text-gray-600">{rating} étoiles</div>
-                            <div className="flex-1 mx-2">
-                              <div className="h-2 rounded-full bg-gray-200">
-                                <div
-                                  className="h-2 rounded-full bg-yellow-400"
-                                  style={{ width: `${percentage}%` }}
-                                />
-                              </div>
-                            </div>
-                            <div className="w-12 text-sm text-gray-600 text-right">{count}</div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Reviews list */}
-                <div className="lg:col-span-8">
-                  <div className="space-y-6">
-                    {product.reviews ? (
-                      JSON.parse(product.reviews).map((review: any, index: number) => (
-                        <div key={index} className="border-b border-gray-200 pb-6">
-                          <div className="flex items-center mb-3">
-                            <div className="flex-shrink-0">
-                              <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center">
-                                <span className="text-sm font-medium text-indigo-600">
-                                  {review.userName?.charAt(0) || 'A'}
-                                </span>
-                              </div>
-                            </div>
-                            <div className="ml-3">
-                              <p className="text-sm font-medium text-gray-900">{review.userName || 'Anonyme'}</p>
-                              <div className="flex items-center mt-1">
-                                {Array.from({ length: 5 }).map((_, i) => (
-                                  <Star
-                                    key={i}
-                                    className={`w-4 h-4 ${
-                                      i < review.rating
-                                        ? 'text-yellow-400 fill-current'
-                                        : 'text-gray-300'
-                                    }`}
-                                  />
-                                ))}
-                              </div>
-                            </div>
-                            <span className="ml-auto text-sm text-gray-500">
-                              {new Date(review.date).toLocaleDateString()}
-                            </span>
-                          </div>
-                          <p className="text-gray-700">{review.comment}</p>
-                          {review.images?.length > 0 && (
-                            <div className="mt-4 grid grid-cols-4 gap-2">
-                              {review.images.map((image: string, i: number) => (
-                                <div key={i} className="relative aspect-square rounded-lg overflow-hidden">
-                                  <Image
-                                    src={image}
-                                    alt={`Review image ${i + 1}`}
-                                    layout="fill"
-                                    objectFit="cover"
-                                  />
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      ))
-                    ) : (
-                      <div className="text-center py-12">
-                        <p className="text-gray-500">Aucun avis pour le moment</p>
-                        <button
-                          onClick={() => setIsReviewModalOpen(true)}
-                          className="mt-4 text-indigo-600 hover:text-indigo-700"
-                        >
-                          Soyez le premier à donner votre avis
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+    
 
           {activeTab === 'livraison' && (
             <div className="space-y-6">
@@ -807,14 +559,7 @@ const getTextColor = (bgColor: string) => {
           )}
         </div>
       </div>
-
-      {/* Review Modal */}
-      <ReviewModal
-        isOpen={isReviewModalOpen}
-        onClose={() => setIsReviewModalOpen(false)}
-        productId={product?._id || ''}
-        onSuccess={handleReviewSubmitted}
-      />
+  
     </div>
 
      </>
