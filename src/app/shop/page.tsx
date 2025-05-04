@@ -107,7 +107,7 @@ export default function ShopPage() {
 
   const processSizes = (sizes: string[] | undefined) => {
     if (!sizes || sizes.length === 0) return [];
-    return sizes.flatMap(sizeItem => sizeItem.split(',').map(size => size.trim()));
+    return sizes.map(sizeItem => sizeItem.split(',').map(size => size.trim()));
   };
 
   useEffect(() => {
@@ -136,9 +136,9 @@ export default function ShopPage() {
   // Extract filter options from products
   const categories = Array.from(new Set(products.map(p => p.category)));
   const colors = Array.from(new Set(
-    products.flatMap(p => processColors(p.couleurs || []))
+    products.map(p => processColors(p.couleurs || []))
   ));
-  const sizes = Array.from(new Set(products.flatMap(p => p.taille || [])));
+  const sizes = Array.from(new Set(products.map(p => p.taille || [])));
 
   // Filter products
   const filteredProducts = products.filter(product => {
@@ -336,7 +336,7 @@ export default function ShopPage() {
                 <div className="border-b border-gray-200 pb-6">
                   <h3 className="font-medium text-gray-900 mb-4">Tailles</h3>
                   <div className="grid grid-cols-3 gap-2">
-                    {Array.from(new Set(sizes.flatMap(size => 
+                    {Array.from(new Set(sizes.map(size => 
                       size.split(',').map(s => s.trim())
                     ))).sort().map((size) => (
                       <button
@@ -655,7 +655,7 @@ export default function ShopPage() {
                   <div className="border-b border-gray-200 pb-6">
                     <h3 className="font-medium text-gray-900 mb-4">Tailles</h3>
                     <div className="grid grid-cols-3 gap-2">
-                      {Array.from(new Set(sizes.flatMap(size => 
+                      {Array.from(new Set(sizes.map(size => 
                         size.split(',').map(s => s.trim())
                       ))).sort().map((size) => (
                         <button
