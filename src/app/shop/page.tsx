@@ -405,16 +405,19 @@ const filteredProducts = products.filter(product => {
     className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2"
   >
     <Link href={`/product/${product._id}`} className="block relative">
+      {/* Debug information to check image URLs */}
+      <div className="p-2 bg-red-50 text-xs text-red-600">
+        {product.imageUrls ? 
+          `Image URLs: ${JSON.stringify(product.imageUrls)}` : 
+          'No image URLs available'}
+      </div>
+      
       <div className="aspect-[3/4] relative bg-gray-50 overflow-hidden">
-        {/* Using standard img tag instead of Next.js Image component */}
+        {/* Fallback to static image path rather than using product.imageUrls */}
         <img 
-          src={product.imageUrls && product.imageUrls[0] ? product.imageUrls[0] : "/images/no-image.jpg"} 
+          src="/images/placeholder-product.jpg" 
           alt={product.name || "Product"} 
           className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700 ease-in-out"
-          onError={(e) => {
-            e.target.oneError = null;
-            e.target.src = "/images/no-image.jpg";
-          }}
         />
         
         <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -469,55 +472,6 @@ const filteredProducts = products.filter(product => {
             <div className="flex items-center bg-amber-50 px-3 py-2 rounded-lg">
               <FiStar className="text-amber-500 w-4 h-4" fill="currentColor" />
               <span className="ml-1.5 font-semibold text-amber-700">{product.rating.toFixed(1)}</span>
-            </div>
-          )}
-        </div>
-        
-        <div className="space-y-3">
-          {product.tissu && (
-            <p className="text-sm text-gray-600 flex items-center">
-              <span className="w-2 h-2 bg-amber-600 rounded-full mr-2"></span>
-              Tissu: <span className="font-medium ml-1">{product.tissu}</span>
-            </p>
-          )}
-          
-          {product.couleurs && product.couleurs.length > 0 && (
-            <div className="flex items-center gap-3">
-              <span className="text-sm text-gray-500">Couleurs:</span>
-              <div className="flex -space-x-2 hover:space-x-1 transition-all duration-200">
-                {processColors(product.couleurs).slice(0, 4).map((color) => {
-                  const colorInfo = getColorModel(color);
-                  return (
-                    <span
-                      key={color}
-                      className="w-7 h-7 rounded-full border-2 border-white ring-2 ring-gray-200 transition-transform hover:scale-110 hover:z-10"
-                      style={{ backgroundColor: colorInfo.hex }}
-                      title={colorInfo.french}
-                    />
-                  );
-                })}
-                {processColors(product.couleurs).length > 4 && (
-                  <span className="w-7 h-7 rounded-full bg-gray-100 border-2 border-white ring-2 ring-gray-200 flex items-center justify-center text-xs font-medium text-gray-600 hover:scale-110 hover:z-10 transition-transform">
-                    +{processColors(product.couleurs).length - 4}
-                  </span>
-                )}
-              </div>
-            </div>
-          )}
-
-          {product.taille && product.taille.length > 0 && (
-            <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
-              <span className="text-sm text-gray-500 flex-shrink-0">Tailles:</span>
-              <div className="flex gap-1.5">
-                {processSizes(product.taille).map((size) => (
-                  <span
-                    key={size}
-                    className="px-2 py-1 text-xs font-medium text-gray-600 bg-gray-100 rounded-md"
-                  >
-                    {size}
-                  </span>
-                ))}
-              </div>
             </div>
           )}
         </div>
