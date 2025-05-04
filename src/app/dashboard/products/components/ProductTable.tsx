@@ -71,9 +71,9 @@ const ProductTable: React.FC<ProductTableProps> = ({ products, refreshProducts }
   };
 
   const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('fr-FR', {
+    return new Intl.NumberFormat('DZ-DZA', {
       style: 'currency',
-      currency: 'EUR'
+      currency: 'DA'
     }).format(price);
   };
 
