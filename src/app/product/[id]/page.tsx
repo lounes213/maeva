@@ -48,7 +48,37 @@ export default function ProductDetailsPage() {
   const [addedToCart, setAddedToCart] = useState(false);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
 
-  // Robust function to process sizes that handles both arrays and strings
+  const handleReviewSubmitted = () => {
+    if (!id) return;
+    const fetchProduct = async () => {
+      try {
+        const res = await fetch(`/api/products?id=${id}`);
+        const data = await res.json();
+        setProduct(data.data);
+      } catch (error) {
+        console.error('Erreur lors du rafraîchissement des données:', error);
+      }
+    };
+    fetchProduct();
+  };
+
+  useEffect(() => {
+    if (!id) return;
+    const fetchProduct = async () => {
+      try {
+        const res = await fetch(`/api/products?id=${id}`);
+        const data = await res.json();
+        setProduct(data.data);
+      } catch (error) {
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProduct();
+  }, [id]);
+
+  // Simplified color processing - assumes colors are already an array
   const processSizes = (sizes: string[] | string | undefined): string[] => {
     if (!sizes) return [];
     
@@ -98,10 +128,6 @@ export default function ProductDetailsPage() {
     }
   }, [product]);
 
-  // Rest of your component code remains the same...
-  // Only the processSizes and processColors functions have been updated
-
-  // ... [keep all other functions and JSX the same]
 
   if (loading) {
     return (
