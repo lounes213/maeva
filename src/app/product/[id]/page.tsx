@@ -7,7 +7,6 @@ import { Heart, ShoppingCart, Truck, Clock, Check, ChevronDown, Star, Share2 } f
 import { useCart } from '@/app/context/cartContext'; // Import our custom hook
 import Header from '@/app/components/header';
 import toast from 'react-hot-toast';
-import ReviewModal from '@/app/components/ReviewModal';
 
 interface Product {
   _id: string;
@@ -16,7 +15,6 @@ interface Product {
   price: number;
   stock: number;
   category: string;
-  reference: string;
   tissu?: string;
   couleurs?: string[];
   taille?: string[];
@@ -25,12 +23,12 @@ interface Product {
   deliveryAddress?: string;
   deliveryStatus?: string;
   reviews?: string;
-  rating?: number;
-  reviewCount?: number;
   sold?: number;
   promotion?: boolean;
-  promoPrice?: number;
 }
+
+
+
 
 export default function ProductDetailsPage() {
   const { id } = useParams();
@@ -40,28 +38,12 @@ export default function ProductDetailsPage() {
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(0);
-  const [activeTab, setActiveTab] = useState<'description' | 'livraison' | 'avis'>('description');
+  const [activeTab, setActiveTab] = useState<'description' | 'livraison'>('description');
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [addedToCart, setAddedToCart] = useState(false);
-  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
-
-  const handleReviewSubmitted = () => {
-    // Rafraîchir les données du produit après l'ajout d'un avis
-    if (!id) return;
-    const fetchProduct = async () => {
-      try {
-        const res = await fetch(`/api/products?id=${id}`);
-        const data = await res.json();
-        setProduct(data.data);
-      } catch (error) {
-        console.error('Erreur lors du rafraîchissement des données:', error);
-      }
-    };
-    fetchProduct();
-  };
 
   useEffect(() => {
     if (!id) return;
@@ -219,98 +201,29 @@ export default function ProductDetailsPage() {
     setTimeout(() => setAddedToCart(false), 3000);
   };
 
-  // Modified handleBuyNow function that includes API call
-  const handleBuyNow = async () => {
-    if (!product || !selectedColor || !selectedSize) {
-      toast.error('Veuillez sélectionner une couleur et une taille');
-      return;
-    }
-
-    // Vérifier les informations client
-    const customer = {
-      name: 'John Doe', // À remplacer par des données réelles
-      address: '123 Main Street',
-      contact: '1234567890',
-    };
-
-    if (!customer.name || !customer.address || !customer.contact) {
-      toast.error('Veuillez fournir des informations client complètes');
-      return;
-    }
-
-    // Détails de livraison
-    const shipping = {
-      method: 'standard',
-      cost: 0,
-      estimatedDelivery: '2-4 jours',
-    };
-
-    // Calcul des montants
+  // Modified handleBuyNow function that skips adding to cart
+  const handleBuyNow = () => {
+    if (!product || !selectedColor || !selectedSize) return;
+    
+    // Get the actual price (considering promotions)
     const actualPrice = discountPrice || originalPrice;
-    const subtotal = actualPrice * quantity;
-    const shippingCost = shipping.cost;
-    const discount = discountPrice ? (originalPrice - discountPrice) * quantity : 0;
-
-    // Informations de paiement
-    const payment = {
-      subtotal: subtotal,
-      discount: discount,
-      shipping: shippingCost,
-      total: subtotal - discount + shippingCost,
-      method: 'card',
-      status: 'pending'
-    };
-
-    // Créer l'article de commande
+    
+    // Store the order info in sessionStorage to access on the confirm page
     const orderItem = {
-      productId: product._id,
+      id: product._id,
       name: product.name,
       price: actualPrice,
       imageUrl: product.imageUrls[0],
       quantity: quantity,
       color: selectedColor,
-      size: selectedSize,
+      size: selectedSize
     };
-
-    try {
-      // Envoyer la requête à l'API
-      const response = await fetch('/api/orders', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          items: [orderItem],
-          customer,
-          shipping,
-          payment
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Une erreur est survenue');
-      }
-
-      // Sauvegarder les détails de la commande
-      localStorage.setItem('lastOrder', JSON.stringify({
-        ...data,
-        customer,
-        shipping,
-        items: [orderItem],
-        trackingCode: data.trackingCode
-      }));
-
-      // Toast de succès
-      toast.success('Commande créée avec succès !');
-
-      // Redirection vers la page de confirmation
-      router.push('/confirm');
-    } catch (error: any) {
-      console.error('Erreur lors de la création de la commande:', error);
-      toast.error(error.message || 'Une erreur est survenue lors de la création de la commande');
-    }
+    
+    // Save to sessionStorage so the confirm page can access it
+    sessionStorage.setItem('directOrderItem', JSON.stringify(orderItem));
+    
+    // Navigate directly to confirm page
+    router.push('/confirm');
   };
 
   const toggleWishlist = () => {
@@ -416,7 +329,7 @@ export default function ProductDetailsPage() {
             </div>
             
             <div className="flex items-center gap-2 mt-2 text-sm">
-              <div className={`px-2 py-1 rounded ${product.stock > 10 ? 'bg-green-100 text-green-700' : product.stock > 0 ? `Plus que ${product.stock} en stock` : 'bg-red-100 text-red-700'}`}>
+              <div className={`px-2 py-1 rounded ${product.stock > 10 ? 'bg-green-100 text-green-700' : product.stock > 0 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>
                 {product.stock > 10 ? 'En stock' : product.stock > 0 ? `Plus que ${product.stock} en stock` : 'Rupture de stock'}
               </div>
               
@@ -593,17 +506,6 @@ export default function ProductDetailsPage() {
             >
               Livraison et retours
             </button>
-
-            <button
-              onClick={() => setActiveTab('avis')}
-              className={`px-6 py-3 font-medium text-sm whitespace-nowrap ${
-                activeTab === 'avis'
-                  ? 'border-b-2 border-indigo-600 text-indigo-600'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              Avis ({product.reviewCount || 0})
-            </button>
           </div>
         </div>
 
@@ -614,140 +516,7 @@ export default function ProductDetailsPage() {
             </div>
           )}
 
-          {activeTab === 'avis' && (
-            <div className="space-y-8">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-lg font-medium text-gray-900">Avis clients</h3>
-                  <p className="text-sm text-gray-500 mt-1">
-                    Voir ce que nos clients pensent de ce produit
-                  </p>
-                </div>
-                <button
-                  onClick={() => setIsReviewModalOpen(true)}
-                  className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition"
-                >
-                  Donner mon avis
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                {/* Rating summary */}
-                <div className="lg:col-span-4">
-                  <div className="bg-gray-50 rounded-lg p-6">
-                    <div className="text-center mb-4">
-                      <div className="text-5xl font-bold text-gray-900 mb-2">
-                        {product.rating ? product.rating.toFixed(1) : '0.0'}
-                      </div>
-                      <div className="flex justify-center mb-2">
-                        {Array.from({ length: 5 }).map((_, i) => (
-                          <Star
-                            key={i}
-                            className={`w-5 h-5 ${
-                              i < Math.round(product.rating || 0)
-                                ? 'text-yellow-400 fill-current'
-                                : 'text-gray-300'
-                            }`}
-                          />
-                        ))}
-                      </div>
-                      <p className="text-sm text-gray-500">
-                        Basé sur {product.reviewCount || 0} avis
-                      </p>
-                    </div>
-
-                    {/* Rating bars */}
-                    <div className="space-y-3">
-                      {[5, 4, 3, 2, 1].map((rating) => {
-                        const reviews = product.reviews ? JSON.parse(product.reviews) : [];
-                        const count = reviews.filter((r: any) => r.rating === rating).length;
-                        const percentage = product.reviewCount ? (count / product.reviewCount) * 100 : 0;
-                        
-                        return (
-                          <div key={rating} className="flex items-center">
-                            <div className="w-12 text-sm text-gray-600">{rating} étoiles</div>
-                            <div className="flex-1 mx-2">
-                              <div className="h-2 rounded-full bg-gray-200">
-                                <div
-                                  className="h-2 rounded-full bg-yellow-400"
-                                  style={{ width: `${percentage}%` }}
-                                />
-                              </div>
-                            </div>
-                            <div className="w-12 text-sm text-gray-600 text-right">{count}</div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Reviews list */}
-                <div className="lg:col-span-8">
-                  <div className="space-y-6">
-                    {product.reviews ? (
-                      JSON.parse(product.reviews).map((review: any, index: number) => (
-                        <div key={index} className="border-b border-gray-200 pb-6">
-                          <div className="flex items-center mb-3">
-                            <div className="flex-shrink-0">
-                              <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center">
-                                <span className="text-sm font-medium text-indigo-600">
-                                  {review.userName?.charAt(0) || 'A'}
-                                </span>
-                              </div>
-                            </div>
-                            <div className="ml-3">
-                              <p className="text-sm font-medium text-gray-900">{review.userName || 'Anonyme'}</p>
-                              <div className="flex items-center mt-1">
-                                {Array.from({ length: 5 }).map((_, i) => (
-                                  <Star
-                                    key={i}
-                                    className={`w-4 h-4 ${
-                                      i < review.rating
-                                        ? 'text-yellow-400 fill-current'
-                                        : 'text-gray-300'
-                                    }`}
-                                  />
-                                ))}
-                              </div>
-                            </div>
-                            <span className="ml-auto text-sm text-gray-500">
-                              {new Date(review.date).toLocaleDateString()}
-                            </span>
-                          </div>
-                          <p className="text-gray-700">{review.comment}</p>
-                          {review.images?.length > 0 && (
-                            <div className="mt-4 grid grid-cols-4 gap-2">
-                              {review.images.map((image: string, i: number) => (
-                                <div key={i} className="relative aspect-square rounded-lg overflow-hidden">
-                                  <Image
-                                    src={image}
-                                    alt={`Review image ${i + 1}`}
-                                    layout="fill"
-                                    objectFit="cover"
-                                  />
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      ))
-                    ) : (
-                      <div className="text-center py-12">
-                        <p className="text-gray-500">Aucun avis pour le moment</p>
-                        <button
-                          onClick={() => setIsReviewModalOpen(true)}
-                          className="mt-4 text-indigo-600 hover:text-indigo-700"
-                        >
-                          Soyez le premier à donner votre avis
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+    
 
           {activeTab === 'livraison' && (
             <div className="space-y-6">
@@ -790,14 +559,7 @@ export default function ProductDetailsPage() {
           )}
         </div>
       </div>
-
-      {/* Review Modal */}
-      <ReviewModal
-        isOpen={isReviewModalOpen}
-        onClose={() => setIsReviewModalOpen(false)}
-        productId={product?._id || ''}
-        onSuccess={handleReviewSubmitted}
-      />
+  
     </div>
 
      </>
