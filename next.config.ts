@@ -1,9 +1,7 @@
-import type { NextConfig } from "next";
-
-const nextConfig: NextConfig = {
-  /* other config options here */
+/** @type {import('next').NextConfig} */
+const nextConfig = {
   images: {
-    domains: ['localhost', 'https://maeva-tawny.vercel.app/'], // Added your Netlify domain
+    domains: ['localhost', 'maeva-tawny.vercel.app'], // Removed https:// prefix
   },
   // Add any other configuration options here
 };
