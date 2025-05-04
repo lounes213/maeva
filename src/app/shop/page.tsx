@@ -14,7 +14,7 @@ interface Product {
   category: string;
   tissu?: string;
   couleurs?: string[];
-  taille?: string[];
+  taille?: string;
   promotion?: boolean;
   promoPrice?: number;
   imageUrls?: string[];
