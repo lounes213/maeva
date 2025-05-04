@@ -59,10 +59,10 @@ export default function CartPage() {
   const handleCheckout = async () => {
     try {
       const customer = {
-        name: 'Rachell .A', // Remplacez par les données réelles du client
-        address: 'حي اولاد البطولة عمر خوجة البويرة',
-        contact: '+213559050962',
-        email: 'vviva1069@gmail.com',
+        name: 'John Doe', // Remplacez par les données réelles du client
+        address: '123 Main Street',
+        contact: '1234567890',
+        email: 'johndoe@example.com',
       };
 
       const payment = {
