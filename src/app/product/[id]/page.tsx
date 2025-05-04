@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Heart, ShoppingCart, Truck, Clock, Check, ChevronDown, Star, Share2 } from 'lucide-react';
-import { useCart } from '@/app/context/cartContext'; // Import our custom hook
+import { useCart } from '@/app/context/cartContext';
 import Header from '@/app/components/header';
 import toast from 'react-hot-toast';
 import ReviewModal from '@/app/components/ReviewModal';
@@ -35,7 +35,7 @@ interface Product {
 export default function ProductDetailsPage() {
   const { id } = useParams();
   const router = useRouter();
-  const { addToCart } = useCart(); // Get the addToCart function from our context
+  const { addToCart } = useCart();
 
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
@@ -49,7 +49,6 @@ export default function ProductDetailsPage() {
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
 
   const handleReviewSubmitted = () => {
-    // Rafraîchir les données du produit après l'ajout d'un avis
     if (!id) return;
     const fetchProduct = async () => {
       try {
@@ -79,68 +78,30 @@ export default function ProductDetailsPage() {
     fetchProduct();
   }, [id]);
 
-  // Helper function to process color strings from the database
+  // Simplified color processing - assumes colors are already an array
   const processColors = (colors: string[] | undefined) => {
     if (!colors || colors.length === 0) return [];
-    
-    // Process each color entry which might contain comma-separated values
-    const processedColors: string[] = [];
-    colors.forEach(colorItem => {
-      // Check if the color string contains commas
-      if (colorItem.includes(',')) {
-        // Split by comma and add each color to the array
-        colorItem.split(',').forEach(color => {
-          if (color.trim()) processedColors.push(color.trim());
-        });
-      } else {
-        // Add the single color to the array
-        processedColors.push(colorItem);
-      }
-    });
-    
-    return processedColors;
+    return colors;
   };
 
-  // Helper function to process sizes from the database
+  // Simplified size processing - assumes sizes are already an array
   const processSizes = (sizes: string[] | undefined) => {
     if (!sizes || sizes.length === 0) return [];
-    
-    // Process each size entry which might contain comma-separated values
-    const processedSizes: string[] = [];
-    sizes.forEach(sizeItem => {
-      // Check if the size string contains commas
-      if (sizeItem.includes(',')) {
-        // Split by comma and add each size to the array
-        sizeItem.split(',').forEach(size => {
-          if (size.trim()) processedSizes.push(size.trim());
-        });
-      } else {
-        // Add the single size to the array
-        processedSizes.push(sizeItem);
-      }
-    });
-    
-    return processedSizes;
+    return sizes;
   };
 
   // Helper function to determine text color based on background
   const getTextColor = (bgColor: string) => {
-    // Convert hex to RGB
     const hex = bgColor.replace('#', '');
     const r = parseInt(hex.substr(0, 2), 16);
     const g = parseInt(hex.substr(2, 2), 16);
     const b = parseInt(hex.substr(4, 2), 16);
-    
-    // Calculate perceived brightness
     const brightness = (r * 299 + g * 587 + b * 114) / 1000;
-    
-    // Return white for dark backgrounds, black for light backgrounds
     return brightness > 125 ? '#000000' : '#ffffff';
   };
 
   useEffect(() => {
     if (product) {
-      // Set initial selected values when product loads
       const colors = processColors(product.couleurs);
       const sizes = processSizes(product.taille);
       
@@ -171,11 +132,8 @@ export default function ProductDetailsPage() {
     );
   }
 
-  // Process colors and sizes
   const colors = processColors(product.couleurs);
   const sizes = processSizes(product.taille);
-  
-  // Calculate discount price if promotion is active
   const originalPrice = product.price;
   const discountPrice = product.promotion ? product.price * 0.8 : null;
 
@@ -197,38 +155,31 @@ export default function ProductDetailsPage() {
   const handleAddToCart = () => {
     if (!product || !selectedColor || !selectedSize) return;
     
-    // Get the actual price (considering promotions)
     const actualPrice = discountPrice || originalPrice;
     
-    // Create cart item object
     const cartItem = {
       _id: product._id,
       name: product.name,
       price: actualPrice,
-      imageUrl: product.imageUrls[0], // Use first image as thumbnail
+      imageUrl: product.imageUrls[0],
       quantity: quantity,
       color: selectedColor,
       size: selectedSize
     };
     
-    // Add to cart using the context function
     addToCart(cartItem);
-    
-    // Show success message
     setAddedToCart(true);
     setTimeout(() => setAddedToCart(false), 3000);
   };
 
-  // Modified handleBuyNow function that includes API call
   const handleBuyNow = async () => {
     if (!product || !selectedColor || !selectedSize) {
       toast.error('Veuillez sélectionner une couleur et une taille');
       return;
     }
 
-    // Vérifier les informations client
     const customer = {
-      name: 'John Doe', // À remplacer par des données réelles
+      name: 'John Doe',
       address: '123 Main Street',
       contact: '1234567890',
     };
@@ -238,20 +189,17 @@ export default function ProductDetailsPage() {
       return;
     }
 
-    // Détails de livraison
     const shipping = {
       method: 'standard',
       cost: 0,
       estimatedDelivery: '2-4 jours',
     };
 
-    // Calcul des montants
     const actualPrice = discountPrice || originalPrice;
     const subtotal = actualPrice * quantity;
     const shippingCost = shipping.cost;
     const discount = discountPrice ? (originalPrice - discountPrice) * quantity : 0;
 
-    // Informations de paiement
     const payment = {
       subtotal: subtotal,
       discount: discount,
@@ -261,7 +209,6 @@ export default function ProductDetailsPage() {
       status: 'pending'
     };
 
-    // Créer l'article de commande
     const orderItem = {
       productId: product._id,
       name: product.name,
@@ -273,7 +220,6 @@ export default function ProductDetailsPage() {
     };
 
     try {
-      // Envoyer la requête à l'API
       const response = await fetch('/api/orders', {
         method: 'POST',
         headers: {
@@ -293,7 +239,6 @@ export default function ProductDetailsPage() {
         throw new Error(data.error || 'Une erreur est survenue');
       }
 
-      // Sauvegarder les détails de la commande
       localStorage.setItem('lastOrder', JSON.stringify({
         ...data,
         customer,
@@ -302,10 +247,7 @@ export default function ProductDetailsPage() {
         trackingCode: data.trackingCode
       }));
 
-      // Toast de succès
       toast.success('Commande créée avec succès !');
-
-      // Redirection vers la page de confirmation
       router.push('/confirm');
     } catch (error: any) {
       console.error('Erreur lors de la création de la commande:', error);
@@ -319,19 +261,18 @@ export default function ProductDetailsPage() {
 
   return (
     <>
-    <Header/> 
-   
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 pt-32">
-    
-      {/* Success message */}
-      {addedToCart && (
-        <div className="fixed top-20 right-4 bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded shadow-md z-50 animate-fade-in-out">
-          <div className="flex items-center">
-            <Check className="h-5 w-5 mr-2" />
-            <p>Produit ajouté au panier avec succès!</p>
+      <Header/> 
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 pt-32">
+        {addedToCart && (
+          <div className="fixed top-20 right-4 bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded shadow-md z-50 animate-fade-in-out">
+            <div className="flex items-center">
+              <Check className="h-5 w-5 mr-2" />
+              <p>Produit ajouté au panier avec succès!</p>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+        
+     
       
       {/* Breadcrumb */}
       <div className="mb-6 text-sm text-gray-500">
