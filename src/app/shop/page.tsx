@@ -406,21 +406,15 @@ const filteredProducts = products.filter(product => {
   >
     <Link href={`/product/${product._id}`} className="block relative">
       <div className="aspect-[3/4] relative bg-gray-50 overflow-hidden">
-        {product.imageUrls && product.imageUrls[0] ? (
-          <div className="w-full h-full relative">
-            <Image
-              src={product.imageUrls[0]}
-              alt={product.name}
-              fill
-              className="object-cover transform group-hover:scale-110 transition-transform duration-700 ease-in-out"
-              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-              priority={false}
-              onError={(e) => {
-                e.currentTarget.onerror = null;
-                e.currentTarget.src = '/images/placeholder-product.png'; // Fallback image
-              }}
-            />
-          </div>
+        {product.imageUrls && product.imageUrls.length > 0 ? (
+          <Image
+            src={product.imageUrls[0]}
+            alt={product.name || "Product image"}
+            width={400}
+            height={600}
+            className="object-cover w-full h-full transform group-hover:scale-110 transition-transform duration-700 ease-in-out"
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+          />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-gray-400">
             <FiShoppingBag className="w-12 h-12" />
@@ -452,11 +446,11 @@ const filteredProducts = products.filter(product => {
       <div className="p-6">
         <div className="mb-4">
           <h3 className="font-semibold text-gray-900 text-lg mb-2 line-clamp-1 group-hover:text-amber-600 transition-colors">
-            {product.name}
+            {product.name || "Produit"}
           </h3>
           <p className="text-sm text-gray-500 capitalize flex items-center">
             <span className="w-1.5 h-1.5 bg-amber-500 rounded-full mr-2"></span>
-            {product.category.toLowerCase()}
+            {(product.category || "").toLowerCase()}
           </p>
         </div>
         
