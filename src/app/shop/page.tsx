@@ -399,27 +399,24 @@ const filteredProducts = products.filter(product => {
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-8">
-               {sortedProducts.map((product) => (
+ {sortedProducts.map((product) => (
   <div 
     key={product._id} 
     className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2"
   >
     <Link href={`/product/${product._id}`} className="block relative">
       <div className="aspect-[3/4] relative bg-gray-50 overflow-hidden">
-        {product.imageUrls && product.imageUrls.length > 0 ? (
-          <Image
-            src={product.imageUrls[0]}
-            alt={product.name || "Product image"}
-            width={400}
-            height={600}
-            className="object-cover w-full h-full transform group-hover:scale-110 transition-transform duration-700 ease-in-out"
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-gray-400">
-            <FiShoppingBag className="w-12 h-12" />
-          </div>
-        )}
+        {/* Using standard img tag instead of Next.js Image component */}
+        <img 
+          src={product.imageUrls && product.imageUrls[0] ? product.imageUrls[0] : "/images/no-image.jpg"} 
+          alt={product.name || "Product"} 
+          className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700 ease-in-out"
+          onError={(e) => {
+            e.target.oneError = null;
+            e.target.src = "/images/no-image.jpg";
+          }}
+        />
+        
         <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
         <div className="absolute top-0 left-0 w-full p-4 space-y-2">
           {product.promotion && (
