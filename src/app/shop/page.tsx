@@ -107,8 +107,6 @@ export default function ShopPage() {
 
   const processSizes = (sizes: string[] | undefined) => {
     if (!sizes || sizes.length === 0) return [];
-
-    // Séparer chaque taille individuellement, même si elles sont groupées
     return sizes.flatMap(sizeItem => sizeItem.split(',').map(size => size.trim()));
   };
 
@@ -117,11 +115,12 @@ export default function ShopPage() {
       try {
         const res = await fetch('/api/products');
         const data = await res.json();
+        console.log('Fetched products:', data); // Debug log
         setProducts(data.data || []);
         
         if (data.data?.length > 0) {
           const prices = data.data.map((p: Product) => p.price);
-          const maxPrice = Math.ceil(Math.max(...prices) / 1000) * 1000;
+          const maxPrice = Math.ceil(Math.max(...prices) / 1000 * 1000);
           setPriceRange([0, maxPrice]);
         }
       } catch (error) {
@@ -136,28 +135,27 @@ export default function ShopPage() {
 
   // Extract filter options from products
   const categories = Array.from(new Set(products.map(p => p.category)));
-const colors = Array.from(new Set(
-  products.flatMap(p => processColors(p.couleurs || []))
-));
+  const colors = Array.from(new Set(
+    products.flatMap(p => processColors(p.couleurs || []))
+  ));
   const sizes = Array.from(new Set(products.flatMap(p => p.taille || [])));
 
- // Update the filtering for colors
-const filteredProducts = products.filter(product => {
-  if (product.price < priceRange[0] || product.price > priceRange[1]) return false;
-  if (selectedCategories.length > 0 && !selectedCategories.includes(product.category)) return false;
-  
-  // Improved color filtering - process the colors first
-  if (selectedColors.length > 0 && product.couleurs) {
-    const processedProductColors = processColors(product.couleurs);
-    if (!processedProductColors.some(color => selectedColors.includes(color))) return false;
-  } else if (selectedColors.length > 0 && !product.couleurs) {
-    return false;
-  }
-  
-  if (selectedSizes.length > 0 && product.taille && 
-      !processSizes(product.taille).some(size => selectedSizes.includes(size))) return false;
-  return true;
-});
+  // Filter products
+  const filteredProducts = products.filter(product => {
+    if (product.price < priceRange[0] || product.price > priceRange[1]) return false;
+    if (selectedCategories.length > 0 && !selectedCategories.includes(product.category)) return false;
+    
+    if (selectedColors.length > 0 && product.couleurs) {
+      const processedProductColors = processColors(product.couleurs);
+      if (!processedProductColors.some(color => selectedColors.includes(color))) return false;
+    } else if (selectedColors.length > 0 && !product.couleurs) {
+      return false;
+    }
+    
+    if (selectedSizes.length > 0 && product.taille && 
+        !processSizes(product.taille).some(size => selectedSizes.includes(size))) return false;
+    return true;
+  });
 
   const sortedProducts = [...filteredProducts].sort((a, b) => {
     switch (sortOption) {
@@ -191,6 +189,14 @@ const filteredProducts = products.filter(product => {
         ? prev.filter(s => s !== size) 
         : [...prev, size]
     );
+  };
+
+  // Function to handle image URL
+  const getImageUrl = (url: string | undefined) => {
+    if (!url) return '';
+    if (url.startsWith('http')) return url;
+    if (url.startsWith('/')) return url;
+    return `/${url}`; // Fallback for relative paths
   };
 
   return (
@@ -408,12 +414,12 @@ const filteredProducts = products.filter(product => {
                       <div className="aspect-[3/4] relative bg-gray-50 overflow-hidden">
                         {product.imageUrls?.[0] ? (
                           <Image
-                            src={product.imageUrls[0]}
-                            alt={product.name}
+                            src={getImageUrl(product.imageUrls[0])}
+                            alt={product.name || "Product image"}
                             fill
-                            className="object-cover transform group-hover:scale-110 transition-transform duration-700 ease-in-out"
+                            className="object-cover w-full h-full transform group-hover:scale-110 transition-transform duration-700 ease-in-out"
                             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                            priority
+                            unoptimized={process.env.NODE_ENV !== 'production'} // For local testing
                           />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-gray-400">
@@ -446,11 +452,11 @@ const filteredProducts = products.filter(product => {
                       <div className="p-6">
                         <div className="mb-4">
                           <h3 className="font-semibold text-gray-900 text-lg mb-2 line-clamp-1 group-hover:text-amber-600 transition-colors">
-                            {product.name}
+                            {product.name || "Produit"}
                           </h3>
                           <p className="text-sm text-gray-500 capitalize flex items-center">
                             <span className="w-1.5 h-1.5 bg-amber-500 rounded-full mr-2"></span>
-                            {product.category.toLowerCase()}
+                            {(product.category || "").toLowerCase()}
                           </p>
                         </div>
                         
