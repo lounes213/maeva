@@ -70,12 +70,13 @@ const ProductTable: React.FC<ProductTableProps> = ({ products, refreshProducts }
     }
   };
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('fr-FR', {
-      style: 'currency',
-      currency: 'EUR'
-    }).format(price);
-  };
+const formatPrice = (price: number) => {
+  return new Intl.NumberFormat('fr-DZ', {
+    style: 'currency',
+    currency: 'DZD',
+  }).format(price);
+};
+
 
   return (
     <div className="overflow-x-auto">
