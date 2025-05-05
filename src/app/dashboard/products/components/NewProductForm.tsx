@@ -355,13 +355,24 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData, onSuccess, onCan
           {previewUrls.map((url, index) => (
             <div key={index} className="relative group">
               <div className="aspect-w-1 aspect-h-1 w-full overflow-hidden rounded-lg bg-gray-100">
-                <Image
-                  src={url}
-                  alt={`Preview ${index + 1}`}
-                  fill
-                  sizes="(max-width: 768px) 100vw, 33vw"
-                  className="object-cover object-center"
-                />
+                {url.startsWith('blob:') || url.startsWith('data:') ? (
+                  // Handle blob URLs and data URLs directly with an img tag
+                  <img
+                    src={url}
+                    alt={`Preview ${index + 1}`}
+                    className="w-full h-full object-cover object-center"
+                  />
+                ) : (
+                  // Use Next.js Image for optimized images from your domain
+                  <Image
+                    src={url}
+                    alt={`Preview ${index + 1}`}
+                    fill
+                    sizes="(max-width: 768px) 100vw, 33vw"
+                    className="object-cover object-center"
+                    unoptimized={!url.startsWith('/')} // Skip optimization for external URLs
+                  />
+                )}
               </div>
               <button
                 type="button"
