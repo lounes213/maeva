@@ -276,11 +276,11 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData, onSuccess, onCan
               {...register('promoPrice', {
                 min: { value: 0, message: 'Le prix promotionnel doit être positif' },
                 max: { 
-                  value: parseFloat(watch('price')?.toString() || '0'), 
+                  value: Number(watch('price')) || 0, 
                   message: 'Le prix promotionnel doit être inférieur au prix normal' 
                 },
-                validate: (value: string | undefined) => 
-                  !watch('promotion') || (value !== undefined && parseFloat(value) > 0) || 'Le prix promotionnel est requis quand la promotion est activée'
+                validate: (value: number | undefined) => 
+                  !watch('promotion') || (value !== undefined && value > 0) || 'Le prix promotionnel est requis quand la promotion est activée'
               })}
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
             />
