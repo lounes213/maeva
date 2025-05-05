@@ -1,11 +1,10 @@
-
 'use client';
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Heart, ShoppingCart, Truck, Clock, Check, ChevronDown, Star, Share2 } from 'lucide-react';
-import { useCart } from '@/app/context/cartContext';
+import { useCart } from '@/app/context/cartContext'; // Import our custom hook
 import Header from '@/app/components/header';
 import toast from 'react-hot-toast';
 import ReviewModal from '@/app/components/ReviewModal';
@@ -21,7 +20,7 @@ interface Product {
   tissu?: string;
   couleurs?: string[];
   taille?: string[];
-  imageUrls: string[]; // Made optional
+  imageUrls: string[];
   deliveryDate?: string;
   deliveryAddress?: string;
   deliveryStatus?: string;
@@ -36,7 +35,7 @@ interface Product {
 export default function ProductDetailsPage() {
   const { id } = useParams();
   const router = useRouter();
-  const { addToCart } = useCart();
+  const { addToCart } = useCart(); // Get the addToCart function from our context
 
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
@@ -49,30 +48,16 @@ export default function ProductDetailsPage() {
   const [addedToCart, setAddedToCart] = useState(false);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
 
-  // Production-ready image URL handling
-  const getImageUrl = (url: string | undefined) => {
-    if (!url) return '/placeholder-product.png';
-    // If URL is already absolute, use it directly
-    if (url.startsWith('http')) return url;
-    // For relative paths, prepend the base URL
-    return `${process.env.NEXT_PUBLIC_BASE_URL || ''}${url}`;
-  };
-
-  const safeImageUrls = (product?.imageUrls || []).map(getImageUrl);
-  const mainImageUrl = safeImageUrls[selectedImage] || '/placeholder-product.png';
-
   const handleReviewSubmitted = () => {
+    // Rafraîchir les données du produit après l'ajout d'un avis
     if (!id) return;
     const fetchProduct = async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/products?id=${id}`);
+        const res = await fetch(`/api/products?id=${id}`);
         const data = await res.json();
-        setProduct({
-          ...data.data,
-          imageUrls: (data.data?.imageUrls || []).map(getImageUrl)
-        });
+        setProduct(data.data);
       } catch (error) {
-        console.error('Error refreshing product data:', error);
+        console.error('Erreur lors du rafraîchissement des données:', error);
       }
     };
     fetchProduct();
@@ -82,18 +67,10 @@ export default function ProductDetailsPage() {
     if (!id) return;
     const fetchProduct = async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/products?id=${id}`);
+        const res = await fetch(`/api/products?id=${id}`);
         const data = await res.json();
-        
-        if (!res.ok) throw new Error(data.message || 'Failed to fetch product');
-        
-        setProduct({
-          ...data.data,
-          imageUrls: (data.data?.imageUrls || []).map(getImageUrl)
-        });
+        setProduct(data.data);
       } catch (error) {
-        console.error('Fetch error:', error);
-        toast.error('Failed to load product');
       } finally {
         setLoading(false);
       }
@@ -371,20 +348,15 @@ export default function ProductDetailsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
         {/* Left column - Images */}
         <div>
-<div className="aspect-square rounded-xl overflow-hidden bg-gray-100 mb-4">
-              <Image
-                src={mainImageUrl}
-                alt={product?.name || 'Product image'}
-                width={800}
-                height={800}
-                className="object-contain w-full h-full"
-                priority
-                unoptimized={process.env.NODE_ENV !== 'production'} // Helps with external images
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src = '/placeholder-product.png';
-                }}
-              />
-            </div>
+          <div className="aspect-square rounded-xl overflow-hidden bg-gray-100 mb-4">
+            <Image
+              src={product.imageUrls[selectedImage]}
+              alt={product.name}
+              width={800}
+              height={800}
+              className="object-contain w-full h-full"
+            />
+          </div>
           
           <div className="grid grid-cols-4 gap-3">
             {product.imageUrls.map((url, i) => (
