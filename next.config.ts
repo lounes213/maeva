@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
-    domains: ['localhost', 'maeva-tawny.vercel.app', 'maevashop.netlify.app'], // Removed https:// prefix
+    domains: ['http://localhost:3000/'], // Removed https:// prefix
   },
   // Add any other configuration options here
 };

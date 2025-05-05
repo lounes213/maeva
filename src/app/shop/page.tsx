@@ -4,7 +4,7 @@ import { FiFilter, FiX, FiChevronDown, FiShoppingBag, FiStar, FiCheck } from 're
 import Image from 'next/image';
 import Link from 'next/link';
 import Header from '../components/header';
-import { CldImage } from 'next-cloudinary';
+
 interface Product {
   _id: string;
   name: string;
@@ -407,26 +407,15 @@ const filteredProducts = products.filter(product => {
                     <Link href={`/product/${product._id}`} className="block relative">
                       <div className="aspect-[3/4] relative bg-gray-50 overflow-hidden">
                         {product.imageUrls?.[0] ? (
-
-  
-
-
- 
-    <CldImage
-       src={product.imageUrls[0]}
-      alt={product.name}// Use this sample image or upload your own via the Media Explorer
-      width="500" // Transform the image: auto-crop to square aspect_ratio
-      height="500"
-       className="object-cover transform group-hover:scale-110 transition-transform duration-700 ease-in-out"
+                          <Image
+                            src={product.imageUrls[0]}
+                            alt={product.name}
+                            fill
+                            className="object-cover transform group-hover:scale-110 transition-transform duration-700 ease-in-out"
                             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                             priority
-      crop={{
-        type: 'auto',
-        source: true
-      }}
-  />
-
-                        ): (
+                          />
+                        ) : (
                           <div className="w-full h-full flex items-center justify-center text-gray-400">
                             <FiShoppingBag className="w-12 h-12" />
                           </div>
