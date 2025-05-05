@@ -176,10 +176,10 @@ const onSubmit = async (data: FormData) => {
               { 
                 icon: <FiPhone className="w-8 h-8 text-amber-600" />,
                 title: 'Appelez-nous',
-                content: '+213559050962',
+                content: '+33 1 23 45 67 89',
                 action: {
                   text: 'Appeler maintenant',
-                  href: 'tel:+213559050962'
+                  href: 'tel:+33123456789'
                 }
               }
             ].map((item, index) => (

@@ -134,7 +134,6 @@ export async function PUT(req: NextRequest) {
   try {
     await dbConnect();
 
-    // Récupération du slug depuis l'URL
     const { searchParams } = new URL(req.url);
     const slug = searchParams.get('slug');
 
@@ -142,7 +141,6 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: "Le slug est requis" }, { status: 400 });
     }
 
-    // Vérification de l'existence de l'article
     const existingPost = await BlogPost.findOne({ slug });
     if (!existingPost) {
       return NextResponse.json({ error: "Article non trouvé" }, { status: 404 });
@@ -173,13 +171,11 @@ export async function PUT(req: NextRequest) {
     if (images.length > 0) {
       const uploadDir = path.join(process.cwd(), 'public/uploads/blog');
       
-      // Création du dossier d'upload si nécessaire
       if (!fs.existsSync(uploadDir)) {
         fs.mkdirSync(uploadDir, { recursive: true });
       }
 
       for (const image of images) {
-        // Limite de taille à 5MB
         if (image.size > 5 * 1024 * 1024) continue;
 
         const buffer = await image.arrayBuffer();
@@ -187,11 +183,9 @@ export async function PUT(req: NextRequest) {
         const fileName = `${uuidv4()}.${ext}`;
         const filePath = path.join(uploadDir, fileName);
 
-        // Sauvegarde de l'image
         await fs.promises.writeFile(filePath, Buffer.from(buffer));
         fields.image = `/uploads/blog/${fileName}`;
 
-        // Suppression de l'ancienne image si elle existe
         if (existingPost.image && existingPost.image.startsWith('/uploads/')) {
           const oldImagePath = path.join(process.cwd(), 'public', existingPost.image);
           if (fs.existsSync(oldImagePath)) {
@@ -201,7 +195,6 @@ export async function PUT(req: NextRequest) {
       }
     }
 
-    // Mise à jour de l'article
     const updatedPost = await BlogPost.findOneAndUpdate(
       { slug },
       fields,
@@ -214,14 +207,12 @@ export async function PUT(req: NextRequest) {
 
     return NextResponse.json(updatedPost);
   } catch (error: any) {
-    console.error("Erreur lors de la mise à jour:", error);
     return NextResponse.json(
       { error: error.message || "Erreur lors de la mise à jour de l'article" },
       { status: 500 }
     );
   }
 }
-
 export async function DELETE(req: NextRequest) {
   try {
     await dbConnect();
@@ -238,21 +229,25 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: 'Blog post not found' }, { status: 404 });
     }
 
+    // Delete the database record
     await BlogPost.findOneAndDelete({ slug });
 
-    if (post.image && post.image.startsWith('/uploads/')) {
-      try {
-        const imagePath = path.join(process.cwd(), 'public', post.image);
-        if (fs.existsSync(imagePath)) {
+    // Only attempt to delete local image files if in development mode
+    const isLocal = process.env.NODE_ENV === 'development';
+    if (isLocal && post.image && post.image.startsWith('/uploads/')) {
+      const imagePath = path.join(process.cwd(), 'public', post.image);
+      if (fs.existsSync(imagePath)) {
+        try {
           await fsp.unlink(imagePath);
+        } catch (error) {
+          console.error("Error deleting image file:", error);
         }
-      } catch (error) {
-        toast.error("Error deleting image file:");
       }
     }
 
     return NextResponse.json({ message: 'Blog post deleted successfully' });
   } catch (error: any) {
+    console.error("Error in DELETE handler:", error);
     return NextResponse.json({ error: error.message || "Failed to delete blog post" }, { status: 500 });
   }
 }
