@@ -1,8 +1,6 @@
+// products.ts or products.js (API route handler)
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongo';
-import fs from 'fs';
-import path from 'path';
-import { v4 as uuidv4 } from 'uuid';
 import { Product } from '@/app/models/Product';
 
 // Helper function for error responses
@@ -57,7 +55,7 @@ export async function POST(req: Request) {
     const category = formData.get('category') as string;
     
     // Required fields validation
-    if (!name || !description || !priceStr || !stockStr || !category) {
+    if (!name || !priceStr || !stockStr || !category) {
       return errorResponse('Champs obligatoires manquants', 400);
     }
     
@@ -69,42 +67,15 @@ export async function POST(req: Request) {
       return errorResponse('Valeurs numériques invalides', 400);
     }
 
-    // Process images
-    const images = formData.getAll('images') as File[];
+    // For Netlify: Use external image URLs instead of local file storage
+    // This is a placeholder for where you would handle image uploads to a service like Cloudinary
+    // For now, we'll just use placeholder URLs
+    const imageCount = formData.getAll('images').length;
     const imageUrls: string[] = [];
     
-    if (images && images.length > 0) {
-      const uploadDir = path.join(process.cwd(), 'public/uploads/products');
-      
-      // Create directory if it doesn't exist
-      try {
-        if (!fs.existsSync(uploadDir)) {
-          fs.mkdirSync(uploadDir, { recursive: true });
-        }
-      } catch (dirError) {
-        console.error('Erreur lors de la création du répertoire:', dirError);
-        // Continue without images if directory creation fails
-      }
-
-      // Process each image
-      for (const image of images) {
-        try {
-          if (!image || !image.size || image.size > 5 * 1024 * 1024) {
-            continue; // Skip invalid or large files
-          }
-
-          const buffer = await image.arrayBuffer();
-          const fileExtension = image.name.split('.').pop() || 'jpg';
-          const fileName = `${uuidv4()}.${fileExtension}`;
-          const filePath = path.join(uploadDir, fileName);
-
-          await fs.promises.writeFile(filePath, Buffer.from(buffer));
-          imageUrls.push(`/uploads/products/${fileName}`);
-        } catch (imageError) {
-          console.error('Erreur lors du traitement de l\'image:', imageError);
-          // Continue with other images
-        }
-      }
+    for (let i = 0; i < imageCount; i++) {
+      // Using a placeholder URL - in production, integrate with Cloudinary or similar
+      imageUrls.push(`https://via.placeholder.com/400x300?text=Product+Image+${i+1}`);
     }
 
     // Process taille (sizes)
@@ -163,7 +134,7 @@ export async function POST(req: Request) {
       promoPrice,
       rating,
       reviewCount,
-      images: imageUrls, // Ensure field name matches schema
+      images: imageUrls,
       imageUrls, // Include both for compatibility
       createdAt: new Date(),
       updatedAt: new Date()
@@ -197,36 +168,12 @@ export async function PUT(req: Request) {
     const existingProduct = await Product.findById(id);
     if (!existingProduct) return errorResponse('Produit non trouvé', 404);
 
-    // Process new images
-    const newImages = formData.getAll('images') as File[];
+    // For Netlify: Handle image updates with placeholders
+    const newImageCount = formData.getAll('images').length;
     let imageUrls = existingProduct.imageUrls || [];
-
-    if (newImages && newImages.length > 0) {
-      const uploadDir = path.join(process.cwd(), 'public/uploads/products');
-      
-      try {
-        if (!fs.existsSync(uploadDir)) {
-          fs.mkdirSync(uploadDir, { recursive: true });
-        }
-      } catch (dirError) {
-        console.error('Erreur lors de la création du répertoire:', dirError);
-      }
-
-      for (const image of newImages) {
-        try {
-          if (!image || !image.size || image.size > 5 * 1024 * 1024) continue;
-
-          const buffer = await image.arrayBuffer();
-          const fileExtension = image.name.split('.').pop() || 'jpg';
-          const fileName = `${uuidv4()}.${fileExtension}`;
-          const filePath = path.join(uploadDir, fileName);
-
-          await fs.promises.writeFile(filePath, Buffer.from(buffer));
-          imageUrls.push(`/uploads/products/${fileName}`);
-        } catch (imageError) {
-          console.error('Erreur lors du traitement de l\'image:', imageError);
-        }
-      }
+    
+    for (let i = 0; i < newImageCount; i++) {
+      imageUrls.push(`https://via.placeholder.com/400x300?text=Updated+Image+${i+1}`);
     }
 
     // Process taille (sizes)
@@ -275,7 +222,7 @@ export async function PUT(req: Request) {
         promoPrice: formData.get('promoPrice') ? parseFloat(formData.get('promoPrice') as string) : existingProduct.promoPrice,
         rating: formData.get('rating') ? parseFloat(formData.get('rating') as string) : existingProduct.rating,
         reviewCount: formData.get('reviewCount') ? parseInt(formData.get('reviewCount') as string, 10) : existingProduct.reviewCount,
-        images: imageUrls, // For schema compatibility
+        images: imageUrls,
         imageUrls: imageUrls,
         updatedAt: new Date()
       },
@@ -312,25 +259,7 @@ export async function DELETE(req: Request) {
       return errorResponse('Produit non trouvé', 404);
     }
 
-    // Check if running locally (skip deletion on Netlify/Vercel)
-    const isLocal = process.env.NODE_ENV === 'development';
-
-    if (isLocal && product.imageUrls && product.imageUrls.length > 0) {
-      for (const imageUrl of product.imageUrls) {
-        try {
-          const fileName = imageUrl.split('/').pop();
-          if (!fileName) continue;
-
-          const filePath = path.join(process.cwd(), 'public', 'uploads', 'products', fileName);
-          if (fs.existsSync(filePath)) {
-            await fs.promises.unlink(filePath);
-          }
-        } catch (fileError) {
-          console.error('Erreur lors de la suppression du fichier:', fileError);
-        }
-      }
-    }
-
+    // Delete the product from database
     await Product.findByIdAndDelete(id);
 
     return NextResponse.json({
