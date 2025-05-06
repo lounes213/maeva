@@ -471,8 +471,8 @@ export default function ProductDetailsPage() {
               <Image
                 src={mainImageUrl}
                 alt={product?.name || 'Product image'}
-                width={800}
-                height={800}
+                width={400}
+                height={400}
                 className="object-contain w-full h-full"
                 priority
                 onError={() => handleImageError(selectedImage)}
