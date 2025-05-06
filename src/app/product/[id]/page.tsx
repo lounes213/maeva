@@ -468,13 +468,13 @@ export default function ProductDetailsPage() {
           {/* Left column - Images */}
           <div>
             <div className="aspect-square rounded-xl overflow-hidden bg-gray-100 mb-4">
-              <Image
+              <img
                 src={mainImageUrl}
                 alt={product?.name || 'Product image'}
                 width={800}
                 height={800}
                 className="object-contain w-full h-full"
-                priority
+                aria-required="true"
                 onError={() => handleImageError(selectedImage)}
                 unoptimized={process.env.NODE_ENV !== 'production'} // Helps with external images
               />
