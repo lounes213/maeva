@@ -10,11 +10,10 @@ const nextConfig = {
       'maeva-tawny.vercel.app'
     ],
     // You can also use unoptimized for development
-    unoptimized: process.env.NODE_ENV === 'development',
     // Use the default loader for local development
     loader: process.env.NODE_ENV === 'development' ? 'default' : 'imgix',
     // Use the default path for local development
-    
+
     // You can also use remotePatterns for more specific control
     remotePatterns: [
       {
