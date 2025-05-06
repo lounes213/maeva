@@ -41,7 +41,10 @@ interface Review {
   images?: string[];
 }
 
-export default function ProductDetailsPage() {
+
+
+
+export default function ProductDetailsPage(onSuccess: (newReview: Review) => void) {
   const { id } = useParams();
   const router = useRouter();
   const { addToCart } = useCart();
@@ -928,7 +931,8 @@ export default function ProductDetailsPage() {
         isOpen={isReviewModalOpen}
         onClose={() => setIsReviewModalOpen(false)}
         productId={product?._id || ''}
-        onReviewSubmit={handleReviewSubmitted}
+       onSuccess={() => handleReviewSubmitted}
+
               />
     </div>
 
