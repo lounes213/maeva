@@ -924,12 +924,12 @@ export default function ProductDetailsPage() {
       </div>
 
       {/* Review Modal */}
-      <ReviewModal
+       <ReviewModal
         isOpen={isReviewModalOpen}
         onClose={() => setIsReviewModalOpen(false)}
         productId={product?._id || ''}
-        onSuccess={handleReviewSubmitted}
-      />
+        onReviewSubmit={handleReviewSubmitted}
+              />
     </div>
 
      </>
