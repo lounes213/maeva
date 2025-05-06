@@ -474,7 +474,7 @@ export default function ProductDetailsPage() {
                 width={800}
                 height={800}
                 className="object-contain w-full h-full"
-                property='true'
+                priority
                 onError={() => handleImageError(selectedImage)}
                 unoptimized={process.env.NODE_ENV !== 'production'} // Helps with external images
               />
