@@ -39,11 +39,7 @@ interface Review {
   comment: string;
   date: string;
   images?: string[];
-  onSuccess?: (newReview: Review) => void;
 }
-
-
-
 
 export default function ProductDetailsPage() {
   const { id } = useParams();
@@ -72,9 +68,9 @@ export default function ProductDetailsPage() {
   // Production-ready image URL handling with better error fallback
   const getImageUrl = useCallback((url: string | undefined, index: number) => {
     // If there was a loading error for this image, use placeholder
-    if (imageLoadError[index]) return '/placeholder-product.png';
+    if (imageLoadError[index]) return '/api/placeholder/400/300';
     
-    if (!url) return '/placeholder-product.png';
+    if (!url) return '/api/placeholder/400/300';
     
     // If URL is already absolute, use it directly
     if (url.startsWith('http')) return url;
@@ -468,16 +464,17 @@ export default function ProductDetailsPage() {
           {/* Left column - Images */}
           <div>
             <div className="aspect-square rounded-xl overflow-hidden bg-gray-100 mb-4">
-              <Image
-                src={mainImageUrl}
-                alt={product?.name || 'Product image'}
-                 width={500}
-      height={500}
-                className="object-contain w-full h-full"
-                priority
-                onError={() => handleImageError(selectedImage)}
-                unoptimized={process.env.NODE_ENV !== 'production'} // Helps with external images
-              />
+              <div className="relative w-full h-full">
+                <Image
+                  src={mainImageUrl}
+                  alt={product?.name || 'Product image'}
+                  width={500}
+                  height={500}
+                  className="object-contain w-full h-full"
+                  priority
+                  onError={() => handleImageError(selectedImage)}
+                />
+              </div>
             </div>
             
             <div className="grid grid-cols-4 gap-3">
@@ -488,14 +485,16 @@ export default function ProductDetailsPage() {
                   className={`aspect-square rounded-lg overflow-hidden border bg-gray-100
                     ${selectedImage === i ? 'ring-2 ring-indigo-600' : 'hover:ring-1 hover:ring-indigo-300'}`}
                 >
-                  <Image 
-                    src={getImageUrl(url, i)} 
-                    alt={`${product.name} - image ${i+1}`} 
-                    width={150} 
-                    height={150}
-                    className="object-cover w-full h-full"
-                    onError={() => handleImageError(i)}
-                  />
+                  <div className="relative w-full h-full">
+                    <Image 
+                      src={getImageUrl(url, i)} 
+                      alt={`${product.name} - image ${i+1}`} 
+                      width={150} 
+                      height={150}
+                      className="object-cover w-full h-full"
+                      onError={() => handleImageError(i)}
+                    />
+                  </div>
                 </button>
               ))}
             </div>
