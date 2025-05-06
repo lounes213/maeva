@@ -39,12 +39,13 @@ interface Review {
   comment: string;
   date: string;
   images?: string[];
+  onSuccess?: (newReview: Review) => void;
 }
 
 
 
 
-export default function ProductDetailsPage(onSuccess: (newReview: Review) => void) {
+export default function ProductDetailsPage() {
   const { id } = useParams();
   const router = useRouter();
   const { addToCart } = useCart();
