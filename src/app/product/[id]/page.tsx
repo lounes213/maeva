@@ -757,7 +757,12 @@ export default function ProductDetailsPage() {
         isOpen={isReviewModalOpen}
         onClose={() => setIsReviewModalOpen(false)}
         productId={product._id}
-        onSuccess={handleReviewSubmitted}
+        onSuccess={(newReview: Review) => {
+          handleReviewSubmitted(newReview);
+          setIsReviewModalOpen(false);
+        }
+        }
+
       />
     </>
   );
