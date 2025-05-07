@@ -1,6 +1,6 @@
 'use client';
 import React, { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import Image from 'next/image';
 import { Product } from '@/app/types/product';
@@ -40,33 +40,14 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData, onSuccess, onCan
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
+    setSelectedImages(prev => [...prev, ...files]);
     
-    // Validate images
-    const validFiles = files.filter(file => {
-      // Check file type
-      const isValidType = file.type.startsWith('image/');
-      // Check file size (5MB max)
-      const isValidSize = file.size <= 5 * 1024 * 1024;
-      
-      if (!isValidType || !isValidSize) {
-        toast.error(`Fichier ${file.name} invalide. Utilisez uniquement des images de moins de 5MB.`);
-        return false;
-      }
-      
-      return true;
-    });
-    
-    setSelectedImages(prev => [...prev, ...validFiles]);
-    
-    const newPreviewUrls = validFiles.map(file => URL.createObjectURL(file));
+    const newPreviewUrls = files.map(file => URL.createObjectURL(file));
     setPreviewUrls(prev => [...prev, ...newPreviewUrls]);
   };
 
   const removeImage = (index: number) => {
     setSelectedImages(prev => prev.filter((_, i) => i !== index));
-    
-    // Revoke URL to prevent memory leaks
-    URL.revokeObjectURL(previewUrls[index]);
     setPreviewUrls(prev => prev.filter((_, i) => i !== index));
   };
 
@@ -76,61 +57,74 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData, onSuccess, onCan
   };
 
   const onSubmit = async (data: any) => {
+    setIsLoading(true);
+    const formData = new FormData();
+
+    // Vérifier que le champ 'category' est renseigné
+    if (!data.category || data.category.trim() === '') {
+      toast.error('Le champ catégorie est requis.');
+      setIsLoading(false);
+      return;
+    }
+
+    // Vérifier que le champ 'reference' est renseigné
+    if (!data.reference || data.reference.trim() === '') {
+      toast.error('Le champ référence est requis.');
+      setIsLoading(false);
+      return;
+    }
+
+    // Convertir les champs numériques en nombres
+    const processedData = {
+      ...data,
+      price: parseFloat(data.price),
+      reviewCount: parseInt(data.reviewCount, 10) || 0,
+      sold: parseInt(data.sold, 10) || 0,
+      stock: parseInt(data.stock, 10),
+      rating: parseFloat(data.rating) || 0,
+    };
+
+    // Ajouter les données au FormData
+    Object.keys(processedData).forEach(key => {
+      if (key === 'promoPrice' && !processedData.promotion) {
+        return; // Ne pas inclure promoPrice si promotion est false
+      }
+      if (processedData[key] !== undefined && processedData[key] !== null) {
+        formData.append(key, processedData[key].toString());
+      }
+    });
+
+    // Ajouter les fichiers d'images
+    selectedImages.forEach(image => {
+      formData.append('images', image);
+    });
+
     try {
-      setIsLoading(true);
-      
-      // Validation
-      if (!data.category || data.category.trim() === '') {
-        toast.error('Le champ catégorie est requis.');
-        setIsLoading(false);
-        return;
-      }
-
-      if (data.promotion && (!data.promoPrice || parseFloat(data.promoPrice) <= 0)) {
-        toast.error('Veuillez spécifier un prix promotionnel valide.');
-        setIsLoading(false);
-        return;
-      }
-
-      const formData = new FormData();
-
-      // Ajout des données normales
-      Object.keys(data).forEach(key => {
-        // Skip empty fields, but allow 0 values for numbers
-        if (data[key] === '' || data[key] === null || data[key] === undefined) return;
-        
-        // Handle arrays
-        if (Array.isArray(data[key])) {
-          // For colors, stringify the array
-          if (key === 'couleurs') {
-            formData.append(key, JSON.stringify(data[key]));
-          } else {
-            formData.append(key, data[key].join(','));
-          }
-        } else {
-          formData.append(key, data[key].toString());
-        }
-      });
-
-      // Ajouter les fichiers d'images
-      selectedImages.forEach(image => {
-        formData.append('images', image);
-      });
-
-      // Déterminer l'URL et la méthode
       const url = initialData ? `/api/products?id=${initialData._id}` : '/api/products';
       const method = initialData ? 'PUT' : 'POST';
 
-      // Envoyer la requête au serveur
       const response = await fetch(url, {
         method,
         body: formData
       });
 
-      // Gérer les erreurs
+      const responseData = await response.json();
+
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Erreur lors de l\'enregistrement du produit');
+        if (responseData.details) {
+          // Handle validation errors
+          const errorMessages = Object.entries(responseData.details)
+            .map(([field, errors]: [string, any]) => {
+              if (errors._errors) {
+                return errors._errors.join(', ');
+              }
+              return `${field}: ${errors}`;
+            })
+            .filter(Boolean)
+            .join('\n');
+          throw new Error(errorMessages);
+        }
+        throw new Error(responseData.error || 'Erreur lors de l\'enregistrement du produit');
       }
 
       toast.success(initialData ? 'Produit mis à jour avec succès' : 'Produit créé avec succès');
@@ -143,20 +137,9 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData, onSuccess, onCan
     }
   };
 
-  // Clean up object URLs on component unmount
-  React.useEffect(() => {
-    return () => {
-      previewUrls.forEach(url => {
-        if (url.startsWith('blob:')) {
-          URL.revokeObjectURL(url);
-        }
-      });
-    };
-  }, []);
-
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-2 gap-6">
         <div>
           <label className="block text-sm font-medium text-gray-700">Nom</label>
           <input
@@ -191,7 +174,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData, onSuccess, onCan
         />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-2 gap-6">
         <div>
           <label className="block text-sm font-medium text-gray-700">Tissu</label>
           <input
@@ -212,16 +195,13 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData, onSuccess, onCan
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-3 gap-6">
         <div>
           <label className="block text-sm font-medium text-gray-700">Prix</label>
           <input
             type="number"
             step="0.01"
-            {...register('price', { 
-              required: 'Le prix est requis', 
-              min: { value: 0, message: 'Le prix doit être positif' } 
-            })}
+            {...register('price', { required: 'Le prix est requis', min: 0 })}
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
           />
           {errors.price && (
@@ -233,10 +213,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData, onSuccess, onCan
           <label className="block text-sm font-medium text-gray-700">Stock</label>
           <input
             type="number"
-            {...register('stock', { 
-              required: 'Le stock est requis', 
-              min: { value: 0, message: 'Le stock doit être positif' } 
-            })}
+            {...register('stock', { required: 'Le stock est requis', min: 0 })}
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
           />
           {errors.stock && (
@@ -275,12 +252,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData, onSuccess, onCan
               step="0.01"
               {...register('promoPrice', {
                 min: { value: 0, message: 'Le prix promotionnel doit être positif' },
-                max: { 
-                  value: Number(watch('price')) || 0, 
-                  message: 'Le prix promotionnel doit être inférieur au prix normal' 
-                },
-                validate: (value: number | undefined) => 
-                  !watch('promotion') || (value !== undefined && value > 0) || 'Le prix promotionnel est requis quand la promotion est activée'
+                max: { value: watch('price'), message: 'Le prix promotionnel doit être inférieur au prix normal' }
               })}
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
             />
@@ -291,7 +263,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData, onSuccess, onCan
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-2 gap-6">
         <div>
           <label className="block text-sm font-medium text-gray-700">Note moyenne (0-5)</label>
           <input
@@ -299,15 +271,9 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData, onSuccess, onCan
             step="0.1"
             min="0"
             max="5"
-            {...register('rating', {
-              min: { value: 0, message: 'La note doit être entre 0 et 5' },
-              max: { value: 5, message: 'La note doit être entre 0 et 5' }
-            })}
+            {...register('rating')}
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
           />
-          {errors.rating && (
-            <p className="mt-1 text-sm text-red-600">{errors.rating.message}</p>
-          )}
         </div>
 
         <div>
@@ -315,14 +281,9 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData, onSuccess, onCan
           <input
             type="number"
             min="0"
-            {...register('reviewCount', {
-              min: { value: 0, message: 'Le nombre d\'avis doit être positif' }
-            })}
+            {...register('reviewCount')}
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
           />
-          {errors.reviewCount && (
-            <p className="mt-1 text-sm text-red-600">{errors.reviewCount.message}</p>
-          )}
         </div>
       </div>
 
@@ -351,14 +312,16 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData, onSuccess, onCan
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">Images</label>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-4 gap-4">
           {previewUrls.map((url, index) => (
             <div key={index} className="relative group">
-              <div className="aspect-w-1 aspect-h-1 w-full overflow-hidden rounded-lg bg-gray-100 relative" style={{ paddingBottom: '100%' }}>
-                <img
+              <div className="aspect-w-1 aspect-h-1 w-full overflow-hidden rounded-lg bg-gray-100">
+                <Image
                   src={url}
                   alt={`Preview ${index + 1}`}
-                  className="absolute inset-0 w-full h-full object-cover object-center"
+                  layout="fill"
+                  objectFit="cover"
+                  className="object-center"
                 />
               </div>
               <button
