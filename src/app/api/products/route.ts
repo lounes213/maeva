@@ -92,15 +92,15 @@ export async function POST(req: Request) {
 
     // Prepare product data
     const productData = {
-      name: formData.get('name'),
-      reference: formData.get('reference'),
-      description: formData.get('description'),
+      name: formData.get('name') as string,
+      reference: formData.get('reference') as string,
+      description: formData.get('description') as string,
       price: parseFloat(formData.get('price') as string),
       stock: parseInt(formData.get('stock') as string),
       category: formData.get('category') as string,
       tissu: formData.get('tissu') as string || '',
-      couleurs: couleurs,
-      taille: taille,
+      couleurs: formData.getAll('couleurs') as string[],
+      taille: formData.getAll('taille') as string[],
       sold: parseInt(formData.get('sold') as string) || 0,
       promotion: formData.get('promotion') === 'true',
       promoPrice: formData.get('promotion') === 'true' ? parseFloat(formData.get('promoPrice') as string) : undefined,
@@ -108,11 +108,15 @@ export async function POST(req: Request) {
       rating: parseFloat(formData.get('rating') as string) || 0,
       reviewCount: parseInt(formData.get('reviewCount') as string) || 0,
       imageUrls,
+      deliveryDate: formData.get('deliveryDate') as string || undefined,
+      deliveryAddress: formData.get('deliveryAddress') as string || undefined,
+      deliveryStatus: formData.get('deliveryStatus') as string || undefined
     };
 
     // Validate product data
     const validation = productSchema.safeParse(productData);
     if (!validation.success) {
+      console.error('Validation error:', validation.error.format());
       return NextResponse.json(
         { 
           success: false, 
@@ -123,9 +127,9 @@ export async function POST(req: Request) {
       );
     }
 
-    // Create product
+    // Create product with validated data
     await dbConnect();
-    const product = await Product.create(productData);
+    const product = await Product.create(validation.data);
 
     return NextResponse.json({ 
       success: true, 
