@@ -147,30 +147,41 @@ export async function POST(request: NextRequest) {
 // PUT - Update product
 export async function PUT(request: NextRequest) {
   try {
+    console.log('Starting PUT request processing...');
+    
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
+    console.log('Product ID:', id);
     
     if (!id) {
+      console.log('No ID provided');
       return errorResponse('ID du produit manquant', 400);
     }
 
     const idError = validateProductId(id);
     if (idError) {
+      console.log('Invalid ID:', idError);
       return errorResponse(idError, 400);
     }
 
+    console.log('Connecting to database...');
     await dbConnect();
     
     // Find existing product
+    console.log('Finding existing product...');
     const existingProduct = await Product.findById(id);
     if (!existingProduct) {
+      console.log('Product not found');
       return errorResponse('Produit non trouvé', 404);
     }
+    console.log('Existing product found:', existingProduct._id);
 
     // Get form data
     let formData;
     try {
+      console.log('Parsing form data...');
       formData = await request.formData();
+      console.log('Form data parsed successfully');
     } catch (error) {
       console.error('Error parsing form data:', error);
       return errorResponse('Erreur lors du traitement des données du formulaire', 400);
@@ -179,32 +190,40 @@ export async function PUT(request: NextRequest) {
     // Process new images
     let imageUrls = existingProduct.imageUrls || [];
     try {
+      console.log('Processing images...');
       const newImages = formData.getAll('images') as File[];
+      console.log('Number of new images:', newImages.length);
+
       if (newImages.length > 0) {
         const uploadDir = path.join(process.cwd(), 'public/uploads/products');
+        console.log('Upload directory:', uploadDir);
+        
         if (!fs.existsSync(uploadDir)) {
+          console.log('Creating upload directory...');
           fs.mkdirSync(uploadDir, { recursive: true });
         }
 
         for (const image of newImages) {
           if (!image || !image.name) {
-            console.warn('Image invalide ou sans nom, ignorée.');
+            console.warn('Invalid image or missing name, skipping...');
             continue;
           }
 
           if (image.size > 5 * 1024 * 1024) {
-            console.warn('Image trop grande, ignorée.');
+            console.warn('Image too large, skipping:', image.name);
             continue;
           }
 
           const fileExtension = image.name.split('.').pop();
           const fileName = `${uuidv4()}.${fileExtension}`;
           const filePath = path.join(uploadDir, fileName);
+          console.log('Saving image:', fileName);
 
           try {
             const buffer = Buffer.from(await image.arrayBuffer());
             await fs.promises.writeFile(filePath, buffer);
             imageUrls.push(`/uploads/products/${fileName}`);
+            console.log('Image saved successfully:', fileName);
           } catch (error) {
             console.error('Error saving image:', error);
             continue;
@@ -217,6 +236,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Process colors and sizes with fallbacks
+    console.log('Processing colors and sizes...');
     const couleurs = formData.getAll('couleurs').length > 0 
       ? formData.getAll('couleurs') as string[] 
       : existingProduct.couleurs || [];
@@ -226,6 +246,7 @@ export async function PUT(request: NextRequest) {
       : existingProduct.taille || [];
 
     // Prepare product data with safe fallbacks
+    console.log('Preparing product data...');
     const productData = {
       name: formData.get('name')?.toString() || existingProduct.name,
       reference: formData.get('reference')?.toString() || existingProduct.reference,
@@ -248,6 +269,7 @@ export async function PUT(request: NextRequest) {
       deliveryStatus: formData.get('deliveryStatus')?.toString() || existingProduct.deliveryStatus || ''
     };
 
+    console.log('Validating product data...');
     // Validate product data
     const validation = productSchema.safeParse(productData);
     if (!validation.success) {
@@ -262,6 +284,7 @@ export async function PUT(request: NextRequest) {
       );
     }
 
+    console.log('Updating product...');
     // Update product with validated data
     const updatedProduct = await Product.findByIdAndUpdate(
       id,
@@ -270,9 +293,11 @@ export async function PUT(request: NextRequest) {
     );
 
     if (!updatedProduct) {
+      console.error('Failed to update product');
       return errorResponse('Échec de la mise à jour du produit', 500);
     }
     
+    console.log('Product updated successfully');
     return NextResponse.json({
       success: true,
       data: updatedProduct,
