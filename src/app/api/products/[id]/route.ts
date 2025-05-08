@@ -33,7 +33,7 @@ const logError = (error: any) => {
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
-) {
+): Promise<NextResponse> {
   try {
     const id = params.id;
     const idError = validateProductId(id);
@@ -59,7 +59,7 @@ export async function GET(
 export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }
-) {
+): Promise<NextResponse> {
   try {
     const id = params.id;
     const idError = validateProductId(id);
@@ -70,7 +70,7 @@ export async function PUT(
     const formData = await request.formData();
     await dbConnect();
     
-    // Rest of your PUT implementation...
+    // Find existing product
     const existingProduct = await Product.findById(id);
     if (!existingProduct) {
       return errorResponse('Produit non trouvé', 404);
@@ -178,7 +178,7 @@ export async function PUT(
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
-) {
+): Promise<NextResponse> {
   try {
     const id = params.id;
     const idError = validateProductId(id);
