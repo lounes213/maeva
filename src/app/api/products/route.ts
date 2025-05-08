@@ -159,7 +159,6 @@ export async function PUT(request: NextRequest) {
       return errorResponse(idError, 400);
     }
 
-    const formData = await request.formData();
     await dbConnect();
     
     // Find existing product
@@ -168,65 +167,85 @@ export async function PUT(request: NextRequest) {
       return errorResponse('Produit non trouvé', 404);
     }
 
-    // Process new images
-    const newImages = formData.getAll('images') as File[];
-    let imageUrls = existingProduct.imageUrls || [];
-
-    if (newImages.length > 0) {
-      const uploadDir = path.join(process.cwd(), 'public/uploads/products');
-      if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
-      }
-
-      for (const image of newImages) {
-        if (!image || !image.name) {
-          console.warn('Image invalide ou sans nom, ignorée.');
-          continue;
-        }
-
-        if (image.size > 5 * 1024 * 1024) continue;
-
-        const fileExtension = image.name.split('.').pop();
-        const fileName = `${uuidv4()}.${fileExtension}`;
-        const filePath = path.join(uploadDir, fileName);
-
-        const buffer = Buffer.from(await image.arrayBuffer());
-        await fs.promises.writeFile(filePath, buffer);
-
-        imageUrls.push(`/uploads/products/${fileName}`);
-      }
+    // Get form data
+    let formData;
+    try {
+      formData = await request.formData();
+    } catch (error) {
+      console.error('Error parsing form data:', error);
+      return errorResponse('Erreur lors du traitement des données du formulaire', 400);
     }
 
-    // Process colors and sizes
+    // Process new images
+    let imageUrls = existingProduct.imageUrls || [];
+    try {
+      const newImages = formData.getAll('images') as File[];
+      if (newImages.length > 0) {
+        const uploadDir = path.join(process.cwd(), 'public/uploads/products');
+        if (!fs.existsSync(uploadDir)) {
+          fs.mkdirSync(uploadDir, { recursive: true });
+        }
+
+        for (const image of newImages) {
+          if (!image || !image.name) {
+            console.warn('Image invalide ou sans nom, ignorée.');
+            continue;
+          }
+
+          if (image.size > 5 * 1024 * 1024) {
+            console.warn('Image trop grande, ignorée.');
+            continue;
+          }
+
+          const fileExtension = image.name.split('.').pop();
+          const fileName = `${uuidv4()}.${fileExtension}`;
+          const filePath = path.join(uploadDir, fileName);
+
+          try {
+            const buffer = Buffer.from(await image.arrayBuffer());
+            await fs.promises.writeFile(filePath, buffer);
+            imageUrls.push(`/uploads/products/${fileName}`);
+          } catch (error) {
+            console.error('Error saving image:', error);
+            continue;
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error processing images:', error);
+      // Continue with existing images if there's an error
+    }
+
+    // Process colors and sizes with fallbacks
     const couleurs = formData.getAll('couleurs').length > 0 
       ? formData.getAll('couleurs') as string[] 
-      : existingProduct.couleurs;
+      : existingProduct.couleurs || [];
     
     const taille = formData.getAll('taille').length > 0
       ? formData.getAll('taille') as string[]
-      : existingProduct.taille;
+      : existingProduct.taille || [];
 
-    // Prepare product data
+    // Prepare product data with safe fallbacks
     const productData = {
-      name: formData.get('name') as string || existingProduct.name,
-      reference: formData.get('reference') as string || existingProduct.reference,
-      description: formData.get('description') as string || existingProduct.description,
+      name: formData.get('name')?.toString() || existingProduct.name,
+      reference: formData.get('reference')?.toString() || existingProduct.reference,
+      description: formData.get('description')?.toString() || existingProduct.description,
       price: formData.get('price') ? parseFloat(formData.get('price') as string) : existingProduct.price,
       stock: formData.get('stock') ? parseInt(formData.get('stock') as string) : existingProduct.stock,
-      category: formData.get('category') as string || existingProduct.category,
-      tissu: formData.get('tissu') as string || existingProduct.tissu,
+      category: formData.get('category')?.toString() || existingProduct.category,
+      tissu: formData.get('tissu')?.toString() || existingProduct.tissu,
       couleurs: couleurs,
       taille: taille,
-      sold: formData.get('sold') ? parseInt(formData.get('sold') as string) : existingProduct.sold,
-      promotion: formData.get('promotion') ? formData.get('promotion') === 'true' : existingProduct.promotion,
+      sold: formData.get('sold') ? parseInt(formData.get('sold') as string) : existingProduct.sold || 0,
+      promotion: formData.get('promotion') ? formData.get('promotion') === 'true' : existingProduct.promotion || false,
       promoPrice: formData.get('promotion') === 'true' ? parseFloat(formData.get('promoPrice') as string) : existingProduct.promoPrice,
-      reviews: formData.get('reviews') as string || existingProduct.reviews,
-      rating: formData.get('rating') ? parseFloat(formData.get('rating') as string) : existingProduct.rating,
-      reviewCount: formData.get('reviewCount') ? parseInt(formData.get('reviewCount') as string) : existingProduct.reviewCount,
+      reviews: formData.get('reviews')?.toString() || existingProduct.reviews || '',
+      rating: formData.get('rating') ? parseFloat(formData.get('rating') as string) : existingProduct.rating || 0,
+      reviewCount: formData.get('reviewCount') ? parseInt(formData.get('reviewCount') as string) : existingProduct.reviewCount || 0,
       imageUrls,
-      deliveryDate: formData.get('deliveryDate') as string || existingProduct.deliveryDate,
-      deliveryAddress: formData.get('deliveryAddress') as string || existingProduct.deliveryAddress,
-      deliveryStatus: formData.get('deliveryStatus') as string || existingProduct.deliveryStatus
+      deliveryDate: formData.get('deliveryDate')?.toString() || existingProduct.deliveryDate || '',
+      deliveryAddress: formData.get('deliveryAddress')?.toString() || existingProduct.deliveryAddress || '',
+      deliveryStatus: formData.get('deliveryStatus')?.toString() || existingProduct.deliveryStatus || ''
     };
 
     // Validate product data
@@ -261,6 +280,7 @@ export async function PUT(request: NextRequest) {
     });
 
   } catch (error) {
+    console.error('Error in PUT /api/products:', error);
     const errorMessage = logError(error);
     return errorResponse(`Échec de la mise à jour du produit: ${errorMessage}`);
   }
