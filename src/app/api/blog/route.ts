@@ -15,6 +15,14 @@ export const config = {
   },
 };
 
+// Helper function for error responses
+const errorResponse = (message: string, status: number = 500) => {
+  return NextResponse.json(
+    { success: false, message },
+    { status }
+  );
+};
+
 // Amélioration des messages d'erreur avec des toasts spécifiques
 export async function POST(req: NextRequest) {
   try {
@@ -22,63 +30,66 @@ export async function POST(req: NextRequest) {
 
     const contentType = req.headers.get("content-type") || "";
 
-    if (contentType.includes("multipart/form-data")) {
-      const formData = await req.formData();
-
-      const title = formData.get('title') as string;
-      const content = formData.get('content') as string;
-      const slug = (formData.get('slug') as string) || slugify(title);
-      const excerpt = formData.get('excerpt') as string;
-      const category = formData.get('category') as string;
-      const tags = formData.get('tags')?.toString().split(',').map(t => t.trim()) || [];
-
-      if (!title || !content) {
-        toast.error("Le titre et le contenu sont obligatoires.");
-        return NextResponse.json({ error: "Title and content are required" }, { status: 400 });
-      }
-
-      const images = formData.getAll('images') as File[];
-      const imageUrls: string[] = [];
-
-      if (images.length > 0) {
-        const uploadDir = path.join(process.cwd(), 'public/uploads/blog');
-        if (!fs.existsSync(uploadDir)) {
-          fs.mkdirSync(uploadDir, { recursive: true });
-        }
-
-        for (const image of images) {
-          if (image.size > 5 * 1024 * 1024) continue;
-
-          const buffer = await image.arrayBuffer();
-          const ext = image.name.split('.').pop();
-          const fileName = `${uuidv4()}.${ext}`;
-          const filePath = path.join(uploadDir, fileName);
-
-          await fs.promises.writeFile(filePath, Buffer.from(buffer));
-          imageUrls.push(`/uploads/blog/${fileName}`);
-        }
-      }
-
-      const blogPost = new BlogPost({
-        title,
-        content,
-        slug,
-        excerpt,
-        category,
-        tags,
-        image: imageUrls[0] || undefined,
-      });
-
-      const savedPost = await blogPost.save();
-
-      return NextResponse.json(savedPost, { status: 201 });
+    if (!contentType.includes("multipart/form-data")) {
+      return errorResponse("Content-Type must be multipart/form-data", 415);
     }
 
-    toast.error("Type de contenu non pris en charge.");
-    return NextResponse.json({ error: "Unsupported Content-Type" }, { status: 415 });
+    const formData = await req.formData();
+
+    const title = formData.get('title') as string;
+    const content = formData.get('content') as string;
+    const slug = (formData.get('slug') as string) || slugify(title);
+    const excerpt = formData.get('excerpt') as string;
+    const category = formData.get('category') as string;
+    const tags = formData.get('tags')?.toString().split(',').map(t => t.trim()) || [];
+
+    if (!title || !content) {
+      return errorResponse("Title and content are required", 400);
+    }
+
+    const images = formData.getAll('images') as File[];
+    const imageUrls: string[] = [];
+
+    if (images.length > 0) {
+      const uploadDir = path.join(process.cwd(), 'public/uploads/blog');
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+
+      for (const image of images) {
+        if (image.size > 5 * 1024 * 1024) continue;
+
+        const buffer = await image.arrayBuffer();
+        const ext = image.name.split('.').pop();
+        const fileName = `${uuidv4()}.${ext}`;
+        const filePath = path.join(uploadDir, fileName);
+
+        await fs.promises.writeFile(filePath, Buffer.from(buffer));
+        imageUrls.push(`/uploads/blog/${fileName}`);
+      }
+    }
+
+    const blogPost = new BlogPost({
+      title,
+      content,
+      slug,
+      excerpt,
+      category,
+      tags,
+      image: imageUrls[0] || undefined,
+    });
+
+    const savedPost = await blogPost.save();
+
+    return NextResponse.json({
+      success: true,
+      data: savedPost,
+      message: "Blog post created successfully"
+    }, { status: 201 });
+
   } catch (error: any) {
-    toast.error("Erreur lors de la création de l'article de blog.");
-    return NextResponse.json({ error: error.message || "Failed to create blog post" }, { status: 500 });
+    console.error("Error creating blog post:", error);
+    return errorResponse(error.message || "Failed to create blog post");
   }
 }
 
@@ -89,44 +100,37 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = new URL(req.url);
     const slug = searchParams.get('slug');
+    const limit = parseInt(searchParams.get('limit') || '10');
+    const excludeSlug = searchParams.get('excludeSlug');
 
     if (slug) {
       const post = await BlogPost.findOne({ slug });
       if (!post) {
-        return NextResponse.json({ error: 'Blog post not found' }, { status: 404 });
+        return errorResponse("Blog post not found", 404);
       }
-      return NextResponse.json(post);
+      return NextResponse.json({
+        success: true,
+        data: post
+      });
     }
 
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '10');
-    const category = searchParams.get('category');
-    const tag = searchParams.get('tag');
-
-    const query: any = {};
-    if (category) query.category = category;
-    if (tag) query.tags = tag;
-
-    const skip = (page - 1) * limit;
+    let query = {};
+    if (excludeSlug) {
+      query = { slug: { $ne: excludeSlug } };
+    }
 
     const posts = await BlogPost.find(query)
       .sort({ createdAt: -1 })
-      .skip(skip)
       .limit(limit);
 
-    const total = await BlogPost.countDocuments(query);
-
     return NextResponse.json({
-      posts,
-      pagination: {
-        total,
-        page,
-        limit,
-        pages: Math.ceil(total / limit)
-      }
+      success: true,
+      data: posts
     });
+
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || "Failed to get blog posts" }, { status: 500 });
+    console.error("Error fetching blog posts:", error);
+    return errorResponse(error.message || "Failed to fetch blog posts");
   }
 }
 
