@@ -29,13 +29,19 @@ const logError = (error: any) => {
   return 'Une erreur inconnue est survenue';
 };
 
+type RouteContext = {
+  params: {
+    id: string;
+  };
+};
+
 // GET single product
 export async function GET(
   request: NextRequest,
-  context: { params: { id: string } }
+  { params }: RouteContext
 ) {
   try {
-    const id = context.params.id;
+    const id = params.id;
     const idError = validateProductId(id);
     if (idError) {
       return errorResponse(idError, 400);
@@ -58,10 +64,10 @@ export async function GET(
 // PUT - Update product
 export async function PUT(
   request: NextRequest,
-  context: { params: { id: string } }
+  { params }: RouteContext
 ) {
   try {
-    const id = context.params.id;
+    const id = params.id;
     const idError = validateProductId(id);
     if (idError) {
       return errorResponse(idError, 400);
@@ -177,10 +183,10 @@ export async function PUT(
 // DELETE - Delete product
 export async function DELETE(
   request: NextRequest,
-  context: { params: { id: string } }
+  { params }: RouteContext
 ) {
   try {
-    const id = context.params.id;
+    const id = params.id;
     const idError = validateProductId(id);
     if (idError) {
       return errorResponse(idError, 400);
