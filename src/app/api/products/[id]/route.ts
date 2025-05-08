@@ -32,10 +32,10 @@ const logError = (error: any) => {
 // GET single product
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
-): Promise<NextResponse> {
+  context: { params: { id: string } }
+) {
   try {
-    const id = params.id;
+    const id = context.params.id;
     const idError = validateProductId(id);
     if (idError) {
       return errorResponse(idError, 400);
@@ -58,10 +58,10 @@ export async function GET(
 // PUT - Update product
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
-): Promise<NextResponse> {
+  context: { params: { id: string } }
+) {
   try {
-    const id = params.id;
+    const id = context.params.id;
     const idError = validateProductId(id);
     if (idError) {
       return errorResponse(idError, 400);
@@ -177,10 +177,10 @@ export async function PUT(
 // DELETE - Delete product
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
-): Promise<NextResponse> {
+  context: { params: { id: string } }
+) {
   try {
-    const id = params.id;
+    const id = context.params.id;
     const idError = validateProductId(id);
     if (idError) {
       return errorResponse(idError, 400);
