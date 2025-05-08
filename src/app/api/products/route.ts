@@ -56,66 +56,110 @@ export async function GET(request: NextRequest) {
 // POST - Create new product
 export async function POST(request: NextRequest) {
   try {
+    console.log('Starting POST request processing...');
+    
+    console.log('Parsing form data...');
     const formData = await request.formData();
-    await dbConnect();
+    console.log('Form data parsed successfully');
 
+    console.log('Connecting to database...');
+    await dbConnect();
+    
     // Process images
+    console.log('Processing images...');
     const images = formData.getAll('images') as File[];
+    console.log('Number of images:', images.length);
     const imageUrls: string[] = [];
 
     if (images.length > 0) {
       const uploadDir = path.join(process.cwd(), 'public/uploads/products');
+      console.log('Upload directory:', uploadDir);
+      
       if (!fs.existsSync(uploadDir)) {
+        console.log('Creating upload directory...');
         fs.mkdirSync(uploadDir, { recursive: true });
       }
 
       for (const image of images) {
         if (!image || !image.name) {
-          console.warn('Image invalide ou sans nom, ignorée.');
+          console.warn('Invalid image or missing name, skipping...');
           continue;
         }
 
-        if (image.size > 5 * 1024 * 1024) continue;
+        if (image.size > 5 * 1024 * 1024) {
+          console.warn('Image too large, skipping:', image.name);
+          continue;
+        }
 
         const fileExtension = image.name.split('.').pop();
         const fileName = `${uuidv4()}.${fileExtension}`;
         const filePath = path.join(uploadDir, fileName);
+        console.log('Saving image:', fileName);
 
-        const buffer = Buffer.from(await image.arrayBuffer());
-        await fs.promises.writeFile(filePath, buffer);
-
-        imageUrls.push(`/uploads/products/${fileName}`);
+        try {
+          const buffer = Buffer.from(await image.arrayBuffer());
+          await fs.promises.writeFile(filePath, buffer);
+          imageUrls.push(`/uploads/products/${fileName}`);
+          console.log('Image saved successfully:', fileName);
+        } catch (error) {
+          console.error('Error saving image:', error);
+          continue;
+        }
       }
     }
 
     // Process colors and sizes
+    console.log('Processing colors and sizes...');
     const couleurs = formData.getAll('couleurs') as string[];
     const taille = formData.getAll('taille') as string[];
+    console.log('Colors:', couleurs);
+    console.log('Sizes:', taille);
+
+    // Validate required fields
+    console.log('Validating required fields...');
+    const requiredFields = ['name', 'reference', 'description', 'price', 'stock', 'category'];
+    const missingFields = requiredFields.filter(field => !formData.get(field));
+    
+    if (missingFields.length > 0) {
+      console.error('Missing required fields:', missingFields);
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Champs requis manquants', 
+          details: `Les champs suivants sont requis: ${missingFields.join(', ')}` 
+        },
+        { status: 400 }
+      );
+    }
 
     // Prepare product data
+    console.log('Preparing product data...');
     const productData = {
-      name: formData.get('name') as string,
-      reference: formData.get('reference') as string,
-      description: formData.get('description') as string,
+      name: formData.get('name')?.toString(),
+      reference: formData.get('reference')?.toString(),
+      description: formData.get('description')?.toString(),
       price: parseFloat(formData.get('price') as string),
       stock: parseInt(formData.get('stock') as string),
-      category: formData.get('category') as string,
-      tissu: formData.get('tissu') as string,
+      category: formData.get('category')?.toString(),
+      tissu: formData.get('tissu')?.toString() || '',
       couleurs: couleurs,
       taille: taille,
       sold: parseInt(formData.get('sold') as string) || 0,
       promotion: formData.get('promotion') === 'true',
       promoPrice: formData.get('promotion') === 'true' ? parseFloat(formData.get('promoPrice') as string) : undefined,
-      reviews: formData.get('reviews') as string,
+      reviews: formData.get('reviews')?.toString() || '',
       rating: parseFloat(formData.get('rating') as string) || 0,
       reviewCount: parseInt(formData.get('reviewCount') as string) || 0,
       imageUrls,
-      deliveryDate: formData.get('deliveryDate') as string,
-      deliveryAddress: formData.get('deliveryAddress') as string,
-      deliveryStatus: formData.get('deliveryStatus') as string
+      deliveryDate: formData.get('deliveryDate')?.toString() || '',
+      deliveryAddress: formData.get('deliveryAddress')?.toString() || '',
+      deliveryStatus: formData.get('deliveryStatus')?.toString() || ''
     };
 
+    console.log('Product data prepared:', productData);
+
     // Validate product data
+    console.log('Validating product data...');
     const validation = productSchema.safeParse(productData);
     if (!validation.success) {
       console.error('Validation error:', validation.error.format());
@@ -129,8 +173,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    console.log('Creating product...');
     // Create product with validated data
     const product = await Product.create(validation.data);
+    console.log('Product created successfully:', product._id);
     
     return NextResponse.json({
       success: true,
@@ -139,6 +185,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
+    console.error('Error in POST /api/products:', error);
     const errorMessage = logError(error);
     return errorResponse(`Échec de la création du produit: ${errorMessage}`);
   }
