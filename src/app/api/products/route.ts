@@ -29,10 +29,22 @@ const logError = (error: any) => {
   return 'Une erreur inconnue est survenue';
 };
 
-// GET all products
+// GET all products or single product
 export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+
     await dbConnect();
+
+    if (id) {
+      const product = await Product.findById(id);
+      if (!product) {
+        return errorResponse('Produit non trouvé', 404);
+      }
+      return NextResponse.json({ success: true, data: product });
+    }
+
     const products = await Product.find({});
     return NextResponse.json({ success: true, data: products });
   } catch (error) {
@@ -135,8 +147,8 @@ export async function POST(request: NextRequest) {
 // PUT - Update product
 export async function PUT(request: NextRequest) {
   try {
-    const formData = await request.formData();
-    const id = formData.get('id') as string;
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
     
     if (!id) {
       return errorResponse('ID du produit manquant', 400);
@@ -147,6 +159,7 @@ export async function PUT(request: NextRequest) {
       return errorResponse(idError, 400);
     }
 
+    const formData = await request.formData();
     await dbConnect();
     
     // Find existing product
@@ -256,8 +269,8 @@ export async function PUT(request: NextRequest) {
 // DELETE - Delete product
 export async function DELETE(request: NextRequest) {
   try {
-    const formData = await request.formData();
-    const id = formData.get('id') as string;
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
     
     if (!id) {
       return errorResponse('ID du produit manquant', 400);
