@@ -47,6 +47,12 @@ export async function POST(req: NextRequest) {
       return errorResponse("Title and content are required", 400);
     }
 
+    // Check if a blog post with the same slug already exists
+    const existingPost = await BlogPost.findOne({ slug });
+    if (existingPost) {
+      return errorResponse("A blog post with this title already exists", 400);
+    }
+
     const images = formData.getAll('images') as File[];
     const imageUrls: string[] = [];
 
@@ -89,6 +95,16 @@ export async function POST(req: NextRequest) {
 
   } catch (error: any) {
     console.error("Error creating blog post:", error);
+    
+    // Handle specific MongoDB errors
+    if (error.code === 11000) {
+      return errorResponse("A blog post with this title already exists", 400);
+    }
+    
+    if (error.name === 'ValidationError') {
+      return errorResponse(error.message, 400);
+    }
+
     return errorResponse(error.message || "Failed to create blog post");
   }
 }
