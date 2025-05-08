@@ -7,7 +7,8 @@ const nextConfig = {
     domains: [
       'localhost',
       'maevashop.netlify.app',
-      'maeva-tawny.vercel.app'
+      'maeva-tawny.vercel.app',
+      'maeva-three.vercel.app'
     ],
   
 
