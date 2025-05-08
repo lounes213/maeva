@@ -6,9 +6,10 @@ const nextConfig = {
 
     domains: [
       'localhost',
-      'maevashop.netlify.app',
-      'maeva-tawny.vercel.app',
-      'maeva-three.vercel.app'
+     
+      'maeva-three.vercel.app',
+      // Add your cloud storage domain here
+      'your-cloud-storage-domain.com'
     ],
   
 
@@ -23,7 +24,9 @@ const nextConfig = {
         hostname: 'localhost',
         port: '3000',
       }
-    ]
+    ],
+    // Add this to ensure local images work
+    unoptimized: true
   },
   // Add any other configuration options here
 };

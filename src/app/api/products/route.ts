@@ -29,6 +29,15 @@ const logError = (error: any) => {
   return 'Une erreur inconnue est survenue';
 };
 
+// Helper function for image URL
+const getImageUrl = (fileName: string) => {
+  if (process.env.NODE_ENV === 'development') {
+    return `/uploads/products/${fileName}`;
+  }
+  // In production, use your cloud storage URL
+  return `${process.env.NEXT_PUBLIC_CLOUD_STORAGE_URL}/products/${fileName}`;
+};
+
 // GET all products or single product
 export async function GET(request: NextRequest) {
   try {
@@ -99,7 +108,7 @@ export async function POST(request: NextRequest) {
         try {
           const buffer = Buffer.from(await image.arrayBuffer());
           await fs.promises.writeFile(filePath, buffer);
-          imageUrls.push(`/uploads/products/${fileName}`);
+          imageUrls.push(getImageUrl(fileName));
           console.log('Image saved successfully:', fileName);
         } catch (error) {
           console.error('Error saving image:', error);
@@ -269,7 +278,7 @@ export async function PUT(request: NextRequest) {
           try {
             const buffer = Buffer.from(await image.arrayBuffer());
             await fs.promises.writeFile(filePath, buffer);
-            imageUrls.push(`/uploads/products/${fileName}`);
+            imageUrls.push(getImageUrl(fileName));
             console.log('Image saved successfully:', fileName);
           } catch (error) {
             console.error('Error saving image:', error);
