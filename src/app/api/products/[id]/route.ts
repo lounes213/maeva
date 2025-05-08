@@ -31,11 +31,11 @@ const logError = (error: any) => {
 
 // GET single product
 export async function GET(
-  req: NextRequest,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  context: { params: { id: string } }
 ) {
   try {
-    const id = params.id;
+    const id = context.params.id;
     const idError = validateProductId(id);
     if (idError) {
       return errorResponse(idError, 400);
@@ -57,17 +57,17 @@ export async function GET(
 
 // PUT - Update product
 export async function PUT(
-  req: NextRequest,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  context: { params: { id: string } }
 ) {
   try {
-    const id = params.id;
+    const id = context.params.id;
     const idError = validateProductId(id);
     if (idError) {
       return errorResponse(idError, 400);
     }
 
-    const formData = await req.formData();
+    const formData = await request.formData();
     await dbConnect();
     
     // Find existing product
@@ -176,11 +176,11 @@ export async function PUT(
 
 // DELETE - Delete product
 export async function DELETE(
-  req: NextRequest,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  context: { params: { id: string } }
 ) {
   try {
-    const id = params.id;
+    const id = context.params.id;
     const idError = validateProductId(id);
     if (idError) {
       return errorResponse(idError, 400);
