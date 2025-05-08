@@ -29,11 +29,11 @@ export default function BlogPage() {
       try {
         const res = await fetch('/api/blog');
         const data = await res.json();
-        if (Array.isArray(data.posts)) {
-          setBlogs(data.posts);
-          setFilteredBlogs(data.posts);
+        if (data.success && Array.isArray(data.data)) {
+          setBlogs(data.data);
+          setFilteredBlogs(data.data);
         } else {
-          throw new Error('Invalid response format');
+          throw new Error(data.message || 'Invalid response format');
         }
       } catch (err: any) {
         setError(err.message || 'Something went wrong');
