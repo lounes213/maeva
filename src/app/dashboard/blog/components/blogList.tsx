@@ -9,16 +9,30 @@ export function BlogList() {
 
   const refreshPosts = async () => {
     setLoading(true);
-    const res = await fetch('/api/blog');
-    const data = await res.json();
-    setPosts(data.posts);
-    setLoading(false);
+    try {
+      const res = await fetch('/api/blog');
+      const data = await res.json();
+      if (data.success && Array.isArray(data.data)) {
+        setPosts(data.data);
+      } else {
+        throw new Error(data.message || 'Invalid response format');
+      }
+    } catch (error) {
+      console.error('Failed to fetch posts:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleDelete = async (id: string) => {
     try {
-      await fetch(`/api/blog/${id}`, { method: 'DELETE' });
-      await refreshPosts();
+      const res = await fetch(`/api/blog?slug=${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) {
+        await refreshPosts();
+      } else {
+        throw new Error(data.message || 'Failed to delete post');
+      }
     } catch (error) {
       console.error('Failed to delete post:', error);
     }
@@ -39,25 +53,24 @@ export function BlogList() {
         Create New Post
       </button>
       
-     {posts.map((post) => (
-  <div key={post._id} className="border-b pb-6 mb-6">
-    <h2 className="text-2xl font-bold">{post.title}</h2>
-    <p>{post.excerpt}</p>
-    <button 
-      onClick={() => router.push(`/blog/${post.slug}`)}
-      className="mt-2 text-blue-500"
-    >
-      Read More
-    </button>
-    <button 
-      onClick={() => handleDelete(post._id)}
-      className="mt-2 text-red-500"
-    >
-      Delete
-    </button>
-  </div>
-))}
-
+      {posts.map((post) => (
+        <div key={post._id} className="border-b pb-6 mb-6">
+          <h2 className="text-2xl font-bold">{post.title}</h2>
+          <p>{post.excerpt}</p>
+          <button 
+            onClick={() => router.push(`/blog/${post.slug}`)}
+            className="mt-2 text-blue-500"
+          >
+            Read More
+          </button>
+          <button 
+            onClick={() => handleDelete(post.slug)}
+            className="mt-2 text-red-500"
+          >
+            Delete
+          </button>
+        </div>
+      ))}
     </div>
   );
 }
