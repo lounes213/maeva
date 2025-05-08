@@ -1,13 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import mongoose from "mongoose";
 import BlogPost from "@/app/models/blog";
-import path from 'path';
-import fs from 'fs';
-import { promises as fsp } from 'fs';
 import { v4 as uuidv4 } from 'uuid';
 import dbConnect from "@/lib/mongo";
 import slugify from "@/lib/utils";
-import toast from "react-hot-toast";
+import { v2 as cloudinary } from 'cloudinary';
+
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
 export const config = {
   api: {
@@ -23,16 +27,34 @@ const errorResponse = (message: string, status: number = 500) => {
   );
 };
 
-// Helper function for image URL
-const getImageUrl = (fileName: string) => {
-  if (process.env.NODE_ENV === 'development') {
-    return `/uploads/blog/${fileName}`;
+// Helper function to upload image to Cloudinary
+const uploadToCloudinary = async (file: File): Promise<string | null> => {
+  try {
+    const bytes = await file.arrayBuffer();
+    const buffer = Buffer.from(bytes);
+
+    // Convert buffer to base64
+    const base64String = buffer.toString('base64');
+    const dataURI = `data:${file.type};base64,${base64String}`;
+
+    // Upload to Cloudinary
+    const result = await new Promise((resolve, reject) => {
+      cloudinary.uploader.upload(dataURI, {
+        folder: 'blog',
+        resource_type: 'auto',
+      }, (error, result) => {
+        if (error) reject(error);
+        else resolve(result);
+      });
+    });
+
+    return (result as any).secure_url;
+  } catch (error) {
+    console.error('Error uploading to Cloudinary:', error);
+    return null;
   }
-  // In production, use your cloud storage URL
-  return `${process.env.NEXT_PUBLIC_CLOUD_STORAGE_URL}/blog/${fileName}`;
 };
 
-// Amélioration des messages d'erreur avec des toasts spécifiques
 export async function POST(req: NextRequest) {
   try {
     await dbConnect();
@@ -66,11 +88,6 @@ export async function POST(req: NextRequest) {
     const imageUrls: string[] = [];
 
     if (images.length > 0) {
-      const uploadDir = path.join(process.cwd(), 'public/uploads/blog');
-      if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
-      }
-
       for (const image of images) {
         if (!image || !image.name) {
           console.warn('Invalid image or missing name, skipping...');
@@ -82,16 +99,13 @@ export async function POST(req: NextRequest) {
           continue;
         }
 
-        const fileExtension = image.name.split('.').pop();
-        const fileName = `${uuidv4()}.${fileExtension}`;
-        const filePath = path.join(uploadDir, fileName);
-
         try {
-          const buffer = Buffer.from(await image.arrayBuffer());
-          await fs.promises.writeFile(filePath, buffer);
-          imageUrls.push(getImageUrl(fileName));
+          const imageUrl = await uploadToCloudinary(image);
+          if (imageUrl) {
+            imageUrls.push(imageUrl);
+          }
         } catch (error) {
-          console.error('Error saving image:', error);
+          console.error('Error uploading image:', error);
           continue;
         }
       }
@@ -131,7 +145,6 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// Amélioration des messages d'erreur avec des toasts spécifiques
 export async function GET(req: NextRequest) {
   try {
     await dbConnect();
@@ -211,12 +224,6 @@ export async function PUT(req: NextRequest) {
     // Process images
     const images = formData.getAll('images') as File[];
     if (images.length > 0) {
-      const uploadDir = path.join(process.cwd(), 'public/uploads/blog');
-      
-      if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
-      }
-
       for (const image of images) {
         if (!image || !image.name) {
           console.warn('Invalid image or missing name, skipping...');
@@ -228,24 +235,13 @@ export async function PUT(req: NextRequest) {
           continue;
         }
 
-        const fileExtension = image.name.split('.').pop();
-        const fileName = `${uuidv4()}.${fileExtension}`;
-        const filePath = path.join(uploadDir, fileName);
-
         try {
-          const buffer = Buffer.from(await image.arrayBuffer());
-          await fs.promises.writeFile(filePath, buffer);
-          fields.image = getImageUrl(fileName);
-
-          // Delete old image if it exists
-          if (existingPost.image && existingPost.image.startsWith('/uploads/')) {
-            const oldImagePath = path.join(process.cwd(), 'public', existingPost.image);
-            if (fs.existsSync(oldImagePath)) {
-              await fs.promises.unlink(oldImagePath);
-            }
+          const imageUrl = await uploadToCloudinary(image);
+          if (imageUrl) {
+            fields.image = imageUrl;
           }
         } catch (error) {
-          console.error('Error saving image:', error);
+          console.error('Error uploading image:', error);
           continue;
         }
       }
@@ -291,19 +287,6 @@ export async function DELETE(req: NextRequest) {
 
     // Delete the database record
     await BlogPost.findOneAndDelete({ slug });
-
-    // Only attempt to delete local image files if in development mode
-    const isLocal = process.env.NODE_ENV === 'development';
-    if (isLocal && post.image && post.image.startsWith('/uploads/')) {
-      const imagePath = path.join(process.cwd(), 'public', post.image);
-      if (fs.existsSync(imagePath)) {
-        try {
-          await fsp.unlink(imagePath);
-        } catch (error) {
-          console.error("Error deleting image file:", error);
-        }
-      }
-    }
 
     return NextResponse.json({
       success: true,
