@@ -7,6 +7,14 @@ import { promises as fsp } from 'fs';
 import { v4 as uuidv4 } from 'uuid';
 import dbConnect from "@/lib/mongo";
 import slugify from "@/lib/utils";
+import { v2 as cloudinary } from 'cloudinary';
+
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
 export const config = {
   api: {
@@ -21,6 +29,36 @@ const errorResponse = (message: string, status: number = 500) => {
     { status }
   );
 };
+
+// Helper function to handle image uploads
+async function handleImageUpload(image: File): Promise<string | undefined> {
+  try {
+    if (image.size > 5 * 1024 * 1024) {
+      console.warn(`Skipping large image: ${image.name}`);
+      return undefined;
+    }
+
+    const buffer = await image.arrayBuffer();
+    const base64Image = Buffer.from(buffer).toString('base64');
+    const dataURI = `data:${image.type};base64,${base64Image}`;
+
+    // Upload to Cloudinary
+    const result = await new Promise((resolve, reject) => {
+      cloudinary.uploader.upload(dataURI, {
+        folder: 'blog',
+        resource_type: 'auto',
+      }, (error, result) => {
+        if (error) reject(error);
+        else resolve(result);
+      });
+    });
+
+    return (result as any).secure_url;
+  } catch (error) {
+    console.error(`Error uploading image ${image.name}:`, error);
+    return undefined;
+  }
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -54,31 +92,11 @@ export async function POST(req: NextRequest) {
     const images = formData.getAll('images') as File[];
     const imageUrls: string[] = [];
 
-    // Only handle file uploads in development
-    const isLocal = process.env.NODE_ENV === 'development';
-    if (isLocal && images.length > 0) {
-      const uploadDir = path.join(process.cwd(), 'public/uploads/blog');
-      if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
-      }
-
-      for (const image of images) {
-        if (image.size > 5 * 1024 * 1024) {
-          console.warn(`Skipping large image: ${image.name}`);
-          continue;
-        }
-
-        try {
-          const buffer = await image.arrayBuffer();
-          const ext = image.name.split('.').pop();
-          const fileName = `${uuidv4()}.${ext}`;
-          const filePath = path.join(uploadDir, fileName);
-
-          await fs.promises.writeFile(filePath, Buffer.from(buffer));
-          imageUrls.push(`/uploads/blog/${fileName}`);
-        } catch (error) {
-          console.error(`Error processing image ${image.name}:`, error);
-        }
+    // Process images
+    for (const image of images) {
+      const imageUrl = await handleImageUpload(image);
+      if (imageUrl) {
+        imageUrls.push(imageUrl);
       }
     }
 
