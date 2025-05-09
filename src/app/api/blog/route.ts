@@ -7,7 +7,6 @@ import { promises as fsp } from 'fs';
 import { v4 as uuidv4 } from 'uuid';
 import dbConnect from "@/lib/mongo";
 import slugify from "@/lib/utils";
-import toast from "react-hot-toast";
 
 export const config = {
   api: {
@@ -23,7 +22,6 @@ const errorResponse = (message: string, status: number = 500) => {
   );
 };
 
-// Amélioration des messages d'erreur avec des toasts spécifiques
 export async function POST(req: NextRequest) {
   try {
     await dbConnect();
@@ -118,7 +116,6 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// Amélioration des messages d'erreur avec des toasts spécifiques
 export async function GET(req: NextRequest) {
   try {
     await dbConnect();
@@ -129,9 +126,9 @@ export async function GET(req: NextRequest) {
     if (slug) {
       const post = await BlogPost.findOne({ slug });
       if (!post) {
-        return NextResponse.json({ error: 'Blog post not found' }, { status: 404 });
+        return errorResponse('Blog post not found', 404);
       }
-      return NextResponse.json(post);
+      return NextResponse.json({ success: true, data: post });
     }
 
     const page = parseInt(searchParams.get('page') || '1');
@@ -153,16 +150,20 @@ export async function GET(req: NextRequest) {
     const total = await BlogPost.countDocuments(query);
 
     return NextResponse.json({
-      posts,
-      pagination: {
-        total,
-        page,
-        limit,
-        pages: Math.ceil(total / limit)
+      success: true,
+      data: {
+        posts,
+        pagination: {
+          total,
+          page,
+          limit,
+          pages: Math.ceil(total / limit)
+        }
       }
     });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || "Failed to get blog posts" }, { status: 500 });
+    console.error("Error fetching blog posts:", error);
+    return errorResponse(error.message || "Failed to get blog posts");
   }
 }
 
@@ -174,35 +175,35 @@ export async function PUT(req: NextRequest) {
     const slug = searchParams.get('slug');
 
     if (!slug) {
-      return NextResponse.json({ error: "Le slug est requis" }, { status: 400 });
+      return errorResponse("Slug is required", 400);
     }
 
     const existingPost = await BlogPost.findOne({ slug });
     if (!existingPost) {
-      return NextResponse.json({ error: "Article non trouvé" }, { status: 404 });
+      return errorResponse("Blog post not found", 404);
     }
 
     const formData = await req.formData();
     const fields: any = {};
 
-    // Traitement des champs textuels
+    // Process text fields
     for (const [key, value] of formData.entries()) {
       if (typeof value === 'string') {
         fields[key] = value;
       }
     }
 
-    // Traitement des tags s'ils sont présents
+    // Process tags if present
     if (fields.tags) {
       fields.tags = fields.tags.split(',').map((tag: string) => tag.trim());
     }
 
-    // Génération du nouveau slug si le titre est modifié
+    // Generate new slug if title is modified
     if (fields.title && !fields.slug) {
       fields.slug = slugify(fields.title);
     }
 
-    // Traitement des images
+    // Process images
     const images = formData.getAll('images') as File[];
     if (images.length > 0) {
       const uploadDir = path.join(process.cwd(), 'public/uploads/blog');
@@ -238,17 +239,20 @@ export async function PUT(req: NextRequest) {
     );
 
     if (!updatedPost) {
-      return NextResponse.json({ error: "Erreur lors de la mise à jour" }, { status: 500 });
+      return errorResponse("Failed to update blog post", 500);
     }
 
-    return NextResponse.json(updatedPost);
+    return NextResponse.json({
+      success: true,
+      data: updatedPost,
+      message: "Blog post updated successfully"
+    });
   } catch (error: any) {
-    return NextResponse.json(
-      { error: error.message || "Erreur lors de la mise à jour de l'article" },
-      { status: 500 }
-    );
+    console.error("Error updating blog post:", error);
+    return errorResponse(error.message || "Failed to update blog post");
   }
 }
+
 export async function DELETE(req: NextRequest) {
   try {
     await dbConnect();
@@ -257,12 +261,12 @@ export async function DELETE(req: NextRequest) {
     const slug = searchParams.get('slug');
 
     if (!slug) {
-      return NextResponse.json({ error: "Slug parameter is required" }, { status: 400 });
+      return errorResponse("Slug parameter is required", 400);
     }
 
     const post = await BlogPost.findOne({ slug });
     if (!post) {
-      return NextResponse.json({ error: 'Blog post not found' }, { status: 404 });
+      return errorResponse('Blog post not found', 404);
     }
 
     // Delete the database record
@@ -281,9 +285,12 @@ export async function DELETE(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({ message: 'Blog post deleted successfully' });
+    return NextResponse.json({
+      success: true,
+      message: 'Blog post deleted successfully'
+    });
   } catch (error: any) {
     console.error("Error in DELETE handler:", error);
-    return NextResponse.json({ error: error.message || "Failed to delete blog post" }, { status: 500 });
+    return errorResponse(error.message || "Failed to delete blog post");
   }
 }
