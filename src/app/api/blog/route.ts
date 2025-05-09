@@ -33,6 +33,7 @@ const errorResponse = (message: string, status: number = 500) => {
       status,
       headers: {
         'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type, Authorization',
       }
@@ -53,6 +54,7 @@ const successResponse = (data: any, message: string = "Success", status: number 
       status,
       headers: {
         'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type, Authorization',
       }
@@ -122,13 +124,6 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Add CORS headers to the response
-    const headers = {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    };
-
     await dbConnect();
 
     const contentType = req.headers.get("content-type") || "";
@@ -184,14 +179,7 @@ export async function POST(req: NextRequest) {
 
     const savedPost = await blogPost.save();
 
-    return NextResponse.json({
-      success: true,
-      message: "Blog post created successfully",
-      data: savedPost
-    }, {
-      status: 201,
-      headers
-    });
+    return successResponse(savedPost, "Blog post created successfully", 201);
 
   } catch (error: any) {
     console.error("Error creating blog post:", error);
@@ -296,29 +284,22 @@ export async function PUT(req: NextRequest) {
     // Process images
     const images = formData.getAll('images') as File[];
     if (images.length > 0) {
-      const uploadDir = path.join(process.cwd(), 'public/uploads/blog');
+      const imageUrls: string[] = [];
       
-      if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
+      for (const image of images) {
+        try {
+          const imageUrl = await handleImageUpload(image);
+          if (imageUrl) {
+            imageUrls.push(imageUrl);
+          }
+        } catch (error) {
+          console.error('Error processing image:', error);
+          return errorResponse("Failed to upload image. Please try again.");
+        }
       }
 
-      for (const image of images) {
-        if (image.size > 5 * 1024 * 1024) continue;
-
-        const buffer = await image.arrayBuffer();
-        const ext = image.name.split('.').pop();
-        const fileName = `${uuidv4()}.${ext}`;
-        const filePath = path.join(uploadDir, fileName);
-
-        await fs.promises.writeFile(filePath, Buffer.from(buffer));
-        fields.image = `/uploads/blog/${fileName}`;
-
-        if (existingPost.image && existingPost.image.startsWith('/uploads/')) {
-          const oldImagePath = path.join(process.cwd(), 'public', existingPost.image);
-          if (fs.existsSync(oldImagePath)) {
-            await fs.promises.unlink(oldImagePath);
-          }
-        }
+      if (imageUrls.length > 0) {
+        fields.image = imageUrls[0];
       }
     }
 
@@ -355,21 +336,7 @@ export async function DELETE(req: NextRequest) {
       return errorResponse('Blog post not found', 404);
     }
 
-    // Delete the database record
     await BlogPost.findOneAndDelete({ slug });
-
-    // Only attempt to delete local image files if in development mode
-    const isLocal = process.env.NODE_ENV === 'development';
-    if (isLocal && post.image && post.image.startsWith('/uploads/')) {
-      const imagePath = path.join(process.cwd(), 'public', post.image);
-      if (fs.existsSync(imagePath)) {
-        try {
-          await fsp.unlink(imagePath);
-        } catch (error) {
-          console.error("Error deleting image file:", error);
-        }
-      }
-    }
 
     return successResponse(null, 'Blog post deleted successfully');
   } catch (error: any) {
