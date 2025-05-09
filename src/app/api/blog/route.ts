@@ -99,8 +99,10 @@ export async function OPTIONS() {
   return new NextResponse(null, {
     status: 204,
     headers: {
+      'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Access-Control-Max-Age': '86400',
     },
   });
 }
@@ -112,11 +114,20 @@ export async function POST(req: NextRequest) {
       return new NextResponse(null, {
         status: 204,
         headers: {
+          'Access-Control-Allow-Origin': '*',
           'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
           'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+          'Access-Control-Max-Age': '86400',
         },
       });
     }
+
+    // Add CORS headers to the response
+    const headers = {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    };
 
     await dbConnect();
 
@@ -173,7 +184,14 @@ export async function POST(req: NextRequest) {
 
     const savedPost = await blogPost.save();
 
-    return successResponse(savedPost, "Blog post created successfully", 201);
+    return NextResponse.json({
+      success: true,
+      message: "Blog post created successfully",
+      data: savedPost
+    }, {
+      status: 201,
+      headers
+    });
 
   } catch (error: any) {
     console.error("Error creating blog post:", error);
