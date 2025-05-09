@@ -44,12 +44,12 @@ export default function CreateBlogForm({ blog, onCreated, onEdited }: CreateBlog
         content: blog.content || "",
         excerpt: blog.excerpt || "",
         category: blog.category || "Uncategorized",
-        tags: blog.tags || "",
+        tags: blog.tags?.join(", ") || "",
         images: [],
       });
 
-      if (blog.imageUrls?.length) {
-        setImagePreviews(blog.imageUrls);
+      if (blog.image) {
+        setImagePreviews([blog.image]);
       }
     }
   }, [blog]);
@@ -69,6 +69,11 @@ export default function CreateBlogForm({ blog, onCreated, onEdited }: CreateBlog
     const newPreviews: string[] = [];
 
     selectedFiles.forEach((file) => {
+      if (file.size > 5 * 1024 * 1024) {
+        setError("Image size should be less than 5MB");
+        return;
+      }
+
       const reader = new FileReader();
       reader.onload = () => {
         setImagePreviews((prev) => [...prev, reader.result as string]);
@@ -108,6 +113,7 @@ export default function CreateBlogForm({ blog, onCreated, onEdited }: CreateBlog
       if (formData.category) postData.append("category", formData.category);
       if (formData.tags) postData.append("tags", formData.tags);
 
+      // Append each image file
       formData.images.forEach((img) => {
         postData.append("images", img);
       });
@@ -270,13 +276,12 @@ export default function CreateBlogForm({ blog, onCreated, onEdited }: CreateBlog
         {/* Images */}
         <div className="mb-6">
           <label htmlFor="images" className="block text-sm font-medium text-gray-700 mb-1">
-            Featured Images
+            Featured Image (max 5MB)
           </label>
           <input
             type="file"
             id="images"
             name="images"
-            multiple
             ref={fileInputRef}
             onChange={handleImagesChange}
             accept="image/*"
