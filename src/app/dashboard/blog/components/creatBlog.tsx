@@ -100,103 +100,130 @@ export default function CreateBlogForm({ blog, onCreated, onEdited }: CreateBlog
     setImagePreviews(updatedPreviews);
   };
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    setError("");
-    setSuccessMessage("");
-    setUploadError("");
+  // Improve the handleSubmit function in your CreateBlogForm component
 
-    try {
-      if (!formData.title || !formData.content) {
-        throw new Error("Title and content are required");
-      }
+const handleSubmit = async (e: FormEvent) => {
+  e.preventDefault();
+  setIsSubmitting(true);
+  setError("");
+  setSuccessMessage("");
+  setUploadError("");
 
-      // Check if title is too short
-      if (formData.title.length < 5) {
-        throw new Error("Title must be at least 5 characters long");
-      }
-
-      const postData = new FormData();
-      postData.append("title", formData.title);
-      postData.append("content", formData.content);
-      postData.append("slug", slugify(formData.title));
-      if (formData.excerpt) postData.append("excerpt", formData.excerpt);
-      if (formData.category) postData.append("category", formData.category);
-      if (formData.tags) postData.append("tags", formData.tags);
-
-      // Append each image file
-      formData.images.forEach((img) => {
-        postData.append("images", img);
-      });
-
-      const method = blog ? "PUT" : "POST";
-      const url = blog ? `/api/blog?slug=${blog.slug}` : "/api/blog";
-
-      const response = await fetch(url, {
-        method,
-        body: postData,
-      });
-
-      // Check for network-level errors
-      if (!response.ok) {
-        const errorText = await response.text();
-        let errorMessage;
-        
-        try {
-          // Try to parse as JSON
-          const errorData = JSON.parse(errorText);
-          errorMessage = errorData.message || `Error: ${response.status}`;
-        } catch (e) {
-          // If not valid JSON, use text directly
-          errorMessage = errorText || `Error: ${response.status}`;
-        }
-        
-        throw new Error(errorMessage);
-      }
-
-      // Parse JSON response, with better error handling
-      let result;
-      try {
-        const responseText = await response.text();
-        result = JSON.parse(responseText);
-      } catch (parseError) {
-        console.error("Failed to parse response:", parseError);
-        throw new Error("Invalid response from server");
-      }
-
-      if (!result.success) {
-        throw new Error(result.message || "Failed to save blog post");
-      }
-
-      setSuccessMessage(blog ? "Blog post updated!" : "Blog post created!");
-
-      if (!blog) {
-        setFormData({
-          title: "",
-          content: "",
-          excerpt: "",
-          category: "Uncategorized",
-          tags: "",
-          images: [],
-        });
-        setImagePreviews([]);
-        if (fileInputRef.current) fileInputRef.current.value = "";
-      }
-
-      if (blog && onEdited) onEdited(result.data);
-      if (!blog && onCreated) onCreated(result.data);
-
-      setTimeout(() => {
-        router.push("/dashboard/blog");
-      }, 2000);
-    } catch (err: any) {
-      setError(err.message || "An error occurred");
-      console.error("Form submission error:", err);
-    } finally {
-      setIsSubmitting(false);
+  try {
+    if (!formData.title || !formData.content) {
+      throw new Error("Title and content are required");
     }
-  };
+
+    // Check if title is too short
+    if (formData.title.length < 5) {
+      throw new Error("Title must be at least 5 characters long");
+    }
+
+    const postData = new FormData();
+    postData.append("title", formData.title);
+    postData.append("content", formData.content);
+    postData.append("slug", slugify(formData.title));
+    if (formData.excerpt) postData.append("excerpt", formData.excerpt);
+    if (formData.category) postData.append("category", formData.category);
+    if (formData.tags) postData.append("tags", formData.tags);
+
+    // Append each image file
+    formData.images.forEach((img) => {
+      postData.append("images", img);
+    });
+
+    const method = blog ? "PUT" : "POST";
+    const url = blog ? `/api/blog?slug=${blog.slug}` : "/api/blog";
+
+    console.log(`Submitting form to ${url} with method ${method}`);
+    
+    // Log form data for debugging (don't do this in production)
+    console.log("Form data entries:");
+    for (const [key, value] of postData.entries()) {
+      if (value instanceof File) {
+        console.log(`${key}: File - ${value.name} (${value.size} bytes)`);
+      } else {
+        console.log(`${key}: ${value}`);
+      }
+    }
+
+    const response = await fetch(url, {
+      method,
+      body: postData,
+      // Important: Don't set Content-Type header when using FormData
+      // The browser will set it correctly with the proper boundary
+    });
+
+    console.log(`Response status: ${response.status}`);
+    
+    // Get response headers for debugging
+    const headers: Record<string, string> = {};
+    response.headers.forEach((value, key) => {
+      headers[key] = value;
+    });
+    console.log("Response headers:", headers);
+
+    // Check for network-level errors
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Error response text:", errorText);
+      
+      let errorMessage;
+      try {
+        // Try to parse as JSON
+        const errorData = JSON.parse(errorText);
+        errorMessage = errorData.message || `Error: ${response.status}`;
+      } catch (e) {
+        // If not valid JSON, use text directly
+        errorMessage = errorText || `Error: ${response.status}`;
+      }
+      
+      throw new Error(errorMessage);
+    }
+
+    // Parse JSON response, with better error handling
+    let result;
+    try {
+      const responseText = await response.text();
+      console.log("Raw response:", responseText);
+      result = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error("Failed to parse response:", parseError);
+      throw new Error("Invalid response from server");
+    }
+
+    if (!result.success) {
+      throw new Error(result.message || "Failed to save blog post");
+    }
+
+    setSuccessMessage(blog ? "Blog post updated!" : "Blog post created!");
+
+    if (!blog) {
+      setFormData({
+        title: "",
+        content: "",
+        excerpt: "",
+        category: "Uncategorized",
+        tags: "",
+        images: [],
+      });
+      setImagePreviews([]);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+
+    if (blog && onEdited) onEdited(result.data);
+    if (!blog && onCreated) onCreated(result.data);
+
+    setTimeout(() => {
+      router.push("/dashboard/blog");
+    }, 2000);
+  } catch (err: any) {
+    setError(err.message || "An error occurred");
+    console.error("Form submission error:", err);
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   return (
     <div className="max-w-4xl mx-auto p-6 bg-white rounded-lg shadow-md">

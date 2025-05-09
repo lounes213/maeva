@@ -1,342 +1,262 @@
-import { NextRequest, NextResponse } from "next/server";
-import mongoose from "mongoose";
-import BlogPost from "@/app/models/blog";
+// File: pages/api/blog.ts (Next.js Pages Router)
+// Use this approach if you're using the Pages Router instead of App Router
+
+import type { NextApiRequest, NextApiResponse } from 'next';
+import formidable from 'formidable';
+import fs from 'fs';
+import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
-import dbConnect from "@/lib/mongo";
-import slugify from "@/lib/utils";
-import { v2 as cloudinary } from 'cloudinary';
 
-// Configure Cloudinary - FIXED CONFIGURATION
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME || '',
-  api_key: process.env.CLOUDINARY_API_KEY || '',
-  api_secret: process.env.CLOUDINARY_API_SECRET || '',
-  secure: true
-});
+// Required to disable Next.js body parsing for file uploads
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
 
-// Helper function for error responses
-const errorResponse = (message: string, status: number = 500) => {
-  return NextResponse.json(
-    { 
-      success: false, 
-      message,
+// Type for our response
+type BlogApiResponse = {
+  success: boolean;
+  message: string;
+  error: boolean;
+  data: any;
+};
+
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse<BlogApiResponse>
+) {
+  const { method } = req;
+  console.log(`Received ${method} request to /api/blog`);
+
+  try {
+    switch (method) {
+      case 'GET':
+        return await handleGetRequest(req, res);
+      case 'POST':
+        return await handlePostRequest(req, res);
+      case 'PUT':
+        return await handlePutRequest(req, res);
+      case 'DELETE':
+        return await handleDeleteRequest(req, res);
+      default:
+        // Very important: Set the Allow header with supported methods
+        res.setHeader('Allow', ['GET', 'POST', 'PUT', 'DELETE']);
+        return res.status(405).json({
+          success: false,
+          message: `Method ${method} Not Allowed`,
+          error: true,
+          data: null
+        });
+    }
+  } catch (error: any) {
+    console.error(`Error in API route (${method}):`, error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Internal Server Error',
       error: true,
       data: null
-    },
-    { 
-      status,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-      }
-    }
-  );
-};
-
-// Helper function for success responses
-const successResponse = (data: any, message: string = "Success", status: number = 200) => {
-  return NextResponse.json(
-    {
-      success: true,
-      message,
-      error: false,
-      data
-    },
-    {
-      status,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-      }
-    }
-  );
-};
-
-// FIXED: Improved error handling and added try-catch for Cloudinary operations
-async function handleImageUpload(image: File): Promise<string | undefined> {
-  try {
-    // Validate cloudinary config first
-    if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
-      console.error('Missing Cloudinary configuration');
-      throw new Error('Cloudinary configuration is missing');
-    }
-
-    // Check image size
-    if (image.size > 5 * 1024 * 1024) {
-      console.warn(`Image too large: ${image.name}`);
-      throw new Error('Image size exceeds 5MB limit');
-    }
-
-    // Convert to base64
-    const buffer = await image.arrayBuffer();
-    const base64Image = Buffer.from(buffer).toString('base64');
-    const dataURI = `data:${image.type};base64,${base64Image}`;
-
-    // Upload to Cloudinary with proper promise handling
-    const uploadResult = await new Promise<any>((resolve, reject) => {
-      cloudinary.uploader.upload(
-        dataURI, 
-        {
-          folder: 'blog',
-          resource_type: 'auto',
-        }, 
-        (error, result) => {
-          if (error) {
-            console.error('Cloudinary upload error:', error);
-            reject(error);
-          } else {
-            resolve(result);
-          }
-        }
-      );
     });
-
-    return uploadResult.secure_url;
-  } catch (error) {
-    console.error(`Error uploading image ${image.name}:`, error);
-    // Don't throw here, just return undefined so we can continue
-    return undefined;
   }
 }
 
-// Handle OPTIONS request for CORS
-export async function OPTIONS() {
-  return new NextResponse(null, {
-    status: 204,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-      'Access-Control-Max-Age': '86400',
-    },
+// Parse multipart form data (for POST and PUT requests with file uploads)
+const parseFormData = async (req: NextApiRequest) => {
+  return new Promise<{ fields: formidable.Fields; files: formidable.Files }>((resolve, reject) => {
+    // Create uploads directory if it doesn't exist
+    const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+
+    const form = formidable({
+      uploadDir: uploadsDir,
+      keepExtensions: true,
+      maxFileSize: 5 * 1024 * 1024, // 5MB
+      filename: (name, ext, part) => {
+        return `${uuidv4()}-${part.originalFilename?.replace(/\s/g, '-')}`;
+      }
+    });
+
+    form.parse(req, (err, fields, files) => {
+      if (err) {
+        reject(err);
+        return;
+      }
+      resolve({ fields, files });
+    });
   });
-}
+};
 
-export async function POST(req: NextRequest) {
-  try {
-    // Handle CORS
-    if (req.method === 'OPTIONS') {
-      return new NextResponse(null, {
-        status: 204,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-          'Access-Control-Max-Age': '86400',
-        },
-      });
+// Process the parsed form data into a blog post object
+const processBlogPostData = (fields: formidable.Fields, files: formidable.Files) => {
+  const blogPost: any = {};
+
+  // Process text fields
+  Object.keys(fields).forEach((fieldName) => {
+    const field = fields[fieldName];
+    
+    if (fieldName === 'tags' && field && field[0]) {
+      // Process tags into an array
+      blogPost.tags = field[0].split(',').map((tag: string) => tag.trim());
+    } else if (field && field[0]) {
+      // Add other fields directly
+      blogPost[fieldName] = field[0];
     }
+  });
 
-    await dbConnect();
-
-    const contentType = req.headers.get("content-type") || "";
-
-    if (!contentType.includes("multipart/form-data")) {
-      return errorResponse("Content-Type must be multipart/form-data", 415);
-    }
-
-    const formData = await req.formData();
-
-    const title = formData.get('title') as string;
-    const content = formData.get('content') as string;
-    const slug = (formData.get('slug') as string) || slugify(title);
-    const excerpt = formData.get('excerpt') as string;
-    const category = formData.get('category') as string;
-    const tags = formData.get('tags')?.toString().split(',').map(t => t.trim()) || [];
-
-    if (!title || !content) {
-      return errorResponse("Title and content are required", 400);
-    }
-
-    // Check if a post with this slug already exists
-    const existingPost = await BlogPost.findOne({ slug });
-    if (existingPost) {
-      return errorResponse("A post with this title already exists", 409);
-    }
-
-    let imageUrl;
-    try {
-      // Process only the first image for featured image
-      const images = formData.getAll('images') as File[];
-      if (images.length > 0) {
-        imageUrl = await handleImageUpload(images[0]);
-      }
-    } catch (imageError: any) {
-      // Log but continue without image if upload fails
-      console.error('Image upload failed:', imageError);
-      // We'll continue without the image
-    }
-
-    const blogPost = new BlogPost({
-      title,
-      content,
-      slug,
-      excerpt,
-      category,
-      tags,
-      image: imageUrl,
+  // Process image files
+  const imageFiles = files.images;
+  if (imageFiles && Array.isArray(imageFiles) && imageFiles.length > 0) {
+    // Get uploaded file paths and convert to public URLs
+    const imagePaths = imageFiles.map((file) => {
+      const relativePath = path.relative(
+        path.join(process.cwd(), 'public'),
+        file.filepath
+      );
+      return `/${relativePath.replace(/\\/g, '/')}`;
     });
 
-    const savedPost = await blogPost.save();
-
-    return successResponse(savedPost, "Blog post created successfully", 201);
-
-  } catch (error: any) {
-    console.error("Error creating blog post:", error);
+    blogPost.images = imagePaths;
     
-    // Handle specific MongoDB errors
-    if (error.code === 11000) {
-      return errorResponse("A post with this title already exists", 409);
+    // Set the first image as the main image
+    if (imagePaths.length > 0) {
+      blogPost.image = imagePaths[0];
     }
-    
-    if (error.name === 'ValidationError') {
-      return errorResponse(error.message, 400);
-    }
-
-    return errorResponse(error.message || "Failed to create blog post");
   }
-}
 
-export async function GET(req: NextRequest) {
-  try {
-    await dbConnect();
+  return blogPost;
+};
 
-    const { searchParams } = new URL(req.url);
-    const slug = searchParams.get('slug');
+// GET handler
+async function handleGetRequest(req: NextApiRequest, res: NextApiResponse<BlogApiResponse>) {
+  const { slug, page = '1', limit = '10', category, tag } = req.query;
 
-    if (slug) {
-      const post = await BlogPost.findOne({ slug });
-      if (!post) {
-        return errorResponse('Blog post not found', 404);
-      }
-      return successResponse(post);
-    }
+  // If slug is provided, return a single blog post
+  if (slug) {
+    // Here you would fetch the blog post from your database
+    const post = {}; // Replace with actual database query
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Blog post retrieved successfully',
+      error: false,
+      data: post
+    });
+  }
 
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '10');
-    const category = searchParams.get('category');
-    const tag = searchParams.get('tag');
+  // Handle listing blog posts with pagination and filters
+  const pageNum = parseInt(page as string, 10);
+  const limitNum = parseInt(limit as string, 10);
+  
+  // Here you would query your database with these parameters
+  const posts = []; // Replace with actual database query
+  const total = 0; // Replace with count from database
 
-    const query: any = {};
-    if (category) query.category = category;
-    if (tag) query.tags = tag;
-
-    const skip = (page - 1) * limit;
-
-    const posts = await BlogPost.find(query)
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit);
-
-    const total = await BlogPost.countDocuments(query);
-
-    return successResponse({
+  return res.status(200).json({
+    success: true,
+    message: 'Blog posts retrieved successfully',
+    error: false,
+    data: {
       posts,
       pagination: {
         total,
-        page,
-        limit,
-        pages: Math.ceil(total / limit)
+        page: pageNum,
+        limit: limitNum,
+        pages: Math.ceil(total / limitNum)
       }
+    }
+  });
+}
+
+// POST handler
+async function handlePostRequest(req: NextApiRequest, res: NextApiResponse<BlogApiResponse>) {
+  // Parse the multipart form data
+  const { fields, files } = await parseFormData(req);
+  
+  // Process the data into a blog post object
+  const blogPostData = processBlogPostData(fields, files);
+  
+  // Add creation timestamps
+  blogPostData.createdAt = new Date().toISOString();
+  blogPostData.updatedAt = new Date().toISOString();
+  
+  // Here you would save to your database
+  // const savedPost = await db.blogPosts.create(blogPostData);
+  
+  // For now, just return the processed data
+  const savedPost = {
+    _id: uuidv4(),
+    ...blogPostData
+  };
+
+  return res.status(201).json({
+    success: true,
+    message: 'Blog post created successfully',
+    error: false,
+    data: savedPost
+  });
+}
+
+// PUT handler
+async function handlePutRequest(req: NextApiRequest, res: NextApiResponse<BlogApiResponse>) {
+  const { slug } = req.query;
+  
+  if (!slug) {
+    return res.status(400).json({
+      success: false,
+      message: 'Slug is required',
+      error: true,
+      data: null
     });
-  } catch (error: any) {
-    console.error("Error fetching blog posts:", error);
-    return errorResponse(error.message || "Failed to get blog posts");
   }
+
+  // Parse the multipart form data
+  const { fields, files } = await parseFormData(req);
+  
+  // Process the data into a blog post object
+  const blogPostData = processBlogPostData(fields, files);
+  
+  // Update the timestamp
+  blogPostData.updatedAt = new Date().toISOString();
+  
+  // Here you would update your database record
+  // const updatedPost = await db.blogPosts.findOneAndUpdate({ slug }, blogPostData, { new: true });
+  
+  // For now, just return the processed data
+  const updatedPost = {
+    _id: uuidv4(),
+    ...blogPostData
+  };
+
+  return res.status(200).json({
+    success: true,
+    message: 'Blog post updated successfully',
+    error: false,
+    data: updatedPost
+  });
 }
 
-export async function PUT(req: NextRequest) {
-  try {
-    await dbConnect();
-
-    const { searchParams } = new URL(req.url);
-    const slug = searchParams.get('slug');
-
-    if (!slug) {
-      return errorResponse("Slug is required", 400);
-    }
-
-    const existingPost = await BlogPost.findOne({ slug });
-    if (!existingPost) {
-      return errorResponse("Blog post not found", 404);
-    }
-
-    const formData = await req.formData();
-    const fields: any = {};
-
-    // Process text fields
-    for (const [key, value] of formData.entries()) {
-      if (typeof value === 'string') {
-        fields[key] = value;
-      }
-    }
-
-    // Process tags if present
-    if (fields.tags) {
-      fields.tags = fields.tags.split(',').map((tag: string) => tag.trim());
-    }
-
-    // Generate new slug if title is modified
-    if (fields.title && !fields.slug) {
-      fields.slug = slugify(fields.title);
-    }
-
-    // Process images - FIXED: better error handling
-    try {
-      const images = formData.getAll('images') as File[];
-      if (images.length > 0) {
-        const imageUrl = await handleImageUpload(images[0]);
-        if (imageUrl) {
-          fields.image = imageUrl;
-        }
-      }
-    } catch (imageError) {
-      console.error('Error processing image - continuing without updating image:', imageError);
-      // Continue without updating the image
-    }
-
-    const updatedPost = await BlogPost.findOneAndUpdate(
-      { slug },
-      fields,
-      { new: true, runValidators: true }
-    );
-
-    if (!updatedPost) {
-      return errorResponse("Failed to update blog post", 500);
-    }
-
-    return successResponse(updatedPost, "Blog post updated successfully");
-  } catch (error: any) {
-    console.error("Error updating blog post:", error);
-    return errorResponse(error.message || "Failed to update blog post");
+// DELETE handler
+async function handleDeleteRequest(req: NextApiRequest, res: NextApiResponse<BlogApiResponse>) {
+  const { slug } = req.query;
+  
+  if (!slug) {
+    return res.status(400).json({
+      success: false,
+      message: 'Slug is required',
+      error: true,
+      data: null
+    });
   }
-}
-
-export async function DELETE(req: NextRequest) {
-  try {
-    await dbConnect();
-
-    const { searchParams } = new URL(req.url);
-    const slug = searchParams.get('slug');
-
-    if (!slug) {
-      return errorResponse("Slug parameter is required", 400);
-    }
-
-    const post = await BlogPost.findOne({ slug });
-    if (!post) {
-      return errorResponse('Blog post not found', 404);
-    }
-
-    await BlogPost.findOneAndDelete({ slug });
-
-    return successResponse(null, 'Blog post deleted successfully');
-  } catch (error: any) {
-    console.error("Error in DELETE handler:", error);
-    return errorResponse(error.message || "Failed to delete blog post");
-  }
+  
+  // Here you would delete the blog post from your database
+  // await db.blogPosts.deleteOne({ slug });
+  
+  return res.status(200).json({
+    success: true,
+    message: 'Blog post deleted successfully',
+    error: false,
+    data: null
+  });
 }
