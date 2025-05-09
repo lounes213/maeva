@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongo';
-import { v4 as uuidv4 } from 'uuid';
 import { Product } from '@/app/models/Product';
 import { v2 as cloudinary } from 'cloudinary';
 
@@ -204,29 +203,21 @@ export async function PUT(req: Request) {
     let imageUrls = existingProduct.imageUrls || [];
 
     if (newImages.length > 0) {
-      const uploadDir = path.join(process.cwd(), 'public/uploads/products');
-      if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
-      }
-
-      // Remplace l'utilisation de `arrayBuffer()` par une méthode compatible avec Node.js
       for (const image of newImages) {
         if (!image || !image.name) {
           console.warn('Image invalide ou sans nom, ignorée.');
           continue;
         }
 
-        if (image.size > 5 * 1024 * 1024) continue;
-
-        const fileExtension = image.name.split('.').pop();
-        const fileName = `${uuidv4()}.${fileExtension}`;
-        const filePath = path.join(uploadDir, fileName);
-
-        // Lire le fichier en tant que Buffer
-        const buffer = Buffer.from(await image.arrayBuffer());
-        await fs.promises.writeFile(filePath, buffer);
-
-        imageUrls.push(`/uploads/products/${fileName}`);
+        try {
+          const imageUrl = await handleImageUpload(image);
+          if (imageUrl) {
+            imageUrls.push(imageUrl);
+          }
+        } catch (error) {
+          console.error('Error processing image:', error);
+          return errorResponse("Failed to upload image. Please try again.");
+        }
       }
     }
 
@@ -266,11 +257,7 @@ export async function PUT(req: Request) {
       return errorResponse('Échec de la mise à jour du produit', 500);
     }
 
-    return NextResponse.json({ 
-      success: true, 
-      data: updatedProduct,
-      message: 'Produit mis à jour avec succès' 
-    });
+    return successResponse(updatedProduct, 'Produit mis à jour avec succès');
 
   } catch (error) {
     console.error('Erreur lors de la mise à jour du produit:', error);
@@ -283,47 +270,21 @@ export async function DELETE(req: Request) {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
     if (!id) {
-      return NextResponse.json(
-        { error: 'ID du produit est requis' },
-        { status: 400 }
-      );
+      return errorResponse('ID du produit est requis', 400);
     }
 
     await dbConnect();
     const product = await Product.findById(id);
     if (!product) {
-      return NextResponse.json(
-        { error: 'Produit non trouvé' },
-        { status: 404 }
-      );
+      return errorResponse('Produit non trouvé', 404);
     }
 
-    // Check if running locally (skip deletion on Netlify/Vercel)
-    const isLocal = process.env.NODE_ENV === 'development';
-
-    if (isLocal && product.imageUrls && product.imageUrls.length > 0) {
-      for (const imageUrl of product.imageUrls) {
-        const fileName = imageUrl.split('/').pop();
-        if (!fileName) continue;
-
-        const filePath = path.join(process.cwd(), 'public', 'uploads', 'products', fileName);
-        if (fs.existsSync(filePath)) {
-          await fs.promises.unlink(filePath);
-        }
-      }
-    }
-
+    // Delete the product
     await Product.findByIdAndDelete(id);
 
-    return NextResponse.json({
-      success: true,
-      message: 'Produit supprimé avec succès',
-    });
+    return successResponse(null, 'Produit supprimé avec succès');
   } catch (error: any) {
     console.error('Erreur de suppression:', error);
-    return NextResponse.json(
-      { error: error.message || 'Échec de la suppression du produit' },
-      { status: 500 }
-    );
+    return errorResponse(error.message || 'Échec de la suppression du produit');
   }
 }
