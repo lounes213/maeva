@@ -51,7 +51,7 @@ export default function UsersTable() {
   // Charger les utilisateurs
   const fetchUsers = async () => {
     try {
-      const response = await fetch('/api/users');
+      const response = await fetch('https://maeva-three.vercel.app/api/users');
       const data = await response.json();
       if (response.ok) {
         setUsers(data);
@@ -74,7 +74,7 @@ export default function UsersTable() {
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const response = await fetch('/api/users', {
+      const response = await fetch('https://maeva-three.vercel.app/api/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
@@ -101,7 +101,7 @@ export default function UsersTable() {
     if (!selectedUser) return;
 
     try {
-      const response = await fetch(`/api/users/${selectedUser._id}`, {
+      const response = await fetch(`https://maeva-three.vercel.app/api/users/${selectedUser._id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

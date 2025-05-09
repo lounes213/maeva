@@ -76,7 +76,7 @@ export default function TrackOrderPage() {
     setLoading(true);
     setError('');
     try {
-      const response = await fetch(`/api/orders/track?code=${encodeURIComponent(code)}`);
+      const response = await fetch(`https://maeva-three.vercel.app/api/orders/track?code=${encodeURIComponent(code)}`);
       
       if (!response.ok) {
         const errorData = await response.json();

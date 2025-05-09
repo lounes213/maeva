@@ -49,7 +49,7 @@ export default function CollectionDetails() {
         setLoading(true);
         setError(null);
 
-        const response = await fetch(`/api/collection/${encodeURIComponent(collectionId)}`);
+        const response = await fetch(`https://maeva-three.vercel.app/api/collection/${encodeURIComponent(collectionId)}`);
 
         if (!response.ok) {
           const errorData = await response.json();

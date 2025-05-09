@@ -9,7 +9,7 @@ async function getCollections() {
   const host = headersList.get('host');
   const baseUrl = `${protocol}://${host}`;
 
-  const res = await fetch(`${baseUrl}/api/collection`, {
+  const res = await fetch(`https://maeva-three.vercel.app/api/collection`, {
     next: { revalidate: 60 },
     headers: { 'Content-Type': 'application/json' },
   });
