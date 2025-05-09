@@ -15,6 +15,14 @@ export const config = {
   },
 };
 
+// Helper function for error responses
+const errorResponse = (message: string, status: number = 500) => {
+  return NextResponse.json(
+    { success: false, message },
+    { status }
+  );
+};
+
 // Amélioration des messages d'erreur avec des toasts spécifiques
 export async function POST(req: NextRequest) {
   try {
@@ -22,33 +30,47 @@ export async function POST(req: NextRequest) {
 
     const contentType = req.headers.get("content-type") || "";
 
-    if (contentType.includes("multipart/form-data")) {
-      const formData = await req.formData();
+    if (!contentType.includes("multipart/form-data")) {
+      return errorResponse("Content-Type must be multipart/form-data", 415);
+    }
 
-      const title = formData.get('title') as string;
-      const content = formData.get('content') as string;
-      const slug = (formData.get('slug') as string) || slugify(title);
-      const excerpt = formData.get('excerpt') as string;
-      const category = formData.get('category') as string;
-      const tags = formData.get('tags')?.toString().split(',').map(t => t.trim()) || [];
+    const formData = await req.formData();
 
-      if (!title || !content) {
-        toast.error("Le titre et le contenu sont obligatoires.");
-        return NextResponse.json({ error: "Title and content are required" }, { status: 400 });
+    const title = formData.get('title') as string;
+    const content = formData.get('content') as string;
+    const slug = (formData.get('slug') as string) || slugify(title);
+    const excerpt = formData.get('excerpt') as string;
+    const category = formData.get('category') as string;
+    const tags = formData.get('tags')?.toString().split(',').map(t => t.trim()) || [];
+
+    if (!title || !content) {
+      return errorResponse("Title and content are required", 400);
+    }
+
+    // Check if a post with this slug already exists
+    const existingPost = await BlogPost.findOne({ slug });
+    if (existingPost) {
+      return errorResponse("A post with this title already exists", 409);
+    }
+
+    const images = formData.getAll('images') as File[];
+    const imageUrls: string[] = [];
+
+    // Only handle file uploads in development
+    const isLocal = process.env.NODE_ENV === 'development';
+    if (isLocal && images.length > 0) {
+      const uploadDir = path.join(process.cwd(), 'public/uploads/blog');
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
       }
 
-      const images = formData.getAll('images') as File[];
-      const imageUrls: string[] = [];
-
-      if (images.length > 0) {
-        const uploadDir = path.join(process.cwd(), 'public/uploads/blog');
-        if (!fs.existsSync(uploadDir)) {
-          fs.mkdirSync(uploadDir, { recursive: true });
+      for (const image of images) {
+        if (image.size > 5 * 1024 * 1024) {
+          console.warn(`Skipping large image: ${image.name}`);
+          continue;
         }
 
-        for (const image of images) {
-          if (image.size > 5 * 1024 * 1024) continue;
-
+        try {
           const buffer = await image.arrayBuffer();
           const ext = image.name.split('.').pop();
           const fileName = `${uuidv4()}.${ext}`;
@@ -56,29 +78,43 @@ export async function POST(req: NextRequest) {
 
           await fs.promises.writeFile(filePath, Buffer.from(buffer));
           imageUrls.push(`/uploads/blog/${fileName}`);
+        } catch (error) {
+          console.error(`Error processing image ${image.name}:`, error);
         }
       }
-
-      const blogPost = new BlogPost({
-        title,
-        content,
-        slug,
-        excerpt,
-        category,
-        tags,
-        image: imageUrls[0] || undefined,
-      });
-
-      const savedPost = await blogPost.save();
-
-      return NextResponse.json(savedPost, { status: 201 });
     }
 
-    toast.error("Type de contenu non pris en charge.");
-    return NextResponse.json({ error: "Unsupported Content-Type" }, { status: 415 });
+    const blogPost = new BlogPost({
+      title,
+      content,
+      slug,
+      excerpt,
+      category,
+      tags,
+      image: imageUrls[0] || undefined,
+    });
+
+    const savedPost = await blogPost.save();
+
+    return NextResponse.json({
+      success: true,
+      data: savedPost,
+      message: "Blog post created successfully"
+    }, { status: 201 });
+
   } catch (error: any) {
-    toast.error("Erreur lors de la création de l'article de blog.");
-    return NextResponse.json({ error: error.message || "Failed to create blog post" }, { status: 500 });
+    console.error("Error creating blog post:", error);
+    
+    // Handle specific MongoDB errors
+    if (error.code === 11000) {
+      return errorResponse("A post with this title already exists", 409);
+    }
+    
+    if (error.name === 'ValidationError') {
+      return errorResponse(error.message, 400);
+    }
+
+    return errorResponse(error.message || "Failed to create blog post");
   }
 }
 

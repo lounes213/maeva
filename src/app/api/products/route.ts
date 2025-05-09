@@ -55,6 +55,9 @@ export async function POST(req: Request) {
       }
     }
 
+    // Generate a unique reference
+    const reference = `PROD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+
     // Process images
     const images = formData.getAll('images') as File[];
     const imageUrls: string[] = [];
@@ -92,6 +95,7 @@ export async function POST(req: Request) {
       price: parseFloat(formData.get('price') as string),
       stock: parseInt(formData.get('stock') as string),
       category: formData.get('category') as string,
+      reference,
       tissu: formData.get('tissu') as string || '',
       couleurs: couleurs,
       taille: taille,
@@ -111,8 +115,8 @@ export async function POST(req: Request) {
     });
 
   } catch (error) {
-    const errorMessage = logError(error);
-    return errorResponse(`Échec de la création du produit: ${errorMessage}`);
+    console.error('Error creating product:', error);
+    return errorResponse(`Échec de la création du produit: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 
@@ -208,8 +212,6 @@ export async function PUT(req: Request) {
     return errorResponse('Échec de la mise à jour du produit');
   }
 }
-
-
 
 export async function DELETE(req: Request) {
   try {

@@ -15,7 +15,7 @@ interface OrderItem {
 
 interface Order {
   _id: string;
-  id: string; // Added this field since the MongoDB model transforms _id to id
+  id: string;
   items: OrderItem[];
   customer: {
     name: string;
@@ -53,9 +53,13 @@ export default function OrderTable() {
       try {
         const res = await fetch('https://maeva-three.vercel.app/api/orders');
         if (!res.ok) {
-          throw new Error(`Erreur HTTP: ${res.status}`);
+          throw new Error(`HTTP error! Status: ${res.status}`);
         }
         const data = await res.json();
+        
+        if (!data.success) {
+          throw new Error(data.message || 'Failed to fetch orders');
+        }
         
         // Ensure each order has an _id property
         const processedOrders = (data.data || []).map((order: any) => ({
@@ -65,7 +69,8 @@ export default function OrderTable() {
         
         setOrders(processedOrders);
       } catch (error) {
-        toast.error('Échec du chargement des commandes');
+        console.error('Error fetching orders:', error);
+        toast.error('Failed to load orders');
       } finally {
         setLoading(false);
       }
