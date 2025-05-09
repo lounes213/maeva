@@ -29,13 +29,25 @@ export default function BlogPage() {
       try {
         const res = await fetch('/api/blog');
         const data = await res.json();
-        if (data.success && Array.isArray(data.data)) {
-          setBlogs(data.data);
-          setFilteredBlogs(data.data);
-        } else {
-          throw new Error(data.message || 'Invalid response format');
+        
+        if (!data.success) {
+          throw new Error(data.message || 'Failed to fetch blog posts');
         }
+
+        if (!Array.isArray(data.data)) {
+          throw new Error('Invalid response format');
+        }
+
+        // Process image URLs
+        const processedBlogs = data.data.map((blog: BlogPost) => ({
+          ...blog,
+          image: blog.image ? (blog.image.startsWith('http') ? blog.image : `/uploads/blog/${blog.image}`) : undefined
+        }));
+
+        setBlogs(processedBlogs);
+        setFilteredBlogs(processedBlogs);
       } catch (err: any) {
+        console.error('Error fetching blogs:', err);
         setError(err.message || 'Something went wrong');
       } finally {
         setLoading(false);
