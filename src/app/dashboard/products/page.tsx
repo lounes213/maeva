@@ -31,7 +31,7 @@ const ProductsPage = () => {
 
   const fetchUser = async () => {
     try {
-      const response = await fetch('/api/auth/me');
+      const response = await fetch('https://maeva-three.vercel.app/api/auth/me');
       if (response.ok) {
         const userData = await response.json();
         setUser(userData);

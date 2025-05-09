@@ -40,7 +40,7 @@ export default function CollectionTable() {
   useEffect(() => {
     const fetchCollections = async () => {
       try {
-        const res = await fetch('/api/collection')
+        const res = await fetch('https://maeva-three.vercel.app/api/collection')
         if (!res.ok) throw new Error('Failed to fetch collections')
         const { data } = await res.json()
         setCollections(data)
@@ -74,7 +74,7 @@ export default function CollectionTable() {
     
     setIsDeleting(true)
     try {
-      const res = await fetch(`/api/collection?id=${id}`, {
+      const res = await fetch(`https://maeva-three.vercel.app/api/collection?id=${id}`, {
         method: 'DELETE',
       })
 

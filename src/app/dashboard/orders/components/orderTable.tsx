@@ -51,7 +51,7 @@ export default function OrderTable() {
   useEffect(() => {
     const fetchOrders = async () => {
       try {
-        const res = await fetch('/api/orders');
+        const res = await fetch('https://maeva-three.vercel.app/api/orders');
         if (!res.ok) {
           throw new Error(`Erreur HTTP: ${res.status}`);
         }
@@ -88,7 +88,7 @@ export default function OrderTable() {
 
     setIsUpdating(true);
     try {
-      const res = await fetch(`/api/orders?id=${id}`, {
+      const res = await fetch(`https://maeva-three.vercel.app/api/orders?id=${id}`, {
         method: 'PUT',
         headers: { 
           'Content-Type': 'application/json',
@@ -126,7 +126,7 @@ export default function OrderTable() {
     if (!confirm('Êtes-vous sûr de vouloir supprimer cette commande ?')) return;
 
     try {
-      const res = await fetch(`/api/orders?id=${id}`, {
+      const res = await fetch(`https://maeva-three.vercel.app/api/orders?id=${id}`, {
         method: 'DELETE',
       });
 
