@@ -120,12 +120,16 @@ export default function CreateBlogForm({ blog, onCreated, onEdited }: CreateBlog
         body: postData,
       });
 
+      const result = await response.json();
+
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Failed to save blog post");
+        throw new Error(result.message || "Failed to save blog post");
       }
 
-      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.message || "Failed to save blog post");
+      }
+
       setSuccessMessage(blog ? "Blog post updated!" : "Blog post created!");
 
       if (!blog) {
@@ -141,8 +145,8 @@ export default function CreateBlogForm({ blog, onCreated, onEdited }: CreateBlog
         if (fileInputRef.current) fileInputRef.current.value = "";
       }
 
-      if (blog && onEdited) onEdited(result);
-      if (!blog && onCreated) onCreated(result);
+      if (blog && onEdited) onEdited(result.data);
+      if (!blog && onCreated) onCreated(result.data);
 
       setTimeout(() => {
         router.push("/dashboard/blog");
