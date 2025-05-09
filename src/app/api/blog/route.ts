@@ -20,17 +20,43 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
-
 // Helper function for error responses
 const errorResponse = (message: string, status: number = 500) => {
   return NextResponse.json(
-    { success: false, message },
-    { status }
+    { 
+      success: false, 
+      message,
+      error: true,
+      data: null
+    },
+    { 
+      status,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      }
+    }
+  );
+};
+
+// Helper function for success responses
+const successResponse = (data: any, message: string = "Success", status: number = 200) => {
+  return NextResponse.json(
+    {
+      success: true,
+      message,
+      error: false,
+      data
+    },
+    {
+      status,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      }
+    }
   );
 };
 
@@ -64,12 +90,34 @@ async function handleImageUpload(image: File): Promise<string | undefined> {
     return (result as any).secure_url;
   } catch (error) {
     console.error(`Error uploading image ${image.name}:`, error);
-    throw error; // Propagate the error to be handled by the caller
+    throw error;
   }
+}
+
+// Handle OPTIONS request for CORS
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 204,
+    headers: {
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    },
+  });
 }
 
 export async function POST(req: NextRequest) {
   try {
+    // Handle CORS
+    if (req.method === 'OPTIONS') {
+      return new NextResponse(null, {
+        status: 204,
+        headers: {
+          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        },
+      });
+    }
+
     await dbConnect();
 
     const contentType = req.headers.get("content-type") || "";
@@ -125,11 +173,7 @@ export async function POST(req: NextRequest) {
 
     const savedPost = await blogPost.save();
 
-    return NextResponse.json({
-      success: true,
-      data: savedPost,
-      message: "Blog post created successfully"
-    }, { status: 201 });
+    return successResponse(savedPost, "Blog post created successfully", 201);
 
   } catch (error: any) {
     console.error("Error creating blog post:", error);
@@ -159,7 +203,7 @@ export async function GET(req: NextRequest) {
       if (!post) {
         return errorResponse('Blog post not found', 404);
       }
-      return NextResponse.json({ success: true, data: post });
+      return successResponse(post);
     }
 
     const page = parseInt(searchParams.get('page') || '1');
@@ -180,16 +224,13 @@ export async function GET(req: NextRequest) {
 
     const total = await BlogPost.countDocuments(query);
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        posts,
-        pagination: {
-          total,
-          page,
-          limit,
-          pages: Math.ceil(total / limit)
-        }
+    return successResponse({
+      posts,
+      pagination: {
+        total,
+        page,
+        limit,
+        pages: Math.ceil(total / limit)
       }
     });
   } catch (error: any) {
@@ -273,11 +314,7 @@ export async function PUT(req: NextRequest) {
       return errorResponse("Failed to update blog post", 500);
     }
 
-    return NextResponse.json({
-      success: true,
-      data: updatedPost,
-      message: "Blog post updated successfully"
-    });
+    return successResponse(updatedPost, "Blog post updated successfully");
   } catch (error: any) {
     console.error("Error updating blog post:", error);
     return errorResponse(error.message || "Failed to update blog post");
@@ -316,10 +353,7 @@ export async function DELETE(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({
-      success: true,
-      message: 'Blog post deleted successfully'
-    });
+    return successResponse(null, 'Blog post deleted successfully');
   } catch (error: any) {
     console.error("Error in DELETE handler:", error);
     return errorResponse(error.message || "Failed to delete blog post");
