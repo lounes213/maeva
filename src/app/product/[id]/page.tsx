@@ -67,7 +67,7 @@ export default function ProductDetailsPage() {
     if (!id) return;
     const fetchProduct = async () => {
       try {
-        const res = await fetch(`https://maeva-three.vercel.app/api/products?id=${id}`);
+        const res = await fetch(`/api/products?id=${id}`);
         const data = await res.json();
         setProduct(data.data);
       } catch (error) {
@@ -274,7 +274,7 @@ export default function ProductDetailsPage() {
 
     try {
       // Envoyer la requête à l'API
-      const response = await fetch('https://maeva-three.vercel.app/api/orders', {
+      const response = await fetch('/api/orders', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

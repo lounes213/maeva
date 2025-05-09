@@ -19,7 +19,7 @@ export default function CollectionGrid() {
   useEffect(() => {
     async function fetchCollections() {
       try {
-        const res = await fetch('https://maeva-three.vercel.app/api/collection');
+        const res = await fetch('/api/collection');
         const data = await res.json();
         setCollections(data.data);
       } catch (error) {

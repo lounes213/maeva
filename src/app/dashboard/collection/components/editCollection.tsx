@@ -158,7 +158,7 @@ export default function EditCollectionModal({
         formData.append('imagesToRemove', JSON.stringify(imagesToRemove));
       }
 
-      const response = await fetch(`https://maeva-three.vercel.app/api/collection?id=${collection._id}`, {
+      const response = await fetch(`/api/collection?id=${collection._id}`, {
         method: 'PUT',
         body: formData,
       });

@@ -90,7 +90,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData, onSuccess, onCan
     });
 
     try {
-      const url = initialData ? `https://maeva-three.vercel.app/api/products?id=${initialData._id}` : 'https://maeva-three.vercel.app/api/products';
+      const url = initialData ? `/api/products?id=${initialData._id}` : '/api/products';
       const method = initialData ? 'PUT' : 'POST';
 
       const response = await fetch(url, {

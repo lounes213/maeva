@@ -15,7 +15,7 @@ interface OrderItem {
 
 interface Order {
   _id: string;
-  id: string;
+  id: string; // Added this field since the MongoDB model transforms _id to id
   items: OrderItem[];
   customer: {
     name: string;
@@ -51,15 +51,11 @@ export default function OrderTable() {
   useEffect(() => {
     const fetchOrders = async () => {
       try {
-        const res = await fetch('https://maeva-three.vercel.app/api/orders');
+        const res = await fetch('/api/orders');
         if (!res.ok) {
-          throw new Error(`HTTP error! Status: ${res.status}`);
+          throw new Error(`Erreur HTTP: ${res.status}`);
         }
         const data = await res.json();
-        
-        if (!data.success) {
-          throw new Error(data.message || 'Failed to fetch orders');
-        }
         
         // Ensure each order has an _id property
         const processedOrders = (data.data || []).map((order: any) => ({
@@ -69,8 +65,7 @@ export default function OrderTable() {
         
         setOrders(processedOrders);
       } catch (error) {
-        console.error('Error fetching orders:', error);
-        toast.error('Failed to load orders');
+        toast.error('Échec du chargement des commandes');
       } finally {
         setLoading(false);
       }
@@ -93,7 +88,7 @@ export default function OrderTable() {
 
     setIsUpdating(true);
     try {
-      const res = await fetch(`https://maeva-three.vercel.app/api/orders?id=${id}`, {
+      const res = await fetch(`/api/orders?id=${id}`, {
         method: 'PUT',
         headers: { 
           'Content-Type': 'application/json',
@@ -131,7 +126,7 @@ export default function OrderTable() {
     if (!confirm('Êtes-vous sûr de vouloir supprimer cette commande ?')) return;
 
     try {
-      const res = await fetch(`https://maeva-three.vercel.app/api/orders?id=${id}`, {
+      const res = await fetch(`/api/orders?id=${id}`, {
         method: 'DELETE',
       });
 

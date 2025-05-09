@@ -15,8 +15,6 @@ interface BlogPost {
   content?: string;
 }
 
-const API_BASE_URL = 'https://maeva-three.vercel.app';
-
 export default function BlogPage() {
   const [blogs, setBlogs] = useState<BlogPost[]>([]);
   const [filteredBlogs, setFilteredBlogs] = useState<BlogPost[]>([]);
@@ -29,7 +27,7 @@ export default function BlogPage() {
   useEffect(() => {
     const fetchBlogs = async () => {
       try {
-        const res = await fetch(`${API_BASE_URL}/api/blog`);
+        const res = await fetch('/api/blog');
         const data = await res.json();
         if (Array.isArray(data.posts)) {
           setBlogs(data.posts);

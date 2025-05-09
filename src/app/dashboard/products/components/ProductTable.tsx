@@ -44,7 +44,7 @@ const ProductTable: React.FC<ProductTableProps> = ({ products, refreshProducts }
 
     setIsLoading(true);
     try {
-      const response = await fetch(`https://maeva-three.vercel.app/api/products?id=${selectedProduct._id}`, {
+      const response = await fetch(`/api/products?id=${selectedProduct._id}`, {
         method: 'DELETE',
       });
 

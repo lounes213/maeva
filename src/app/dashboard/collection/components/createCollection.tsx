@@ -150,7 +150,7 @@ export default function CreateCollectionModal({ onCreateSuccess}:any) {
   });
 
   try {
-    const res = await fetch('https://maeva-three.vercel.app/api/collection', {
+    const res = await fetch('/api/collection', {
       method: 'POST',
       body: formData,
     });

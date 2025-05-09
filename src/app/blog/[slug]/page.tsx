@@ -7,8 +7,6 @@ import Header from "@/app/components/header";
 
 const CopyLinkButton = dynamic(() => import("@/app/components/CopyLinkButton"), { ssr: true });
 
-const API_BASE_URL = 'https://maeva-three.vercel.app';
-
 interface BlogPost {
   _id: string;
   title: string;
@@ -32,27 +30,26 @@ export default async function BlogPostPage({ params }: any) {
   const host = (await headersList).get("host");
   const protocol = process.env.NODE_ENV === "development" ? "http" : "https";
 
-  const url = `${API_BASE_URL}/api/blog?slug=${slug}`;
+  const url = `${protocol}://${host}/api/blog?slug=${slug}`;
   const res = await fetch(url, { cache: "no-store" });
 
   if (!res.ok) return notFound();
-  const data = await res.json();
-  const post: BlogPost = data.data;
-  
-  if (!post?.title) return notFound();
+  const post: BlogPost = await res.json();
+if (!post?.title) return notFound();
 
-  if (post.image && !post.image.startsWith("http")) {
-    const cleanPath = post.image.replace(/^\/?uploads\//, ""); // sanitize the path
-    post.image = `${protocol}://${host}/uploads/${cleanPath}`;
-  }
+if (post.image && !post.image.startsWith("http")) {
+  const cleanPath = post.image.replace(/^\/?uploads\//, ""); // sanitize the path
+  post.image = `${protocol}://${host}/uploads/${cleanPath}`;
+}
 
-  const relatedRes = await fetch(`${API_BASE_URL}/api/blog?limit=3&excludeSlug=${slug}`, {
+
+  const relatedRes = await fetch(`${protocol}://${host}/api/blog?limit=3&excludeSlug=${slug}`, {
     cache: "no-store",
   });
   const relatedData = relatedRes.ok ? await relatedRes.json() : [];
-  const relatedPosts: BlogPost[] = Array.isArray(relatedData.data)
-    ? relatedData.data
-    : [];
+  const relatedPosts: BlogPost[] = Array.isArray(relatedData)
+    ? relatedData
+    : relatedData.posts || relatedData.data || [];
 
   const generateTOC = (content: string) => {
     const headingRegex = /<h([2-3])[^>]*>(.*?)<\/h[2-3]>/g;

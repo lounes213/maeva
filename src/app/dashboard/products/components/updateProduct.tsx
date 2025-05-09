@@ -44,7 +44,7 @@ const UpdateProduct: React.FC<UpdateProductProps> = ({ product, refreshProducts 
   const handleSave = async (updatedProduct: any) => {
     setIsLoading(true);
     try {
-      const response = await fetch(`https://maeva-three.vercel.app/api/products?id=${product._id}`, {
+      const response = await fetch(`/api/products?id=${product._id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
