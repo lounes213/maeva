@@ -1,18 +1,13 @@
-// File: pages/api/blog.ts (Next.js Pages Router)
-// Use this approach if you're using the Pages Router instead of App Router
+// File: src/app/api/blog/route.ts
+// Next.js App Router API implementation
 
-import type { NextApiRequest, NextApiResponse } from 'next';
+import { NextRequest, NextResponse } from 'next/server';
 import formidable from 'formidable';
 import fs from 'fs';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
-
-// Required to disable Next.js body parsing for file uploads
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
+import { writeFile } from 'fs/promises';
+import { join } from 'path';
 
 // Type for our response
 type BlogApiResponse = {
@@ -22,241 +17,296 @@ type BlogApiResponse = {
   data: any;
 };
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse<BlogApiResponse>
-) {
-  const { method } = req;
-  console.log(`Received ${method} request to /api/blog`);
+// In App Router, we define separate handler functions for each HTTP method
+export async function GET(request: NextRequest) {
+  console.log('Received GET request to /api/blog');
 
   try {
-    switch (method) {
-      case 'GET':
-        return await handleGetRequest(req, res);
-      case 'POST':
-        return await handlePostRequest(req, res);
-      case 'PUT':
-        return await handlePutRequest(req, res);
-      case 'DELETE':
-        return await handleDeleteRequest(req, res);
-      default:
-        // Very important: Set the Allow header with supported methods
-        res.setHeader('Allow', ['GET', 'POST', 'PUT', 'DELETE']);
-        return res.status(405).json({
-          success: false,
-          message: `Method ${method} Not Allowed`,
-          error: true,
-          data: null
-        });
+    // Parse URL and searchParams
+    const { searchParams } = new URL(request.url);
+    const slug = searchParams.get('slug');
+    const page = searchParams.get('page') || '1';
+    const limit = searchParams.get('limit') || '10';
+    const category = searchParams.get('category');
+    const tag = searchParams.get('tag');
+
+    // If slug is provided, return a single blog post
+    if (slug) {
+      // Here you would fetch the blog post from your database
+      const post = {}; // Replace with actual database query
+      
+      return NextResponse.json({
+        success: true,
+        message: 'Blog post retrieved successfully',
+        error: false,
+        data: post
+      }, { status: 200 });
     }
+
+    // Handle listing blog posts with pagination and filters
+    const pageNum = parseInt(page, 10);
+    const limitNum = parseInt(limit, 10);
+    
+    // Here you would query your database with these parameters
+    const posts: never[] = []; // Replace with actual database query
+    const total = 0; // Replace with count from database
+
+    return NextResponse.json({
+      success: true,
+      message: 'Blog posts retrieved successfully',
+      error: false,
+      data: {
+        posts,
+        pagination: {
+          total,
+          page: pageNum,
+          limit: limitNum,
+          pages: Math.ceil(total / limitNum)
+        }
+      }
+    }, { status: 200 });
+    
   } catch (error: any) {
-    console.error(`Error in API route (${method}):`, error);
-    return res.status(500).json({
+    console.error('Error in GET /api/blog:', error);
+    return NextResponse.json({
       success: false,
       message: error.message || 'Internal Server Error',
       error: true,
       data: null
-    });
+    }, { status: 500 });
   }
 }
 
-// Parse multipart form data (for POST and PUT requests with file uploads)
-const parseFormData = async (req: NextApiRequest) => {
-  return new Promise<{ fields: formidable.Fields; files: formidable.Files }>((resolve, reject) => {
-    // Create uploads directory if it doesn't exist
-    const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
-    if (!fs.existsSync(uploadsDir)) {
-      fs.mkdirSync(uploadsDir, { recursive: true });
-    }
+export async function POST(request: NextRequest) {
+  console.log('Received POST request to /api/blog');
 
-    const form = formidable({
-      uploadDir: uploadsDir,
-      keepExtensions: true,
-      maxFileSize: 5 * 1024 * 1024, // 5MB
-      filename: (name, ext, part) => {
-        return `${uuidv4()}-${part.originalFilename?.replace(/\s/g, '-')}`;
+  try {
+    // In App Router, we need to handle file uploads differently
+    // Since we can't use formidable directly with the Request stream
+    
+    // For multipart form data, we need to:
+    // 1. Get the FormData from the request
+    const formData = await request.formData();
+    
+    // 2. Process the form data
+    const blogPostData: any = {};
+    const uploadedImages: string[] = [];
+    
+    // Process text fields
+    for (const [key, value] of formData.entries()) {
+      // Handle files separately
+      if (value instanceof File) {
+        if (key === 'images' || key.startsWith('images[')) {
+          const bytes = await value.arrayBuffer();
+          const buffer = Buffer.from(bytes);
+          
+          // Create uploads directory if it doesn't exist
+          const uploadsDir = join(process.cwd(), 'public', 'uploads');
+          if (!fs.existsSync(uploadsDir)) {
+            fs.mkdirSync(uploadsDir, { recursive: true });
+          }
+          
+          // Generate unique filename
+          const fileName = `${uuidv4()}-${value.name.replace(/\s/g, '-')}`;
+          const filePath = join(uploadsDir, fileName);
+          
+          // Write the file
+          await writeFile(filePath, buffer);
+          
+          // Store the public URL
+          const publicPath = `/uploads/${fileName}`;
+          uploadedImages.push(publicPath);
+        }
+      } else if (key === 'tags') {
+        // Process tags into an array
+        blogPostData.tags = String(value).split(',').map(tag => tag.trim());
+      } else {
+        // Add other fields directly
+        blogPostData[key] = value;
       }
-    });
-
-    form.parse(req, (err, fields, files) => {
-      if (err) {
-        reject(err);
-        return;
-      }
-      resolve({ fields, files });
-    });
-  });
-};
-
-// Process the parsed form data into a blog post object
-const processBlogPostData = (fields: formidable.Fields, files: formidable.Files) => {
-  const blogPost: any = {};
-
-  // Process text fields
-  Object.keys(fields).forEach((fieldName) => {
-    const field = fields[fieldName];
-    
-    if (fieldName === 'tags' && field && field[0]) {
-      // Process tags into an array
-      blogPost.tags = field[0].split(',').map((tag: string) => tag.trim());
-    } else if (field && field[0]) {
-      // Add other fields directly
-      blogPost[fieldName] = field[0];
     }
-  });
-
-  // Process image files
-  const imageFiles = files.images;
-  if (imageFiles && Array.isArray(imageFiles) && imageFiles.length > 0) {
-    // Get uploaded file paths and convert to public URLs
-    const imagePaths = imageFiles.map((file) => {
-      const relativePath = path.relative(
-        path.join(process.cwd(), 'public'),
-        file.filepath
-      );
-      return `/${relativePath.replace(/\\/g, '/')}`;
-    });
-
-    blogPost.images = imagePaths;
     
-    // Set the first image as the main image
-    if (imagePaths.length > 0) {
-      blogPost.image = imagePaths[0];
+    // Add images to the blog post data
+    if (uploadedImages.length > 0) {
+      blogPostData.images = uploadedImages;
+      blogPostData.image = uploadedImages[0]; // Set first image as main image
     }
-  }
-
-  return blogPost;
-};
-
-// GET handler
-async function handleGetRequest(req: NextApiRequest, res: NextApiResponse<BlogApiResponse>) {
-  const { slug, page = '1', limit = '10', category, tag } = req.query;
-
-  // If slug is provided, return a single blog post
-  if (slug) {
-    // Here you would fetch the blog post from your database
-    const post = {}; // Replace with actual database query
     
-    return res.status(200).json({
+    // Add creation timestamps
+    blogPostData.createdAt = new Date().toISOString();
+    blogPostData.updatedAt = new Date().toISOString();
+    
+    // Here you would save to your database
+    // const savedPost = await db.blogPosts.create(blogPostData);
+    
+    // For now, just return the processed data
+    const savedPost = {
+      _id: uuidv4(),
+      ...blogPostData
+    };
+
+    return NextResponse.json({
       success: true,
-      message: 'Blog post retrieved successfully',
+      message: 'Blog post created successfully',
       error: false,
-      data: post
-    });
+      data: savedPost
+    }, { status: 201 });
+    
+  } catch (error: any) {
+    console.error('Error in POST /api/blog:', error);
+    return NextResponse.json({
+      success: false,
+      message: error.message || 'Internal Server Error',
+      error: true,
+      data: null
+    }, { status: 500 });
   }
+}
 
-  // Handle listing blog posts with pagination and filters
-  const pageNum = parseInt(page as string, 10);
-  const limitNum = parseInt(limit as string, 10);
-  
-  // Here you would query your database with these parameters
-  const posts = []; // Replace with actual database query
-  const total = 0; // Replace with count from database
+export async function PUT(request: NextRequest) {
+  console.log('Received PUT request to /api/blog');
 
-  return res.status(200).json({
-    success: true,
-    message: 'Blog posts retrieved successfully',
-    error: false,
-    data: {
-      posts,
-      pagination: {
-        total,
-        page: pageNum,
-        limit: limitNum,
-        pages: Math.ceil(total / limitNum)
+  try {
+    // Get the slug from the query parameters
+    const { searchParams } = new URL(request.url);
+    const slug = searchParams.get('slug');
+    
+    if (!slug) {
+      return NextResponse.json({
+        success: false,
+        message: 'Slug is required',
+        error: true,
+        data: null
+      }, { status: 400 });
+    }
+    
+    // Process the form data similarly to POST
+    const formData = await request.formData();
+    
+    // Process the form data
+    const blogPostData: any = {};
+    const uploadedImages: string[] = [];
+    
+    // Process text fields
+    for (const [key, value] of formData.entries()) {
+      // Handle files separately
+      if (value instanceof File) {
+        if (key === 'images' || key.startsWith('images[')) {
+          const bytes = await value.arrayBuffer();
+          const buffer = Buffer.from(bytes);
+          
+          // Create uploads directory if it doesn't exist
+          const uploadsDir = join(process.cwd(), 'public', 'uploads');
+          if (!fs.existsSync(uploadsDir)) {
+            fs.mkdirSync(uploadsDir, { recursive: true });
+          }
+          
+          // Generate unique filename
+          const fileName = `${uuidv4()}-${value.name.replace(/\s/g, '-')}`;
+          const filePath = join(uploadsDir, fileName);
+          
+          // Write the file
+          await writeFile(filePath, buffer);
+          
+          // Store the public URL
+          const publicPath = `/uploads/${fileName}`;
+          uploadedImages.push(publicPath);
+        }
+      } else if (key === 'tags') {
+        // Process tags into an array
+        blogPostData.tags = String(value).split(',').map(tag => tag.trim());
+      } else {
+        // Add other fields directly
+        blogPostData[key] = value;
       }
     }
-  });
-}
+    
+    // Add images to the blog post data
+    if (uploadedImages.length > 0) {
+      blogPostData.images = uploadedImages;
+      // Only set main image if not already set
+      if (!blogPostData.image && uploadedImages.length > 0) {
+        blogPostData.image = uploadedImages[0];
+      }
+    }
+    
+    // Update the timestamp
+    blogPostData.updatedAt = new Date().toISOString();
+    
+    // Here you would update your database record
+    // const updatedPost = await db.blogPosts.findOneAndUpdate({ slug }, blogPostData, { new: true });
+    
+    // For now, just return the processed data
+    const updatedPost = {
+      _id: uuidv4(),
+      slug,
+      ...blogPostData
+    };
 
-// POST handler
-async function handlePostRequest(req: NextApiRequest, res: NextApiResponse<BlogApiResponse>) {
-  // Parse the multipart form data
-  const { fields, files } = await parseFormData(req);
-  
-  // Process the data into a blog post object
-  const blogPostData = processBlogPostData(fields, files);
-  
-  // Add creation timestamps
-  blogPostData.createdAt = new Date().toISOString();
-  blogPostData.updatedAt = new Date().toISOString();
-  
-  // Here you would save to your database
-  // const savedPost = await db.blogPosts.create(blogPostData);
-  
-  // For now, just return the processed data
-  const savedPost = {
-    _id: uuidv4(),
-    ...blogPostData
-  };
-
-  return res.status(201).json({
-    success: true,
-    message: 'Blog post created successfully',
-    error: false,
-    data: savedPost
-  });
-}
-
-// PUT handler
-async function handlePutRequest(req: NextApiRequest, res: NextApiResponse<BlogApiResponse>) {
-  const { slug } = req.query;
-  
-  if (!slug) {
-    return res.status(400).json({
+    return NextResponse.json({
+      success: true,
+      message: 'Blog post updated successfully',
+      error: false,
+      data: updatedPost
+    }, { status: 200 });
+    
+  } catch (error: any) {
+    console.error('Error in PUT /api/blog:', error);
+    return NextResponse.json({
       success: false,
-      message: 'Slug is required',
+      message: error.message || 'Internal Server Error',
       error: true,
       data: null
-    });
+    }, { status: 500 });
   }
-
-  // Parse the multipart form data
-  const { fields, files } = await parseFormData(req);
-  
-  // Process the data into a blog post object
-  const blogPostData = processBlogPostData(fields, files);
-  
-  // Update the timestamp
-  blogPostData.updatedAt = new Date().toISOString();
-  
-  // Here you would update your database record
-  // const updatedPost = await db.blogPosts.findOneAndUpdate({ slug }, blogPostData, { new: true });
-  
-  // For now, just return the processed data
-  const updatedPost = {
-    _id: uuidv4(),
-    ...blogPostData
-  };
-
-  return res.status(200).json({
-    success: true,
-    message: 'Blog post updated successfully',
-    error: false,
-    data: updatedPost
-  });
 }
 
-// DELETE handler
-async function handleDeleteRequest(req: NextApiRequest, res: NextApiResponse<BlogApiResponse>) {
-  const { slug } = req.query;
-  
-  if (!slug) {
-    return res.status(400).json({
+export async function DELETE(request: NextRequest) {
+  console.log('Received DELETE request to /api/blog');
+
+  try {
+    // Get the slug from the query parameters
+    const { searchParams } = new URL(request.url);
+    const slug = searchParams.get('slug');
+    
+    if (!slug) {
+      return NextResponse.json({
+        success: false,
+        message: 'Slug is required',
+        error: true,
+        data: null
+      }, { status: 400 });
+    }
+    
+    // Here you would delete the blog post from your database
+    // await db.blogPosts.deleteOne({ slug });
+    
+    return NextResponse.json({
+      success: true,
+      message: 'Blog post deleted successfully',
+      error: false,
+      data: null
+    }, { status: 200 });
+    
+  } catch (error: any) {
+    console.error('Error in DELETE /api/blog:', error);
+    return NextResponse.json({
       success: false,
-      message: 'Slug is required',
+      message: error.message || 'Internal Server Error',
       error: true,
       data: null
-    });
+    }, { status: 500 });
   }
-  
-  // Here you would delete the blog post from your database
-  // await db.blogPosts.deleteOne({ slug });
-  
-  return res.status(200).json({
-    success: true,
-    message: 'Blog post deleted successfully',
-    error: false,
-    data: null
+}
+
+// Optional: Define OPTIONS handler to support CORS preflight requests
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 204,
+    headers: {
+      'Allow': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    },
   });
 }
