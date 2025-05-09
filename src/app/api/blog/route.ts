@@ -10,6 +10,10 @@ import slugify from "@/lib/utils";
 import { v2 as cloudinary } from 'cloudinary';
 
 // Configure Cloudinary
+if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+  console.error('Cloudinary configuration is missing. Please check your environment variables.');
+}
+
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
@@ -33,6 +37,10 @@ const errorResponse = (message: string, status: number = 500) => {
 // Helper function to handle image uploads
 async function handleImageUpload(image: File): Promise<string | undefined> {
   try {
+    if (!process.env.CLOUDINARY_CLOUD_NAME) {
+      throw new Error('Cloudinary configuration is missing');
+    }
+
     if (image.size > 5 * 1024 * 1024) {
       console.warn(`Skipping large image: ${image.name}`);
       return undefined;
@@ -56,7 +64,7 @@ async function handleImageUpload(image: File): Promise<string | undefined> {
     return (result as any).secure_url;
   } catch (error) {
     console.error(`Error uploading image ${image.name}:`, error);
-    return undefined;
+    throw error; // Propagate the error to be handled by the caller
   }
 }
 
@@ -94,9 +102,14 @@ export async function POST(req: NextRequest) {
 
     // Process images
     for (const image of images) {
-      const imageUrl = await handleImageUpload(image);
-      if (imageUrl) {
-        imageUrls.push(imageUrl);
+      try {
+        const imageUrl = await handleImageUpload(image);
+        if (imageUrl) {
+          imageUrls.push(imageUrl);
+        }
+      } catch (error) {
+        console.error('Error processing image:', error);
+        return errorResponse("Failed to upload image. Please try again.");
       }
     }
 
