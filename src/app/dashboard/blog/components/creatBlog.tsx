@@ -24,6 +24,7 @@ export default function CreateBlogForm({ blog, onCreated, onEdited }: CreateBlog
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const [uploadError, setUploadError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState<FormDataState>({
@@ -65,15 +66,20 @@ export default function CreateBlogForm({ blog, onCreated, onEdited }: CreateBlog
     const files = e.target.files;
     if (!files) return;
 
-    const selectedFiles = Array.from(files);
-    const newPreviews: string[] = [];
+    setUploadError(""); // Clear previous errors
 
-    selectedFiles.forEach((file) => {
+    const selectedFiles = Array.from(files);
+    
+    // Validate file size before processing
+    for (const file of selectedFiles) {
       if (file.size > 5 * 1024 * 1024) {
-        setError("Image size should be less than 5MB");
+        setUploadError(`Image "${file.name}" exceeds 5MB limit`);
+        if (fileInputRef.current) fileInputRef.current.value = "";
         return;
       }
+    }
 
+    selectedFiles.forEach((file) => {
       const reader = new FileReader();
       reader.onload = () => {
         setImagePreviews((prev) => [...prev, reader.result as string]);
@@ -99,10 +105,16 @@ export default function CreateBlogForm({ blog, onCreated, onEdited }: CreateBlog
     setIsSubmitting(true);
     setError("");
     setSuccessMessage("");
+    setUploadError("");
 
     try {
       if (!formData.title || !formData.content) {
         throw new Error("Title and content are required");
+      }
+
+      // Check if title is too short
+      if (formData.title.length < 5) {
+        throw new Error("Title must be at least 5 characters long");
       }
 
       const postData = new FormData();
@@ -126,10 +138,31 @@ export default function CreateBlogForm({ blog, onCreated, onEdited }: CreateBlog
         body: postData,
       });
 
-      const result = await response.json();
-
+      // Check for network-level errors
       if (!response.ok) {
-        throw new Error(result.message || "Failed to save blog post");
+        const errorText = await response.text();
+        let errorMessage;
+        
+        try {
+          // Try to parse as JSON
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData.message || `Error: ${response.status}`;
+        } catch (e) {
+          // If not valid JSON, use text directly
+          errorMessage = errorText || `Error: ${response.status}`;
+        }
+        
+        throw new Error(errorMessage);
+      }
+
+      // Parse JSON response, with better error handling
+      let result;
+      try {
+        const responseText = await response.text();
+        result = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error("Failed to parse response:", parseError);
+        throw new Error("Invalid response from server");
       }
 
       if (!result.success) {
@@ -159,6 +192,7 @@ export default function CreateBlogForm({ blog, onCreated, onEdited }: CreateBlog
       }, 2000);
     } catch (err: any) {
       setError(err.message || "An error occurred");
+      console.error("Form submission error:", err);
     } finally {
       setIsSubmitting(false);
     }
@@ -195,8 +229,10 @@ export default function CreateBlogForm({ blog, onCreated, onEdited }: CreateBlog
             value={formData.title}
             onChange={handleInputChange}
             required
+            minLength={5}
             className="w-full px-3 py-2 border border-gray-300 rounded-md"
           />
+          <p className="text-xs text-gray-500 mt-1">Minimum 5 characters</p>
         </div>
 
         {/* Content */}
@@ -287,6 +323,10 @@ export default function CreateBlogForm({ blog, onCreated, onEdited }: CreateBlog
             accept="image/*"
             className="w-full px-3 py-2 border border-gray-300 rounded-md"
           />
+          
+          {uploadError && (
+            <p className="text-red-500 text-sm mt-1">{uploadError}</p>
+          )}
 
           {/* Preview Grid */}
           {imagePreviews.length > 0 && (
@@ -298,6 +338,7 @@ export default function CreateBlogForm({ blog, onCreated, onEdited }: CreateBlog
                     type="button"
                     onClick={() => handleRemoveImage(index)}
                     className="absolute top-1 right-1 bg-red-600 text-white rounded-full p-1"
+                    aria-label="Remove image"
                   >
                     ✕
                   </button>
