@@ -67,21 +67,13 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData, onSuccess, onCan
       return;
     }
 
-    // Vérifier que le champ 'reference' est renseigné
-    if (!data.reference || data.reference.trim() === '') {
-      toast.error('Le champ référence est requis.');
-      setIsLoading(false);
-      return;
-    }
-
     // Convertir les champs numériques en nombres
     const processedData = {
       ...data,
       price: parseFloat(data.price),
-      reviewCount: parseInt(data.reviewCount, 10) || 0,
-      sold: parseInt(data.sold, 10) || 0,
+      reviewCount: parseInt(data.reviewCount, 10),
+      sold: parseInt(data.sold, 10),
       stock: parseInt(data.stock, 10),
-      rating: parseFloat(data.rating) || 0,
     };
 
     // Ajouter les données au FormData
@@ -89,9 +81,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData, onSuccess, onCan
       if (key === 'promoPrice' && !processedData.promotion) {
         return; // Ne pas inclure promoPrice si promotion est false
       }
-      if (processedData[key] !== undefined && processedData[key] !== null) {
-        formData.append(key, processedData[key].toString());
-      }
+      formData.append(key, processedData[key]);
     });
 
     // Ajouter les fichiers d'images
@@ -108,30 +98,15 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData, onSuccess, onCan
         body: formData
       });
 
-      const responseData = await response.json();
-
       if (!response.ok) {
-        if (responseData.details) {
-          // Handle validation errors
-          const errorMessages = Object.entries(responseData.details)
-            .map(([field, errors]: [string, any]) => {
-              if (errors._errors) {
-                return errors._errors.join(', ');
-              }
-              return `${field}: ${errors}`;
-            })
-            .filter(Boolean)
-            .join('\n');
-          throw new Error(errorMessages);
-        }
-        throw new Error(responseData.error || 'Erreur lors de l\'enregistrement du produit');
+        throw new Error('Erreur lors de l\'enregistrement du produit');
       }
 
       toast.success(initialData ? 'Produit mis à jour avec succès' : 'Produit créé avec succès');
       onSuccess();
     } catch (error) {
       console.error('Erreur lors de l\'enregistrement :', error);
-      toast.error(error instanceof Error ? error.message : 'Une erreur est survenue');
+      toast.error('Une erreur est survenue');
     } finally {
       setIsLoading(false);
     }
