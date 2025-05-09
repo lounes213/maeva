@@ -1,9 +1,11 @@
 "use client";
 
-import { IBlogPost, extractBlogPostsFromResponse } from "@/app/types/blog";
+import { IBlogPost } from "@/app/types/blog";
 import { fetchBlogPosts, deleteBlogPost } from "@/lib/api";
+import { extractBlogPostsFromResponse } from "@/types/blog";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { JSXElementConstructor, Key, ReactElement, ReactNode, ReactPortal, useEffect, useState } from "react";
 
 export function BlogList() {
   const [posts, setPosts] = useState<IBlogPost[]>([]);
@@ -105,7 +107,7 @@ export function BlogList() {
               <div className="flex flex-col md:flex-row">
                 {post.image && (
                   <div className="md:w-1/4">
-                    <img 
+                    <Image 
                       src={post.image} 
                       alt={post.title}
                       className="h-48 w-full object-cover" 
@@ -120,7 +122,7 @@ export function BlogList() {
                   <p className="mt-2 text-gray-700">{post.excerpt || post.content.substring(0, 150) + '...'}</p>
                   
                   <div className="mt-4 flex flex-wrap gap-2">
-                    {post.tags?.map((tag, index) => (
+                    {post.tags?.map((tag: string | number | bigint | boolean | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | Promise<string | number | bigint | boolean | ReactPortal | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | null | undefined> | null | undefined, index: Key | null | undefined) => (
                       <span key={index} className="bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded">
                         {tag}
                       </span>
