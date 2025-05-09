@@ -1,6 +1,6 @@
 "use client";
 
-import { IBlogPost } from "@/app/types/blog";
+import { IBlogPost } from "@/types/blog"; // Changed import path to match with extractBlogPostsFromResponse
 import { fetchBlogPosts, deleteBlogPost } from "@/lib/api";
 import { extractBlogPostsFromResponse } from "@/types/blog";
 import Image from "next/image";

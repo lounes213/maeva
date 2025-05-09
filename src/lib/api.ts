@@ -1,5 +1,7 @@
 // File: /lib/api.ts
 
+import { BlogApiResponse, SingleBlogApiResponse } from "@/types/blog";
+
 
 const API_BASE_URL = 'https://maeva-three.vercel.app';
 
