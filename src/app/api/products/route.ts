@@ -51,8 +51,27 @@ export async function POST(req: Request) {
     const requiredFields = ['name', 'description', 'price', 'stock', 'category', 'reference'];
     for (const field of requiredFields) {
       if (!formData.get(field)) {
-        return errorResponse(`${field} est requis`, 400);
+        return errorResponse(`Le champ ${field} est requis`, 400);
       }
+    }
+
+    // Validate price and stock are valid numbers
+    const price = parseFloat(formData.get('price') as string);
+    const stock = parseInt(formData.get('stock') as string);
+    
+    if (isNaN(price) || price < 0) {
+      return errorResponse('Le prix doit être un nombre valide supérieur ou égal à 0', 400);
+    }
+    
+    if (isNaN(stock) || stock < 0) {
+      return errorResponse('Le stock doit être un nombre valide supérieur ou égal à 0', 400);
+    }
+
+    // Check if reference is unique
+    await dbConnect();
+    const existingProduct = await Product.findOne({ reference: formData.get('reference') });
+    if (existingProduct) {
+      return errorResponse('Cette référence de produit existe déjà', 400);
     }
 
     // Process images
@@ -61,22 +80,33 @@ export async function POST(req: Request) {
     
     if (images.length > 0) {
       const uploadDir = path.join(process.cwd(), 'public/uploads/products');
-      if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
-      }
-
-      for (const image of images) {
-        if (image.size > 5 * 1024 * 1024) { // 5MB limit
-          continue; // Skip large files
+      try {
+        if (!fs.existsSync(uploadDir)) {
+          fs.mkdirSync(uploadDir, { recursive: true });
         }
 
-        const buffer = await image.arrayBuffer();
-        const fileExtension = image.name.split('.').pop();
-        const fileName = `${uuidv4()}.${fileExtension}`;
-        const filePath = path.join(uploadDir, fileName);
+        for (const image of images) {
+          if (!image || !image.name) {
+            console.warn('Image invalide ou sans nom, ignorée.');
+            continue;
+          }
 
-        await fs.promises.writeFile(filePath, Buffer.from(buffer));
-        imageUrls.push(`/uploads/products/${fileName}`);
+          if (image.size > 5 * 1024 * 1024) {
+            console.warn(`Image ${image.name} trop grande, ignorée.`);
+            continue;
+          }
+
+          const buffer = await image.arrayBuffer();
+          const fileExtension = image.name.split('.').pop();
+          const fileName = `${uuidv4()}.${fileExtension}`;
+          const filePath = path.join(uploadDir, fileName);
+
+          await fs.promises.writeFile(filePath, Buffer.from(buffer));
+          imageUrls.push(`/uploads/products/${fileName}`);
+        }
+      } catch (error) {
+        console.error('Erreur lors du traitement des images:', error);
+        return errorResponse('Erreur lors du traitement des images', 500);
       }
     }
 
@@ -85,13 +115,12 @@ export async function POST(req: Request) {
     const taille = formData.getAll('taille') as string[];
 
     // Create product
-    await dbConnect();
     const product = await Product.create({
       name: formData.get('name'),
-      reference: formData.get('reference'), // Added reference field
+      reference: formData.get('reference'),
       description: formData.get('description'),
-      price: parseFloat(formData.get('price') as string),
-      stock: parseInt(formData.get('stock') as string),
+      price,
+      stock,
       category: formData.get('category') as string,
       tissu: formData.get('tissu') as string || '',
       couleurs: couleurs,
@@ -115,6 +144,7 @@ export async function POST(req: Request) {
     });
 
   } catch (error) {
+    console.error('Erreur détaillée:', error);
     const errorMessage = logError(error);
     return errorResponse(`Échec de la création du produit: ${errorMessage}`);
   }
