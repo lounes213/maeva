@@ -9,14 +9,10 @@ import dbConnect from "@/lib/mongo";
 import slugify from "@/lib/utils";
 import toast from "react-hot-toast";
 
+// Update the config to the new syntax for Next.js 15
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
-
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
+// Remove the deprecated config export
 
 // Amélioration des messages d'erreur avec des toasts spécifiques
 export async function POST(req: NextRequest) {
@@ -216,6 +212,7 @@ export async function PUT(req: NextRequest) {
     );
   }
 }
+
 export async function DELETE(req: NextRequest) {
   try {
     await dbConnect();
