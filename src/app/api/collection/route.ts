@@ -7,11 +7,8 @@ import { v4 as uuidv4 } from 'uuid';
 import mime from 'mime-types';
 import { ALLOWED_FILE_TYPES, MAX_FILE_SIZE } from '@/lib/constant';
 
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 async function handleImageUpload(imageFile: File | null): Promise<string | undefined> {
   if (!imageFile || imageFile.size === 0) return undefined;

@@ -9,6 +9,9 @@ import dbConnect from "@/lib/mongo";
 import slugify from "@/lib/utils";
 import toast from "react-hot-toast";
 
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 export const config = {
   api: {
     bodyParser: false,
