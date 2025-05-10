@@ -215,7 +215,7 @@ const onSubmit = async (data: FormData) => {
             <div className="flex justify-center gap-4">
               {[
                 { icon: <FaWhatsapp className="w-6 h-6" />, href: 'https://web.whatsapp.com/', color: 'bg-amber-500 hover:bg-green-600 text-white' },
-                { icon: <FaTiktok className="w-6 h-6" />, href: 'https://www.tiktok.com/@mava.wedding.dz?_t=ZM-8vh8jPv2EkA&_r=1', color: 'bg-amber-500 hover:bg-green-600 text-white' },
+                { icon: <FaTiktok className="w-6 h-6" />, href: 'https://www.tiktok.com/@mava.wedding.dz?_t=ZM-8vh8jPv2EkA&_r=1', color: 'bg-amber-500 hover:bg-blue-400 text-white' },
                 { icon: <FaInstagram className="w-6 h-6" />, href: 'https://www.instagram.com/maevaweddingdz?igsh=MXB5cnVvY3drNThyMw==', color: 'bg-amber-600 text-white hover:bg-pink-700' },
                 { icon: <FaFacebookF className="w-6 h-6" />, href: 'https://www.facebook.com/share/1CGKXJDXmK/', color: 'bg-amber-600  text-white hover:bg-blue-700' },
               ].map((social, index) => (
