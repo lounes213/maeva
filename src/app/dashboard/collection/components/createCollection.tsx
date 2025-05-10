@@ -289,9 +289,15 @@ export default function CreateCollectionModal({ onCreateSuccess}:any) {
                   strategy={verticalListSortingStrategy}
                 >
                   <div className="flex flex-wrap gap-4 mt-4">
-                    {preview.map((src, index) => (
-                      <SortableImage key={index} id={index.toString()} src={src} index={index} removeImage={removeImage} />
-                    ))}
+                   {preview.map((src, index) => (
+  <SortableImage 
+    key={`${src}-${index}`} // Combine src and index
+    id={index.toString()}
+    src={src}
+    index={index}
+    removeImage={removeImage}
+  />
+))}
                   </div>
                 </SortableContext>
               </DndContext>

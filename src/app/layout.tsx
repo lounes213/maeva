@@ -5,11 +5,13 @@ import { Toaster } from "react-hot-toast";
 
 import { Inter } from 'next/font/google';
 import { Providers } from "./provider";
-const inter = Inter({ 
+
+
+const inter = Inter({
   subsets: ['latin'],
-  weight: ['400', '500', '600', '700', '800'],
   display: 'swap',
 });
+
 
 export const metadata: Metadata = {
   title: "Create Next App",

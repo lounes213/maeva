@@ -48,7 +48,7 @@ export async function POST(req: Request) {
     const formData = await req.formData();
     
     // Required fields
-    const requiredFields = ['name', 'description', 'price', 'stock', 'category'];
+    const requiredFields = ['name', 'description', 'price', 'stock', 'category', 'reference'];
     for (const field of requiredFields) {
       if (!formData.get(field)) {
         return errorResponse(`${field} est requis`, 400);
@@ -88,6 +88,7 @@ export async function POST(req: Request) {
     await dbConnect();
     const product = await Product.create({
       name: formData.get('name'),
+      reference: formData.get('reference'), // Added reference field
       description: formData.get('description'),
       price: parseFloat(formData.get('price') as string),
       stock: parseInt(formData.get('stock') as string),
@@ -97,6 +98,9 @@ export async function POST(req: Request) {
       taille: taille,
       sold: parseInt(formData.get('sold') as string) || 0,
       promotion: formData.get('promotion') === 'true',
+      promoPrice: formData.get('promoPrice') ? parseFloat(formData.get('promoPrice') as string) : undefined,
+      rating: formData.get('rating') ? parseFloat(formData.get('rating') as string) : 0,
+      reviewCount: formData.get('reviewCount') ? parseInt(formData.get('reviewCount') as string) : 0,
       reviews: formData.get('reviews') as string || '',
       deliveryDate: formData.get('deliveryDate') as string || undefined,
       deliveryAddress: formData.get('deliveryAddress') as string || '',
@@ -140,7 +144,6 @@ export async function PUT(req: Request) {
         fs.mkdirSync(uploadDir, { recursive: true });
       }
 
-      // Remplace l'utilisation de `arrayBuffer()` par une méthode compatible avec Node.js
       for (const image of newImages) {
         if (!image || !image.name) {
           console.warn('Image invalide ou sans nom, ignorée.');
@@ -175,6 +178,7 @@ export async function PUT(req: Request) {
       id,
       {
         name: formData.get('name') || existingProduct.name,
+        reference: formData.get('reference') || existingProduct.reference, // Added reference field
         description: formData.get('description') || existingProduct.description,
         price: formData.get('price') ? parseFloat(formData.get('price') as string) : existingProduct.price,
         stock: formData.get('stock') ? parseInt(formData.get('stock') as string) : existingProduct.stock,
@@ -184,6 +188,9 @@ export async function PUT(req: Request) {
         taille: taille,
         sold: formData.get('sold') ? parseInt(formData.get('sold') as string) : existingProduct.sold,
         promotion: formData.get('promotion') ? formData.get('promotion') === 'true' : existingProduct.promotion,
+        promoPrice: formData.get('promoPrice') ? parseFloat(formData.get('promoPrice') as string) : existingProduct.promoPrice,
+        rating: formData.get('rating') ? parseFloat(formData.get('rating') as string) : existingProduct.rating,
+        reviewCount: formData.get('reviewCount') ? parseInt(formData.get('reviewCount') as string) : existingProduct.reviewCount,
         reviews: formData.get('reviews') as string || existingProduct.reviews,
         deliveryDate: formData.get('deliveryDate') as string || existingProduct.deliveryDate,
         deliveryAddress: formData.get('deliveryAddress') as string || existingProduct.deliveryAddress,
@@ -208,8 +215,6 @@ export async function PUT(req: Request) {
     return errorResponse('Échec de la mise à jour du produit');
   }
 }
-
-
 
 export async function DELETE(req: Request) {
   try {
