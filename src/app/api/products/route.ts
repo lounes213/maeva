@@ -47,10 +47,21 @@ export async function POST(req: Request) {
   try {
     const formData = await req.formData();
     
+    // Log received data for debugging
+    console.log('Received form data:', {
+      name: formData.get('name'),
+      reference: formData.get('reference'),
+      price: formData.get('price'),
+      stock: formData.get('stock'),
+      category: formData.get('category'),
+      images: formData.getAll('images').length
+    });
+    
     // Required fields
     const requiredFields = ['name', 'description', 'price', 'stock', 'category', 'reference'];
     for (const field of requiredFields) {
       if (!formData.get(field)) {
+        console.error(`Missing required field: ${field}`);
         return errorResponse(`Le champ ${field} est requis`, 400);
       }
     }
@@ -60,18 +71,26 @@ export async function POST(req: Request) {
     const stock = parseInt(formData.get('stock') as string);
     
     if (isNaN(price) || price < 0) {
+      console.error(`Invalid price: ${formData.get('price')}`);
       return errorResponse('Le prix doit être un nombre valide supérieur ou égal à 0', 400);
     }
     
     if (isNaN(stock) || stock < 0) {
+      console.error(`Invalid stock: ${formData.get('stock')}`);
       return errorResponse('Le stock doit être un nombre valide supérieur ou égal à 0', 400);
     }
 
     // Check if reference is unique
-    await dbConnect();
-    const existingProduct = await Product.findOne({ reference: formData.get('reference') });
-    if (existingProduct) {
-      return errorResponse('Cette référence de produit existe déjà', 400);
+    try {
+      await dbConnect();
+      const existingProduct = await Product.findOne({ reference: formData.get('reference') });
+      if (existingProduct) {
+        console.error(`Duplicate reference: ${formData.get('reference')}`);
+        return errorResponse('Cette référence de produit existe déjà', 400);
+      }
+    } catch (dbError) {
+      console.error('Database connection error:', dbError);
+      return errorResponse('Erreur de connexion à la base de données', 500);
     }
 
     // Process images
@@ -115,33 +134,41 @@ export async function POST(req: Request) {
     const taille = formData.getAll('taille') as string[];
 
     // Create product
-    const product = await Product.create({
-      name: formData.get('name'),
-      reference: formData.get('reference'),
-      description: formData.get('description'),
-      price,
-      stock,
-      category: formData.get('category') as string,
-      tissu: formData.get('tissu') as string || '',
-      couleurs: couleurs,
-      taille: taille,
-      sold: parseInt(formData.get('sold') as string) || 0,
-      promotion: formData.get('promotion') === 'true',
-      promoPrice: formData.get('promoPrice') ? parseFloat(formData.get('promoPrice') as string) : undefined,
-      rating: formData.get('rating') ? parseFloat(formData.get('rating') as string) : 0,
-      reviewCount: formData.get('reviewCount') ? parseInt(formData.get('reviewCount') as string) : 0,
-      reviews: formData.get('reviews') as string || '',
-      deliveryDate: formData.get('deliveryDate') as string || undefined,
-      deliveryAddress: formData.get('deliveryAddress') as string || '',
-      deliveryStatus: formData.get('deliveryStatus') as string || '',
-      imageUrls,
-    });
+    try {
+      const product = await Product.create({
+        name: formData.get('name'),
+        reference: formData.get('reference'),
+        description: formData.get('description'),
+        price,
+        stock,
+        category: formData.get('category') as string,
+        tissu: formData.get('tissu') as string || '',
+        couleurs: couleurs,
+        taille: taille,
+        sold: parseInt(formData.get('sold') as string) || 0,
+        promotion: formData.get('promotion') === 'true',
+        promoPrice: formData.get('promoPrice') ? parseFloat(formData.get('promoPrice') as string) : undefined,
+        rating: formData.get('rating') ? parseFloat(formData.get('rating') as string) : 0,
+        reviewCount: formData.get('reviewCount') ? parseInt(formData.get('reviewCount') as string) : 0,
+        reviews: formData.get('reviews') as string || '',
+        deliveryDate: formData.get('deliveryDate') as string || undefined,
+        deliveryAddress: formData.get('deliveryAddress') as string || '',
+        deliveryStatus: formData.get('deliveryStatus') as string || '',
+        imageUrls,
+      });
 
-    return NextResponse.json({ 
-      success: true, 
-      data: product,
-      message: 'Produit créé avec succès' 
-    });
+      return NextResponse.json({ 
+        success: true, 
+        data: product,
+        message: 'Produit créé avec succès' 
+      });
+    } catch (createError) {
+      console.error('Error creating product:', createError);
+      if (createError instanceof Error) {
+        return errorResponse(`Erreur lors de la création du produit: ${createError.message}`);
+      }
+      return errorResponse('Erreur lors de la création du produit');
+    }
 
   } catch (error) {
     console.error('Erreur détaillée:', error);
