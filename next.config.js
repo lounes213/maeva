@@ -11,9 +11,8 @@ const nextConfig = {
     responseLimit: '20mb',
   },
   
-  // Image configuration (if needed)
+  // Image configuration
   images: {
-    domains: ['localhost'],
     remotePatterns: [
       {
         protocol: 'https',
@@ -22,7 +21,7 @@ const nextConfig = {
     ],
   },
   
-  // Optional: For larger files, you might need to increase the serverless function timeout
+  // Server runtime configuration
   serverRuntimeConfig: {
     projectRoot: process.cwd(),
   },
