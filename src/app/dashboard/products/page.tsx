@@ -1,3 +1,5 @@
+'use client';
+
 import { useState, useEffect, useRef } from 'react';
 
 import { Trash, Edit, X, Check, Star, Truck, Image as ImageIcon, Plus, XCircle } from 'lucide-react';
