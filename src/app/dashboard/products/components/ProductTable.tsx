@@ -5,45 +5,23 @@ import { toast } from 'react-hot-toast';
 import { Edit, Trash2, Plus } from 'lucide-react';
 import NewProductForm from './NewProductForm';
 import UpdateProductForm from './UpdateProductForm';
-
-interface Product {
-  _id: string;
-  name: string;
-  reference: string;
-  description: string;
-  price: number;
-  stock: number;
-  category: string;
-  tissu?: string;
-  couleurs?: string[];
-  taille?: string[];
-  imageUrls: string[];
-  promotion?: boolean;
-  promoPrice?: number;
-  sold?: number;
-  rating?: number;
-  reviewCount?: number;
-  reviews?: string;
-  deliveryDate?: string;
-  deliveryAddress?: string;
-  deliveryStatus?: string;
-}
+import { Product } from '@/app/types/product';
 
 interface ProductTableProps {
   products: Product[];
   loading: boolean;
   onEdit: (product: Product) => void;
-  onDelete: (product: Product) => void;
-  page: number;
-  limit: number;
-  totalPages: number;
-  totalItems: number;
-  onPageChange: (page: number) => void;
-  onLimitChange: (limit: number) => void;
-  sortBy: string;
-  sortOrder: string;
-  onSort: (field: string) => void;
-  categories: string[];
+  onDelete: (id: string) => void;
+  page?: number;
+  limit?: number;
+  totalPages?: number;
+  totalItems?: number;
+  onPageChange?: (page: number) => void;
+  onLimitChange?: (limit: number) => void;
+  sortBy?: string;
+  sortOrder?: string;
+  onSort?: (field: string) => void;
+  categories?: string[];
 }
 
 const ProductTable = ({
@@ -51,16 +29,16 @@ const ProductTable = ({
   loading,
   onEdit,
   onDelete,
-  page,
-  limit,
-  totalPages,
-  totalItems,
-  onPageChange,
-  onLimitChange,
-  sortBy,
-  sortOrder,
-  onSort,
-  categories
+  page = 1,
+  limit = 10,
+  totalPages = 1,
+  totalItems = 0,
+  onPageChange = () => {},
+  onLimitChange = () => {},
+  sortBy = '',
+  sortOrder = 'asc',
+  onSort = () => {},
+  categories = []
 }: ProductTableProps) => {
   if (loading) {
     return <div>Loading...</div>;
@@ -110,8 +88,8 @@ const ProductTable = ({
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-          {products.map((product) => (
-            <tr key={product._id}>
+          {products.map((product, index) => (
+            <tr key={product._id || `product-${index}`}>
                   <td className="px-6 py-4 whitespace-nowrap">
                         {product.imageUrls && product.imageUrls.length > 0 ? (
                           <img
@@ -155,7 +133,7 @@ const ProductTable = ({
                   <Edit className="w-5 h-5" />
                       </button>
                       <button
-                  onClick={() => onDelete(product)}
+                  onClick={() => product._id && onDelete(product._id)}
                         className="text-red-600 hover:text-red-900"
                       >
                   <Trash2 className="w-5 h-5" />

@@ -1,6 +1,8 @@
 import mongoose, { Schema, model, models } from 'mongoose';
 
-interface IProduct {
+// app/types/product.ts
+export interface Product {
+  _id: string;
   name: string;
   reference: string;
   description: string;
@@ -18,13 +20,13 @@ interface IProduct {
   reviewCount?: number;
   deliveryDate?: Date | string;
   deliveryAddress?: string;
-  deliveryStatus?: string;
+  deliveryStatus?: 'en attente' | 'expédié' | 'livré' | 'annulé' | 'retourné' | '';
   imageUrls?: string[];
   createdAt?: Date;
   updatedAt?: Date;
 }
 
-const productSchema = new Schema<IProduct>(
+const productSchema = new Schema<Product>(
   {
     name: {
       type: String,
@@ -82,7 +84,7 @@ const productSchema = new Schema<IProduct>(
       type: Number,
       min: [0, 'Le prix promotionnel ne peut pas être négatif'],
       validate: {
-        validator: function(this: IProduct, value: number) {
+        validator: function(this: Product, value: number) {
           if (!this.promotion) return true;
           return value >= 0 && value < this.price;
         },
@@ -133,4 +135,4 @@ productSchema.pre('save', function(next) {
   next();
 });
 
-export const Product = models.Product || model<IProduct>('Product', productSchema);
+export const Product = models.Product || model<Product>('Product', productSchema);

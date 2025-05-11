@@ -1,13 +1,12 @@
+// app/api/products/route.ts
 import { NextRequest, NextResponse } from 'next/server';
+import { Product } from '@/app/models/Product';
 import mongoose from 'mongoose';
 import { dbConnect } from '@/lib/mongo';
-import { Product } from '@/app/models/Product';
 
-// Helper function to handle errors
-const handleError = (error: any, defaultMessage: string) => {
+const handleError = (error: unknown, defaultMessage: string) => {
   console.error(defaultMessage, error);
   
-  // Handle validation errors
   if (error instanceof mongoose.Error.ValidationError) {
     const validationErrors = Object.values(error.errors).map(err => err.message);
     return NextResponse.json(
@@ -16,8 +15,14 @@ const handleError = (error: any, defaultMessage: string) => {
     );
   }
   
-  // Handle duplicate key error
-  if (error.code === 11000) {
+  if (error instanceof mongoose.Error.CastError) {
+    return NextResponse.json(
+      { success: false, message: 'Invalid data format' },
+      { status: 400 }
+    );
+  }
+  
+  if (error instanceof Error && error.message.includes('duplicate key')) {
     return NextResponse.json(
       { success: false, message: 'Product reference must be unique' },
       { status: 400 }
@@ -30,7 +35,7 @@ const handleError = (error: any, defaultMessage: string) => {
   );
 };
 
-// GET all products with filtering and sorting
+// GET all products with filtering
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -41,11 +46,13 @@ export async function GET(request: NextRequest) {
     const promotion = searchParams.get('promotion');
     const name = searchParams.get('name');
     const reference = searchParams.get('reference');
+    const deliveryStatus = searchParams.get('deliveryStatus');
     
     if (category) query.category = category;
     if (promotion) query.promotion = promotion === 'true';
     if (name) query.name = { $regex: name, $options: 'i' };
     if (reference) query.reference = { $regex: reference, $options: 'i' };
+    if (deliveryStatus) query.deliveryStatus = deliveryStatus;
 
     await dbConnect();
     
@@ -61,7 +68,8 @@ export async function GET(request: NextRequest) {
     const products = await Product.find(query)
       .sort(sortBy)
       .skip(skip)
-      .limit(limit);
+      .limit(limit)
+      .lean();
     
     return NextResponse.json({ 
       success: true, 
@@ -78,36 +86,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// GET a single product by id
-export async function HEAD(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const id = searchParams.get('id');
-
-    if (!id) {
-      return NextResponse.json(
-        { success: false, message: 'Product ID is required' },
-        { status: 400 }
-      );
-    }
-
-    await dbConnect();
-    const product = await Product.findById(id);
-
-    if (!product) {
-      return NextResponse.json(
-        { success: false, message: 'Product not found' },
-        { status: 404 }
-      );
-    }
-
-    return NextResponse.json({ success: true, data: product });
-  } catch (error) {
-    return handleError(error, 'Failed to fetch product');
-  }
-}
-
-// CREATE a new product with image handling
+// CREATE a new product
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
@@ -124,6 +103,8 @@ export async function POST(request: NextRequest) {
         } else if (key === 'price' || key === 'stock' || key === 'promoPrice' || 
                   key === 'rating' || key === 'reviewCount' || key === 'sold') {
           body[key] = parseFloat(value as string);
+        } else if (key === 'deliveryDate' && value) {
+          body[key] = new Date(value as string);
         } else {
           body[key] = value;
         }
@@ -132,7 +113,7 @@ export async function POST(request: NextRequest) {
 
     await dbConnect();
     
-    // Create new product
+    // Create new product with validation
     const newProduct = new Product(body);
     const savedProduct = await newProduct.save();
     
@@ -145,15 +126,15 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// UPDATE a product with partial updates
+// UPDATE a product
 export async function PUT(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     
-    if (!id) {
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
       return NextResponse.json(
-        { success: false, message: 'Product ID is required' },
+        { success: false, message: 'Valid product ID is required' },
         { status: 400 }
       );
     }
@@ -164,7 +145,6 @@ export async function PUT(request: NextRequest) {
     // Process all fields except images
     formData.forEach((value, key) => {
       if (key !== 'images') {
-        // Handle arrays and boolean values
         if (key === 'couleurs' || key === 'taille') {
           updates[key] = typeof value === 'string' ? value.split(',') : [];
         } else if (key === 'promotion') {
@@ -172,6 +152,8 @@ export async function PUT(request: NextRequest) {
         } else if (key === 'price' || key === 'stock' || key === 'promoPrice' || 
                   key === 'rating' || key === 'reviewCount' || key === 'sold') {
           updates[key] = parseFloat(value as string);
+        } else if (key === 'deliveryDate' && value) {
+          updates[key] = new Date(value as string);
         } else {
           updates[key] = value;
         }
@@ -205,9 +187,9 @@ export async function DELETE(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     
-    if (!id) {
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
       return NextResponse.json(
-        { success: false, message: 'Product ID is required' },
+        { success: false, message: 'Valid product ID is required' },
         { status: 400 }
       );
     }
@@ -224,8 +206,7 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'Product deleted successfully',
-      data: deletedProduct
+      message: 'Product deleted successfully'
     });
   } catch (error) {
     return handleError(error, 'Failed to delete product');

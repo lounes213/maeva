@@ -1,131 +1,105 @@
+// app/dashboard/products/page.tsx
 'use client';
-import { Product } from '@/app/types/product';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import ProductTable from './components/ProductTable';
-import UpdateProductForm from './components/UpdateProductForm';
-
+import { Product } from '@/app/types/product';
+import NewProductForm from './components/NewProductForm';
 
 const ProductsPage = () => {
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
-  // Add other necessary state variables (pagination, sorting, etc.)
+  const [error, setError] = useState('');
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
-  // Fetch products function (example)
   const fetchProducts = async () => {
     setLoading(true);
     try {
       const response = await fetch('/api/products');
-      const data = await response.json();
-      setProducts(data.data);
-    } catch (error) {
-      console.error('Error fetching products:', error);
+      const { data } = await response.json();
+      setProducts(data);
+    } catch (err) {
+      setError('Failed to fetch products');
     } finally {
       setLoading(false);
     }
   };
 
-  // Edit handler
-  const handleEdit = (product: Product) => {
-    setSelectedProduct(product);
-    setIsEditModalOpen(true);
-  };
-
-  // Delete handler
-  const handleDelete = async (product: Product) => {
-    setSelectedProduct(product);
-    setIsDeleteConfirmOpen(true);
-  };
-
-  // Confirm delete
-  const confirmDelete = async () => {
-    if (!selectedProduct) return;
-    
-    setLoading(true);
+  const handleCreate = async (data: Product) => {
     try {
-      const response = await fetch(`/api/products?id=${selectedProduct._id}`, {
-        method: 'DELETE',
+      setLoading(true);
+      const response = await fetch('/api/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete product');
-      }
-
-      // Refresh the products list
+      if (!response.ok) throw new Error('Failed to create');
       await fetchProducts();
-      setIsDeleteConfirmOpen(false);
-    } catch (error) {
-      console.error('Error deleting product:', error);
+      setEditingProduct(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Creation failed');
     } finally {
       setLoading(false);
     }
   };
 
-  // Update success handler
-  const handleUpdateSuccess = () => {
-    setIsEditModalOpen(false);
-    fetchProducts(); // Refresh the list
+  const handleUpdate = async (data: Product) => {
+    if (!editingProduct) return;
+    try {
+      setLoading(true);
+      const response = await fetch(`/api/products?id=${editingProduct._id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      if (!response.ok) throw new Error('Failed to update');
+      await fetchProducts();
+      setEditingProduct(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Update failed');
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const handleDelete = async (id: string) => {
+    try {
+      setLoading(true);
+      const response = await fetch(`/api/products?id=${id}`, {
+        method: 'DELETE'
+      });
+      if (!response.ok) throw new Error('Failed to delete');
+      await fetchProducts();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Deletion failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchProducts(); }, []);
 
   return (
     <div>
-      <ProductTable
-        products={products}
-        loading={loading}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-        // Add other required props...
-        page={1}
-        limit={10}
-        totalPages={5}
-        totalItems={50}
-        onPageChange={(page) => console.log('Page changed:', page)}
-        onLimitChange={(limit) => console.log('Limit changed:', limit)}
-        sortBy="name"
-        sortOrder="asc"
-        onSort={(field) => console.log('Sort by:', field)}
-        categories={['Category1', 'Category2']}
-      />
+      {error && <div className="error">{error}</div>}
+      
+      <button onClick={() => setEditingProduct({} as Product)}>
+        Add New Product
+      </button>
 
-      {/* Edit Modal */}
-      {isEditModalOpen && selectedProduct && (
-        <UpdateProductForm
-          product={selectedProduct}
-          onSuccess={handleUpdateSuccess}
-          onCancel={() => setIsEditModalOpen(false)}
-          categories={['Category1', 'Category2']}
+      {editingProduct && (
+        <NewProductForm
+          product={editingProduct}
+          onSubmit={editingProduct._id ? handleUpdate : handleCreate}
+          onCancel={() => setEditingProduct(null)}
         />
       )}
 
-      {/* Delete Confirmation Modal */}
-      {isDeleteConfirmOpen && selectedProduct && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full">
-            <h3 className="text-lg font-medium mb-4">Confirm Deletion</h3>
-            <p className="mb-6">
-              Are you sure you want to delete "{selectedProduct.name}"? This action cannot be undone.
-            </p>
-            <div className="flex justify-end space-x-3">
-              <button
-                onClick={() => setIsDeleteConfirmOpen(false)}
-                className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700"
-                disabled={loading}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={confirmDelete}
-                className="px-4 py-2 bg-red-600 text-white rounded-md text-sm font-medium hover:bg-red-700"
-                disabled={loading}
-              >
-                {loading ? 'Deleting...' : 'Delete'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ProductTable
+        products={products}
+        loading={loading}
+        onEdit={setEditingProduct}
+        onDelete={handleDelete}
+      />
     </div>
   );
 };

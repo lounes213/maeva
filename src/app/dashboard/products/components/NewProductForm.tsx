@@ -4,51 +4,81 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Modal from './modal';
 import ColorSelector from './createColor';
+import { Product } from '@/app/types/product';
 
 interface NewProductFormProps {
-  categories: string[];
-  onClose: () => void;
+  product: Product;
+  onSubmit: (data: Product) => void;
+  onCancel: () => void;
+  categories?: string[];
 }
 
-export default function NewProductForm({ categories, onClose }: NewProductFormProps) {
+export default function NewProductForm({ product, onSubmit, onCancel, categories = [] }: NewProductFormProps) {
   const router = useRouter();
-  const [formData, setFormData] = useState({
-    name: '',
-    reference: '',
-    description: '',
-    price: 0,
-    stock: 0,
-    category: '',
-    tissu: '',
-    couleurs: [] as string[],
-    taille: [] as string[],
-    promotion: false,
-    promoPrice: 0,
-    imageUrls: [] as string[],
+  const [formData, setFormData] = useState<Omit<Product, '_id'>>({
+    name: product.name || '',
+    reference: product.reference || '',
+    description: product.description || '',
+    price: product.price || 0,
+    stock: product.stock || 0,
+    category: product.category || '',
+    tissu: product.tissu || '',
+    couleurs: product.couleurs || [],
+    taille: product.taille || [],
+    promotion: product.promotion || false,
+    promoPrice: product.promoPrice || 0,
+    imageUrls: product.imageUrls || [],
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [selectedImages, setSelectedImages] = useState<File[]>([]);
+  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value, type } = e.target as HTMLInputElement;
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value
-    }));
+    const { name, value, type } = e.target;
+    
+    if (type === 'checkbox') {
+      const checked = (e.target as HTMLInputElement).checked;
+      setFormData(prev => ({ ...prev, [name]: checked }));
+    } else if (name === 'price' || name === 'stock' || name === 'promoPrice') {
+      setFormData(prev => ({ ...prev, [name]: parseFloat(value) || 0 }));
+    } else {
+      setFormData(prev => ({ ...prev, [name]: value }));
+    }
   };
 
   const handleColorChange = (colors: string[]) => {
     setFormData(prev => ({ ...prev, couleurs: colors }));
   };
 
-  const handleSizeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { value, checked } = e.target;
+  const handleSizeChange = (size: string) => {
     setFormData(prev => {
-      const newSizes = checked
-        ? [...prev.taille, value]
-        : prev.taille.filter(size => size !== value);
+      const newSizes = prev.taille?.includes(size)
+        ? prev.taille.filter(s => s !== size)
+        : [...(prev.taille || []), size];
       return { ...prev, taille: newSizes };
     });
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
+    const files = Array.from(e.target.files);
+    setSelectedImages(files);
+    
+    // Create preview URLs
+    const urls = files.map(file => URL.createObjectURL(file));
+    setPreviewUrls(urls);
+  };
+
+  const removeImage = (index: number) => {
+    const newSelectedImages = [...selectedImages];
+    const newPreviewUrls = [...previewUrls];
+    
+    newSelectedImages.splice(index, 1);
+    newPreviewUrls.splice(index, 1);
+    
+    setSelectedImages(newSelectedImages);
+    setPreviewUrls(newPreviewUrls);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -57,21 +87,42 @@ export default function NewProductForm({ categories, onClose }: NewProductFormPr
     setError('');
 
     try {
-      const response = await fetch('/api/products', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
+      // First upload images if any
+      let imageUrls = [...(formData.imageUrls || [])];
+      
+      if (selectedImages.length > 0) {
+        const uploadFormData = new FormData();
+        selectedImages.forEach(file => {
+          uploadFormData.append('files', file);
+        });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to create product');
+        const uploadResponse = await fetch('/api/upload', {
+          method: 'POST',
+          body: uploadFormData,
+        });
+
+        if (!uploadResponse.ok) {
+          throw new Error('Failed to upload images');
+        }
+
+        const uploadedUrls = await uploadResponse.json();
+        imageUrls = [...imageUrls, ...uploadedUrls];
       }
 
+      // Then create the product with all data
+      const productData = {
+        ...formData,
+        _id: product._id, // Preserve the _id if it exists
+        imageUrls,
+        price: parseFloat(formData.price.toString()),
+        stock: parseFloat(formData.stock.toString()),
+        promoPrice: formData.promotion ? parseFloat((formData.promoPrice || 0).toString()) : undefined,
+      };
+
+      // Use the onSubmit prop to handle the form submission
+      await onSubmit(productData as Product);
+      
       router.refresh();
-      onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unknown error occurred');
     } finally {
@@ -80,7 +131,7 @@ export default function NewProductForm({ categories, onClose }: NewProductFormPr
   };
 
   return (
-    <Modal isOpen={true} onClose={onClose} title="Nouveau Produit" size="xl">
+    <Modal isOpen={true} onClose={onCancel} title="Nouveau Produit" size="xl">
       <form onSubmit={handleSubmit} className="space-y-6">
         {error && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
@@ -222,6 +273,7 @@ export default function NewProductForm({ categories, onClose }: NewProductFormPr
                   onChange={handleChange}
                   min="0"
                   step="0.01"
+                  max={formData.price}
                   required={formData.promotion}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                 />
@@ -252,7 +304,7 @@ export default function NewProductForm({ categories, onClose }: NewProductFormPr
                 Couleurs disponibles
               </label>
               <ColorSelector
-                selectedColors={formData.couleurs}
+                selectedColors={formData.couleurs || []}
                 onChange={handleColorChange}
               />
             </div>
@@ -267,8 +319,8 @@ export default function NewProductForm({ categories, onClose }: NewProductFormPr
                     <input
                       type="checkbox"
                       value={size}
-                      checked={formData.taille.includes(size)}
-                      onChange={handleSizeChange}
+                      checked={formData.taille?.includes(size) || false}
+                      onChange={() => handleSizeChange(size)}
                       className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                     />
                     <span className="ml-2 text-sm text-gray-700">{size}</span>
@@ -313,7 +365,8 @@ export default function NewProductForm({ categories, onClose }: NewProductFormPr
                         type="file"
                         className="sr-only"
                         multiple
-                        // Implement image upload logic here
+                        onChange={handleImageChange}
+                        accept="image/*"
                       />
                     </label>
                     <p className="pl-1">ou glisser-déposer</p>
@@ -321,6 +374,30 @@ export default function NewProductForm({ categories, onClose }: NewProductFormPr
                   <p className="text-xs text-gray-500">PNG, JPG, GIF jusqu'à 10MB</p>
                 </div>
               </div>
+              
+              {/* Image previews */}
+              {previewUrls.length > 0 && (
+                <div className="mt-4 grid grid-cols-3 gap-4">
+                  {previewUrls.map((url, index) => (
+                    <div key={index} className="relative">
+                      <img
+                        src={url}
+                        alt={`Preview ${index}`}
+                        className="h-24 w-full object-cover rounded"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeImage(index)}
+                        className="absolute top-0 right-0 bg-red-500 text-white rounded-full p-1"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -328,7 +405,7 @@ export default function NewProductForm({ categories, onClose }: NewProductFormPr
         <div className="flex justify-end gap-3 pt-4">
           <button
             type="button"
-            onClick={onClose}
+            onClick={onCancel}
             className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
           >
             Annuler
