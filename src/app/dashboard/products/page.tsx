@@ -19,12 +19,16 @@ interface Product {
   tissu?: string;
   couleurs?: string[];
   taille?: string[];
+  imageUrls: string[];
   promotion?: boolean;
   promoPrice?: number;
-  imageUrls?: string[];
   sold?: number;
   rating?: number;
-  createdAt?: string;
+  reviewCount?: number;
+  reviews?: string;
+  deliveryDate?: string;
+  deliveryAddress?: string;
+  deliveryStatus?: string;
 }
 
 const ProductPage = () => {
@@ -59,15 +63,13 @@ const ProductPage = () => {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        // This would typically come from a categories API
-        // For now, we'll extract unique categories from products
-        const response = await fetch('/api/product');
+        const response = await fetch('/api/products');
         const data = await response.json();
-        
-        if (response.ok) {
+        if (data.success) {
+          // Convert the Set to an array of strings
           const uniqueCategories = Array.from(
-            new Set(data.products.map((product: Product) => product.category))
-          );
+            new Set(data.data.map((product: Product) => product.category))
+          ) as string[];
           setCategories(uniqueCategories);
         }
       } catch (err) {
@@ -252,11 +254,11 @@ const ProductPage = () => {
         <ProductTable
           products={products}
           loading={loading}
-          onEdit={(product: SetStateAction<Product | null>) => {
+          onEdit={(product: Product) => {
             setCurrentProduct(product);
             setIsUpdateModalOpen(true);
           }}
-          onDelete={(product: SetStateAction<Product | null>) => {
+          onDelete={(product: Product) => {
             setCurrentProduct(product);
             setIsDeleteModalOpen(true);
           }}
@@ -268,7 +270,7 @@ const ProductPage = () => {
           onLimitChange={setLimit}
           sortBy={sortBy}
           sortOrder={sortOrder}
-          onSort={(field: SetStateAction<string>) => {
+          onSort={(field: string) => {
             if (sortBy === field) {
               setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
             } else {
@@ -276,6 +278,7 @@ const ProductPage = () => {
               setSortOrder('asc');
             }
           }}
+          categories={categories}
         />
       )}
 
