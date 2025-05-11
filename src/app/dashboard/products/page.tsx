@@ -444,7 +444,7 @@ const ProductManager = () => {
   };
 
   return (
-    <div className="container mx-auto p-4 max-w-6xl">
+    <div className="container mx-auto p-4 max-w-6xl mt-23">
     <DashboardHeader user={user}/>
       <Card>
         <CardHeader className="flex flex-row justify-between items-center">
