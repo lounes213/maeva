@@ -1,30 +1,80 @@
 import { NextRequest, NextResponse } from 'next/server';
-
 import mongoose from 'mongoose';
-import {dbConnect} from '@/lib/mongo';
+import { dbConnect } from '@/lib/mongo';
 import { Product } from '@/app/models/Product';
 
-// GET all products or filter by query params
+// Helper function to handle errors
+const handleError = (error: any, defaultMessage: string) => {
+  console.error(defaultMessage, error);
+  
+  // Handle validation errors
+  if (error instanceof mongoose.Error.ValidationError) {
+    const validationErrors = Object.values(error.errors).map(err => err.message);
+    return NextResponse.json(
+      { success: false, message: 'Validation failed', errors: validationErrors },
+      { status: 400 }
+    );
+  }
+  
+  // Handle duplicate key error
+  if (error.code === 11000) {
+    return NextResponse.json(
+      { success: false, message: 'Product reference must be unique' },
+      { status: 400 }
+    );
+  }
+  
+  return NextResponse.json(
+    { success: false, message: defaultMessage },
+    { status: 500 }
+  );
+};
+
+// GET all products with filtering and sorting
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
+    const query: any = {};
+    
+    // Build query from search params
     const category = searchParams.get('category');
     const promotion = searchParams.get('promotion');
-    const query: any = {};
-
+    const name = searchParams.get('name');
+    const reference = searchParams.get('reference');
+    
     if (category) query.category = category;
     if (promotion) query.promotion = promotion === 'true';
+    if (name) query.name = { $regex: name, $options: 'i' };
+    if (reference) query.reference = { $regex: reference, $options: 'i' };
 
     await dbConnect();
-    const products = await Product.find(query).sort({ createdAt: -1 });
     
-    return NextResponse.json({ success: true, data: products });
+    // Get total count for pagination
+    const total = await Product.countDocuments(query);
+    
+    // Apply sorting (default: newest first)
+    const sortBy = searchParams.get('sortBy') || '-createdAt';
+    const limit = parseInt(searchParams.get('limit') || '10');
+    const page = parseInt(searchParams.get('page') || '1');
+    const skip = (page - 1) * limit;
+    
+    const products = await Product.find(query)
+      .sort(sortBy)
+      .skip(skip)
+      .limit(limit);
+    
+    return NextResponse.json({ 
+      success: true, 
+      data: products,
+      pagination: {
+        total,
+        page,
+        pages: Math.ceil(total / limit),
+        limit
+      }
+    });
   } catch (error) {
-    console.error('Error fetching products:', error);
-    return NextResponse.json(
-      { success: false, message: 'Failed to fetch products' },
-      { status: 500 }
-    );
+    return handleError(error, 'Failed to fetch products');
   }
 }
 
@@ -53,20 +103,36 @@ export async function HEAD(request: NextRequest) {
 
     return NextResponse.json({ success: true, data: product });
   } catch (error) {
-    console.error('Error fetching product:', error);
-    return NextResponse.json(
-      { success: false, message: 'Failed to fetch product' },
-      { status: 500 }
-    );
+    return handleError(error, 'Failed to fetch product');
   }
 }
 
-// CREATE a new product
+// CREATE a new product with image handling
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    const formData = await request.formData();
+    const body: any = {};
     
+    // Process all fields except images
+    formData.forEach((value, key) => {
+      if (key !== 'images') {
+        // Handle arrays and boolean values
+        if (key === 'couleurs' || key === 'taille') {
+          body[key] = typeof value === 'string' ? value.split(',') : [];
+        } else if (key === 'promotion') {
+          body[key] = value === 'true';
+        } else if (key === 'price' || key === 'stock' || key === 'promoPrice' || 
+                  key === 'rating' || key === 'reviewCount' || key === 'sold') {
+          body[key] = parseFloat(value as string);
+        } else {
+          body[key] = value;
+        }
+      }
+    });
+
     await dbConnect();
+    
+    // Create new product
     const newProduct = new Product(body);
     const savedProduct = await newProduct.save();
     
@@ -74,34 +140,12 @@ export async function POST(request: NextRequest) {
       { success: true, data: savedProduct },
       { status: 201 }
     );
-  } catch (error: any) {
-    console.error('Error creating product:', error);
-    
-    // Handle validation errors
-    if (error instanceof mongoose.Error.ValidationError) {
-      const validationErrors = Object.values(error.errors).map(err => err.message);
-      return NextResponse.json(
-        { success: false, message: 'Validation failed', errors: validationErrors },
-        { status: 400 }
-      );
-    }
-    
-    // Handle duplicate key error
-    if (error.code === 11000) {
-      return NextResponse.json(
-        { success: false, message: 'Product reference must be unique' },
-        { status: 400 }
-      );
-    }
-    
-    return NextResponse.json(
-      { success: false, message: 'Failed to create product' },
-      { status: 500 }
-    );
+  } catch (error) {
+    return handleError(error, 'Failed to create product');
   }
 }
 
-// UPDATE a product
+// UPDATE a product with partial updates
 export async function PUT(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -114,12 +158,31 @@ export async function PUT(request: NextRequest) {
       );
     }
     
-    const body = await request.json();
+    const formData = await request.formData();
+    const updates: any = {};
     
+    // Process all fields except images
+    formData.forEach((value, key) => {
+      if (key !== 'images') {
+        // Handle arrays and boolean values
+        if (key === 'couleurs' || key === 'taille') {
+          updates[key] = typeof value === 'string' ? value.split(',') : [];
+        } else if (key === 'promotion') {
+          updates[key] = value === 'true';
+        } else if (key === 'price' || key === 'stock' || key === 'promoPrice' || 
+                  key === 'rating' || key === 'reviewCount' || key === 'sold') {
+          updates[key] = parseFloat(value as string);
+        } else {
+          updates[key] = value;
+        }
+      }
+    });
+
     await dbConnect();
+    
     const updatedProduct = await Product.findByIdAndUpdate(
       id,
-      { $set: body },
+      { $set: updates },
       { new: true, runValidators: true }
     );
 
@@ -131,22 +194,8 @@ export async function PUT(request: NextRequest) {
     }
     
     return NextResponse.json({ success: true, data: updatedProduct });
-  } catch (error: any) {
-    console.error('Error updating product:', error);
-    
-    // Handle validation errors
-    if (error instanceof mongoose.Error.ValidationError) {
-      const validationErrors = Object.values(error.errors).map(err => err.message);
-      return NextResponse.json(
-        { success: false, message: 'Validation failed', errors: validationErrors },
-        { status: 400 }
-      );
-    }
-    
-    return NextResponse.json(
-      { success: false, message: 'Failed to update product' },
-      { status: 500 }
-    );
+  } catch (error) {
+    return handleError(error, 'Failed to update product');
   }
 }
 
@@ -175,13 +224,10 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'Product deleted successfully' 
+      message: 'Product deleted successfully',
+      data: deletedProduct
     });
   } catch (error) {
-    console.error('Error deleting product:', error);
-    return NextResponse.json(
-      { success: false, message: 'Failed to delete product' },
-      { status: 500 }
-    );
+    return handleError(error, 'Failed to delete product');
   }
 }
