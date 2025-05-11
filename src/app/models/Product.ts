@@ -80,6 +80,12 @@ const productSchema = new Schema<IProduct>(
     },
     promoPrice: {
       type: Number,
+      validate: {
+        validator: function(this: IProduct, value: number) {
+          return !this.promotion || (value >= 0 && value <= this.price);
+        },
+        message: 'Le prix promotionnel doit être entre 0 et le prix normal'
+      }
     },
     reviews: {
       type: String,
@@ -107,16 +113,28 @@ const productSchema = new Schema<IProduct>(
       enum: ['en attente', 'expédié', 'livré', 'annulé', 'retourné', ''],
       default: '',
     },
-    imageUrls: [{
-      type: String,
-    }],
-    images: [{
-      type: String,
-    }],
+    imageUrls: {
+      type: [String],
+      default: [],
+      validate: {
+        validator: function(urls: string[]) {
+          return urls.every(url => url.startsWith('/uploads/products/'));
+        },
+        message: 'Les URLs des images doivent commencer par /uploads/products/'
+      }
+    }
   },
   {
     timestamps: true,
   }
 );
+
+// Add pre-save middleware to handle validation
+productSchema.pre('save', function(next) {
+  if (this.promotion && (!this.promoPrice || this.promoPrice > this.price)) {
+    next(new Error('Le prix promotionnel est requis et doit être inférieur au prix normal'));
+  }
+  next();
+});
 
 export const Product = models.Product || model<IProduct>('Product', productSchema);

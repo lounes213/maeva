@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongo';
 import { Product } from '@/app/models/Product';
 import path from 'path';
-import fs from 'fs/promises';
+import { writeFile } from 'fs/promises';
 import { v4 as uuidv4 } from 'uuid';
 import mime from 'mime-types';
 import { ALLOWED_FILE_TYPES, MAX_FILE_SIZE } from '@/lib/constant';
@@ -26,18 +26,13 @@ async function handleImageUpload(imageFile: File | null): Promise<string | undef
 
   const uploadDir = path.join(process.cwd(), 'public/uploads/products');
   try {
-    await fs.access(uploadDir);
-  } catch {
-    await fs.mkdir(uploadDir, { recursive: true });
+    await writeFile(path.join(uploadDir, imageFile.name), Buffer.from(await imageFile.arrayBuffer()));
+  } catch (err) {
+    console.error('Error processing image:', err);
+    return undefined;
   }
 
-  const buffer = await imageFile.arrayBuffer();
-  const ext = path.extname(imageFile.name);
-  const filename = `${uuidv4()}${ext}`;
-  const filepath = path.join(uploadDir, filename);
-
-  await fs.writeFile(filepath, Buffer.from(buffer));
-  return `/uploads/products/${filename}`;
+  return `/uploads/products/${imageFile.name}`;
 }
 
 async function cleanupOldImage(imageUrl: string | undefined) {
@@ -46,8 +41,7 @@ async function cleanupOldImage(imageUrl: string | undefined) {
   try {
     const filepath = path.join(process.cwd(), 'public', imageUrl);
     try {
-      await fs.access(filepath);
-      await fs.unlink(filepath);
+      await writeFile(filepath, Buffer.from([]));
     } catch (err) {
       console.error('Image file not found or already deleted:', imageUrl);
     }
@@ -59,33 +53,39 @@ async function cleanupOldImage(imageUrl: string | undefined) {
 export async function POST(req: NextRequest) {
   try {
     await dbConnect();
-    const formData = await req.formData();
-    
-    // Required fields validation
-    const requiredFields = ['name', 'description', 'price', 'stock', 'category', 'reference'];
-    for (const field of requiredFields) {
-      if (!formData.get(field)) {
-        return NextResponse.json(
-          { error: `Le champ ${field} est requis` },
-          { status: 400 }
-        );
-      }
-    }
+    console.log('Connected to database');
 
-    // Validate price and stock
-    const price = parseFloat(formData.get('price') as string);
-    const stock = parseInt(formData.get('stock') as string);
+    const formData = await req.formData();
+    console.log('Received form data:', Object.fromEntries(formData.entries()));
+
+    // Validate required fields
+    const requiredFields = ['name', 'reference', 'description', 'price', 'stock', 'category'];
+    const missingFields = requiredFields.filter(field => !formData.get(field));
     
-    if (isNaN(price) || price < 0) {
+    if (missingFields.length > 0) {
+      console.error('Missing required fields:', missingFields);
       return NextResponse.json(
-        { error: 'Le prix doit être un nombre valide supérieur ou égal à 0' },
+        { error: `Missing required fields: ${missingFields.join(', ')}` },
         { status: 400 }
       );
     }
-    
-    if (isNaN(stock) || stock < 0) {
+
+    // Validate price and stock
+    const price = Number(formData.get('price'));
+    const stock = Number(formData.get('stock'));
+
+    if (isNaN(price) || price < 0) {
+      console.error('Invalid price:', formData.get('price'));
       return NextResponse.json(
-        { error: 'Le stock doit être un nombre valide supérieur ou égal à 0' },
+        { error: 'Price must be a positive number' },
+        { status: 400 }
+      );
+    }
+
+    if (isNaN(stock) || stock < 0) {
+      console.error('Invalid stock:', formData.get('stock'));
+      return NextResponse.json(
+        { error: 'Stock must be a positive number' },
         { status: 400 }
       );
     }
@@ -93,39 +93,39 @@ export async function POST(req: NextRequest) {
     // Check for duplicate reference
     const existingProduct = await Product.findOne({ reference: formData.get('reference') });
     if (existingProduct) {
+      console.error('Duplicate reference:', formData.get('reference'));
       return NextResponse.json(
-        { error: 'Cette référence de produit existe déjà' },
+        { error: 'A product with this reference already exists' },
         { status: 400 }
       );
     }
 
-    // Handle image uploads
+    // Process images
     const imageFiles = formData.getAll('images') as File[];
-    const uploadedImages: string[] = [];
-
-    console.log('Processing images:', imageFiles.length); // Debug log
+    const imageUrls: string[] = [];
 
     for (const file of imageFiles) {
-      if (file && file.size > 0) {
-        try {
-          console.log('Processing file:', file.name, file.size); // Debug log
-          const imageUrl = await handleImageUpload(file);
-          if (imageUrl) {
-            console.log('Image uploaded successfully:', imageUrl); // Debug log
-            uploadedImages.push(imageUrl);
-          }
-        } catch (err: any) {
-          console.error('Error uploading image:', err);
-          return NextResponse.json(
-            { error: `Erreur lors du téléchargement de l'image: ${err.message}` },
-            { status: 400 }
-          );
+      if (!file || !(file instanceof File)) {
+        console.warn('Invalid file:', file);
+        continue;
+      }
+
+      try {
+        const imageUrl = await handleImageUpload(file);
+        if (imageUrl) {
+          imageUrls.push(imageUrl);
         }
+      } catch (error) {
+        console.error('Error processing image:', error);
+        return NextResponse.json(
+          { error: 'Failed to process image upload' },
+          { status: 500 }
+        );
       }
     }
 
-    // Create new product
-    const newProduct = new Product({
+    // Create product data
+    const productData = {
       name: formData.get('name'),
       reference: formData.get('reference'),
       description: formData.get('description'),
@@ -133,29 +133,31 @@ export async function POST(req: NextRequest) {
       stock,
       category: formData.get('category'),
       tissu: formData.get('tissu') || '',
-      couleurs: formData.getAll('couleurs'),
-      taille: formData.getAll('taille'),
+      couleurs: formData.get('couleurs')?.toString().split(',').map(c => c.trim()) || [],
+      taille: formData.get('taille')?.toString().split(',').map(t => t.trim()) || [],
       sold: parseInt(formData.get('sold') as string) || 0,
       promotion: formData.get('promotion') === 'true',
-      promoPrice: formData.get('promoPrice') ? parseFloat(formData.get('promoPrice') as string) : undefined,
+      promoPrice: formData.get('promoPrice') ? Number(formData.get('promoPrice')) : undefined,
       rating: formData.get('rating') ? parseFloat(formData.get('rating') as string) : 0,
       reviewCount: formData.get('reviewCount') ? parseInt(formData.get('reviewCount') as string) : 0,
       reviews: formData.get('reviews') || '',
       deliveryDate: formData.get('deliveryDate'),
       deliveryAddress: formData.get('deliveryAddress') || '',
       deliveryStatus: formData.get('deliveryStatus') || '',
-      imageUrls: uploadedImages,
-    });
+      imageUrls,
+    };
 
-    console.log('Saving product with images:', uploadedImages); // Debug log
+    console.log('Creating product with data:', productData);
 
-    const savedProduct = await newProduct.save();
-    return NextResponse.json({ data: savedProduct }, { status: 201 });
+    // Create product
+    const product = await Product.create(productData);
+    console.log('Product created successfully:', product);
 
-  } catch (err: any) {
-    console.error('POST Error:', err);
+    return NextResponse.json({ data: product }, { status: 201 });
+  } catch (error) {
+    console.error('Error creating product:', error);
     return NextResponse.json(
-      { error: err.message || 'Erreur serveur' },
+      { error: 'Failed to create product' },
       { status: 500 }
     );
   }
@@ -164,34 +166,11 @@ export async function POST(req: NextRequest) {
 export async function GET(req: NextRequest) {
   try {
     await dbConnect();
-
     const { searchParams } = new URL(req.url);
-    const id = searchParams.get('id');
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '10');
     const category = searchParams.get('category');
     const search = searchParams.get('search');
-    const limit = parseInt(searchParams.get('limit') || '20');
-    const page = parseInt(searchParams.get('page') || '1');
-
-    if (id) {
-      const product = await Product.findById(id);
-      if (!product) {
-        return NextResponse.json(
-          { error: 'Produit non trouvé' },
-          { status: 404 }
-        );
-      }
-      // Ensure imageUrls are absolute URLs
-      const productData = product.toObject();
-      if (productData.imageUrls && productData.imageUrls.length > 0) {
-        productData.imageUrls = productData.imageUrls.map((url: string) => {
-          if (url.startsWith('/')) {
-            return url;
-          }
-          return `/${url}`;
-        });
-      }
-      return NextResponse.json({ data: productData });
-    }
 
     const query: any = {};
     if (category) query.category = category;
@@ -204,27 +183,24 @@ export async function GET(req: NextRequest) {
     }
 
     const skip = (page - 1) * limit;
-    const total = await Product.countDocuments(query);
-    const products = await Product.find(query)
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .lean();
+    const [products, total] = await Promise.all([
+      Product.find(query).skip(skip).limit(limit).sort({ createdAt: -1 }),
+      Product.countDocuments(query)
+    ]);
 
     return NextResponse.json({
       data: products,
       pagination: {
         total,
         page,
-        pages: Math.ceil(total / limit),
         limit,
-      },
+        pages: Math.ceil(total / limit)
+      }
     });
-
-  } catch (err: any) {
-    console.error('GET Error:', err);
+  } catch (error) {
+    console.error('Error fetching products:', error);
     return NextResponse.json(
-      { error: err.message || 'Erreur serveur' },
+      { error: 'Failed to fetch products' },
       { status: 500 }
     );
   }
