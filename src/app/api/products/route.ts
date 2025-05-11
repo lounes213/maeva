@@ -1,453 +1,186 @@
 import { NextRequest, NextResponse } from 'next/server';
+
+import mongoose from 'mongoose';
 import dbConnect from '@/lib/mongo';
 import { Product } from '@/app/models/Product';
-import path from 'path';
-import { writeFile, mkdir } from 'fs/promises';
-import { v4 as uuidv4 } from 'uuid';
-import mime from 'mime-types';
-import { ALLOWED_FILE_TYPES, MAX_FILE_SIZE } from '@/lib/constant';
 
-export const dynamic = 'force-dynamic';
-export const runtime = 'nodejs';
-
-async function handleImageUpload(imageFile: File | null): Promise<string | undefined> {
-  if (!imageFile || imageFile.size === 0) return undefined;
-
-  // Validate file size
-  if (imageFile.size > MAX_FILE_SIZE) {
-    throw new Error(`File size exceeds ${MAX_FILE_SIZE / 1024 / 1024}MB limit`);
-  }
-
-  // Validate file type
-  const fileType = mime.lookup(imageFile.name);
-  if (!fileType || !ALLOWED_FILE_TYPES.includes(fileType)) {
-    throw new Error(`Only ${ALLOWED_FILE_TYPES.join(', ')} files are allowed`);
-  }
-
-  // Create upload directory if it doesn't exist
-  const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'products');
+// GET all products or filter by query params
+export async function GET(request: NextRequest) {
   try {
-    await mkdir(uploadDir, { recursive: true });
-  } catch (err) {
-    console.error('Error creating upload directory:', err);
-  }
-
-  // Generate unique filename
-  const uniqueFilename = `${uuidv4()}-${imageFile.name}`;
-  const filepath = path.join(uploadDir, uniqueFilename);
-
-  try {
-    // Convert File to Buffer and save
-    const bytes = await imageFile.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-    await writeFile(filepath, buffer);
-    
-    // Return the public URL path
-    return `/uploads/products/${uniqueFilename}`;
-  } catch (err) {
-    console.error('Error saving image:', err);
-    return undefined;
-  }
-}
-
-async function cleanupOldImage(imageUrl: string | undefined) {
-  if (!imageUrl) return;
-  
-  try {
-    const filepath = path.join(process.cwd(), 'public', imageUrl);
-    try {
-      await writeFile(filepath, Buffer.from([]));
-    } catch (err) {
-      console.error('Image file not found or already deleted:', imageUrl);
-    }
-  } catch (err) {
-    console.error('Error cleaning up old image:', err);
-  }
-}
-
-export async function POST(req: NextRequest) {
-  try {
-    await dbConnect();
-    console.log('Connected to database');
-
-    const formData = await req.formData();
-    console.log('Received form data:', Object.fromEntries(formData.entries()));
-
-    // Validate required fields
-    const requiredFields = ['name', 'reference', 'description', 'price', 'stock', 'category'];
-    const missingFields = requiredFields.filter(field => !formData.get(field));
-    
-    if (missingFields.length > 0) {
-      console.error('Missing required fields:', missingFields);
-      return NextResponse.json(
-        { error: `Missing required fields: ${missingFields.join(', ')}` },
-        { status: 400 }
-      );
-    }
-
-    // Validate price and stock
-    const price = Number(formData.get('price'));
-    const stock = Number(formData.get('stock'));
-
-    if (isNaN(price) || price < 0) {
-      console.error('Invalid price:', formData.get('price'));
-      return NextResponse.json(
-        { error: 'Price must be a positive number' },
-        { status: 400 }
-      );
-    }
-
-    if (isNaN(stock) || stock < 0) {
-      console.error('Invalid stock:', formData.get('stock'));
-      return NextResponse.json(
-        { error: 'Stock must be a positive number' },
-        { status: 400 }
-      );
-    }
-
-    // Check for duplicate reference
-    const existingProduct = await Product.findOne({ reference: formData.get('reference') });
-    if (existingProduct) {
-      console.error('Duplicate reference:', formData.get('reference'));
-      return NextResponse.json(
-        { error: 'A product with this reference already exists' },
-        { status: 400 }
-      );
-    }
-
-    // Process images
-    const imageFiles = formData.getAll('images') as File[];
-    const imageUrls: string[] = [];
-    
-    console.log('Processing images:', imageFiles.length);
-    
-    for (const file of imageFiles) {
-      if (!file || !(file instanceof File)) {
-        console.warn('Invalid file:', file);
-        continue;
-      }
-
-      try {
-        console.log('Processing image:', file.name);
-        const imageUrl = await handleImageUpload(file);
-        if (imageUrl) {
-          console.log('Image uploaded successfully:', imageUrl);
-          imageUrls.push(imageUrl);
-        }
-      } catch (error) {
-        console.error('Error processing image:', error);
-        return NextResponse.json(
-          { error: 'Failed to process image upload' },
-          { status: 500 }
-        );
-      }
-    }
-
-    console.log('Processed image URLs:', imageUrls);
-
-    // Create product data
-    const productData = {
-      name: formData.get('name'),
-      reference: formData.get('reference'),
-      description: formData.get('description'),
-      price,
-      stock,
-      category: formData.get('category'),
-      tissu: formData.get('tissu') || '',
-      couleurs: formData.get('couleurs')?.toString().split(',').map(c => c.trim()) || [],
-      taille: formData.get('taille')?.toString().split(',').map(t => t.trim()) || [],
-      sold: parseInt(formData.get('sold') as string) || 0,
-      promotion: formData.get('promotion') === 'true',
-      promoPrice: formData.get('promoPrice') ? Number(formData.get('promoPrice')) : undefined,
-      rating: formData.get('rating') ? parseFloat(formData.get('rating') as string) : 0,
-      reviewCount: formData.get('reviewCount') ? parseInt(formData.get('reviewCount') as string) : 0,
-      reviews: formData.get('reviews') || '',
-      deliveryDate: formData.get('deliveryDate'),
-      deliveryAddress: formData.get('deliveryAddress') || '',
-      deliveryStatus: formData.get('deliveryStatus') || '',
-      imageUrls,
-    };
-
-    console.log('Creating product with data:', productData);
-
-    // Create product
-    const product = await Product.create(productData);
-    console.log('Product created successfully:', product);
-
-    return NextResponse.json({ data: product }, { status: 201 });
-  } catch (error) {
-    console.error('Error creating product:', error);
-    return NextResponse.json(
-      { error: 'Failed to create product' },
-      { status: 500 }
-    );
-  }
-}
-
-export async function GET(req: NextRequest) {
-  try {
-    await dbConnect();
-    const { searchParams } = new URL(req.url);
-    const id = searchParams.get('id');
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '10');
+    const { searchParams } = new URL(request.url);
     const category = searchParams.get('category');
-    const search = searchParams.get('search');
-
-    if (id) {
-      // Fetch single product
-      const product = await Product.findById(id);
-      if (!product) {
-        return NextResponse.json(
-          { error: 'Product not found' },
-          { status: 404 }
-        );
-      }
-
-      // Convert numeric fields to numbers
-      const formattedProduct = {
-        ...product.toObject(),
-        price: Number(product.price) || 0,
-        stock: Number(product.stock) || 0,
-        sold: Number(product.sold) || 0,
-        promoPrice: product.promoPrice ? Number(product.promoPrice) : undefined,
-        rating: product.rating ? Number(product.rating) : 0,
-        reviewCount: product.reviewCount ? Number(product.reviewCount) : 0,
-      };
-
-      return NextResponse.json({ data: formattedProduct });
-    }
-
-    // Fetch multiple products with pagination
+    const promotion = searchParams.get('promotion');
     const query: any = {};
+
     if (category) query.category = category;
-    if (search) {
-      query.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } },
-        { reference: { $regex: search, $options: 'i' } }
-      ];
-    }
+    if (promotion) query.promotion = promotion === 'true';
 
-    const skip = (page - 1) * limit;
-    const [products, total] = await Promise.all([
-      Product.find(query).skip(skip).limit(limit).sort({ createdAt: -1 }),
-      Product.countDocuments(query)
-    ]);
-
-    // Format products
-    const formattedProducts = products.map(product => ({
-      ...product.toObject(),
-      price: Number(product.price) || 0,
-      stock: Number(product.stock) || 0,
-      sold: Number(product.sold) || 0,
-      promoPrice: product.promoPrice ? Number(product.promoPrice) : undefined,
-      rating: product.rating ? Number(product.rating) : 0,
-      reviewCount: product.reviewCount ? Number(product.reviewCount) : 0,
-    }));
-
-    return NextResponse.json({ 
-      data: formattedProducts,
-      pagination: {
-        total,
-        page,
-        limit,
-        pages: Math.ceil(total / limit)
-      }
-    });
+    await dbConnect();
+    const products = await Product.find(query).sort({ createdAt: -1 });
+    
+    return NextResponse.json({ success: true, data: products });
   } catch (error) {
     console.error('Error fetching products:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch products' },
+      { success: false, message: 'Failed to fetch products' },
       { status: 500 }
     );
   }
 }
 
-export async function PUT(req: NextRequest) {
+// GET a single product by id
+export async function HEAD(request: NextRequest) {
   try {
-    await dbConnect();
-    console.log('Connected to database for PUT request');
-
-    const { searchParams } = new URL(req.url);
+    const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
+
     if (!id) {
       return NextResponse.json(
-        { error: 'Product ID is required' },
+        { success: false, message: 'Product ID is required' },
         { status: 400 }
       );
     }
 
-    const formData = await req.formData();
-    console.log('Form data received:', Object.fromEntries(formData.entries()));
-
-    // Find existing product
-    const existingProduct = await Product.findById(id);
-    if (!existingProduct) {
-      return NextResponse.json(
-        { error: 'Product not found' },
-        { status: 404 }
-      );
-    }
-
-    // Create update data object
-    const updateData: any = {};
-
-    // Handle numeric fields
-    ['price', 'stock', 'sold', 'promoPrice', 'rating', 'reviewCount'].forEach(field => {
-      const value = formData.get(field);
-      if (value !== null && value !== undefined && value !== '') {
-        const numValue = Number(value);
-        if (!isNaN(numValue)) {
-          updateData[field] = numValue;
-        }
-      }
-    });
-
-    // Handle boolean fields
-    if (formData.has('promotion')) {
-      updateData.promotion = formData.get('promotion') === 'true';
-    }
-
-    // Handle string fields
-    ['name', 'reference', 'description', 'category', 'tissu', 'reviews', 'deliveryAddress', 'deliveryStatus'].forEach(field => {
-      const value = formData.get(field);
-      if (value !== null && value !== undefined) {
-        updateData[field] = value.toString();
-      }
-    });
-
-    // Handle arrays
-    const couleurs = formData.get('couleurs');
-    if (couleurs) {
-      updateData.couleurs = couleurs.toString().split(',').map(c => c.trim()).filter(Boolean);
-    }
-
-    const taille = formData.get('taille');
-    if (taille) {
-      updateData.taille = taille.toString().split(',').map(t => t.trim()).filter(Boolean);
-    }
-
-    // Handle date fields
-    const deliveryDate = formData.get('deliveryDate');
-    if (deliveryDate) {
-      const date = new Date(deliveryDate.toString());
-      if (!isNaN(date.getTime())) {
-        updateData.deliveryDate = date;
-      }
-    }
-
-    // Handle image uploads
-    const imageFiles = formData.getAll('images') as File[];
-    if (imageFiles.length > 0) {
-      const imageUrls = [...(existingProduct.imageUrls || [])];
-      
-      for (const file of imageFiles) {
-        if (file && file.size > 0) {
-          try {
-            const imageUrl = await handleImageUpload(file);
-            if (imageUrl) {
-              imageUrls.push(imageUrl);
-            }
-          } catch (err) {
-            console.error('Error uploading image:', err);
-          }
-        }
-      }
-      
-      updateData.imageUrls = imageUrls;
-    }
-
-    console.log('Update data:', updateData);
-
-    // Validate promotion price
-    if (updateData.promotion && updateData.promoPrice) {
-      if (updateData.promoPrice >= updateData.price) {
-        return NextResponse.json(
-          { error: 'Promotional price must be less than regular price' },
-          { status: 400 }
-        );
-      }
-    }
-
-    // Update product
-    const updatedProduct = await Product.findByIdAndUpdate(
-      id,
-      { $set: updateData },
-      { 
-        new: true, 
-        runValidators: true 
-      }
-    );
-
-    if (!updatedProduct) {
-      return NextResponse.json(
-        { error: 'Failed to update product' },
-        { status: 500 }
-      );
-    }
-
-    // Format response
-    const formattedProduct = {
-      ...updatedProduct.toObject(),
-      price: Number(updatedProduct.price) || 0,
-      stock: Number(updatedProduct.stock) || 0,
-      sold: Number(updatedProduct.sold) || 0,
-      promoPrice: updatedProduct.promoPrice ? Number(updatedProduct.promoPrice) : undefined,
-      rating: updatedProduct.rating ? Number(updatedProduct.rating) : 0,
-      reviewCount: updatedProduct.reviewCount ? Number(updatedProduct.reviewCount) : 0,
-    };
-
-    return NextResponse.json({ data: formattedProduct });
-
-  } catch (err: any) {
-    console.error('PUT Error:', err);
-    return NextResponse.json(
-      { error: err.message || 'Server error' },
-      { status: 500 }
-    );
-  }
-}
-
-export async function DELETE(req: NextRequest) {
-  try {
     await dbConnect();
-
-    const { searchParams } = new URL(req.url);
-    const id = searchParams.get('id');
-    if (!id) {
-      return NextResponse.json(
-        { error: 'ID du produit est requis' },
-        { status: 400 }
-      );
-    }
-
     const product = await Product.findById(id);
+
     if (!product) {
       return NextResponse.json(
-        { error: 'Produit non trouvé' },
+        { success: false, message: 'Product not found' },
         { status: 404 }
       );
     }
 
-    // Clean up product images
-    if (product.imageUrls && product.imageUrls.length > 0) {
-      for (const imageUrl of product.imageUrls) {
-        await cleanupOldImage(imageUrl);
-      }
-    }
-
-    await Product.findByIdAndDelete(id);
-
-    return NextResponse.json({
-      success: true,
-      message: 'Produit supprimé avec succès',
-    });
-
-  } catch (err: any) {
-    console.error('DELETE Error:', err);
+    return NextResponse.json({ success: true, data: product });
+  } catch (error) {
+    console.error('Error fetching product:', error);
     return NextResponse.json(
-      { error: err.message || 'Erreur serveur' },
+      { success: false, message: 'Failed to fetch product' },
+      { status: 500 }
+    );
+  }
+}
+
+// CREATE a new product
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    
+    await dbConnect();
+    const newProduct = new Product(body);
+    const savedProduct = await newProduct.save();
+    
+    return NextResponse.json(
+      { success: true, data: savedProduct },
+      { status: 201 }
+    );
+  } catch (error: any) {
+    console.error('Error creating product:', error);
+    
+    // Handle validation errors
+    if (error instanceof mongoose.Error.ValidationError) {
+      const validationErrors = Object.values(error.errors).map(err => err.message);
+      return NextResponse.json(
+        { success: false, message: 'Validation failed', errors: validationErrors },
+        { status: 400 }
+      );
+    }
+    
+    // Handle duplicate key error
+    if (error.code === 11000) {
+      return NextResponse.json(
+        { success: false, message: 'Product reference must be unique' },
+        { status: 400 }
+      );
+    }
+    
+    return NextResponse.json(
+      { success: false, message: 'Failed to create product' },
+      { status: 500 }
+    );
+  }
+}
+
+// UPDATE a product
+export async function PUT(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+    
+    if (!id) {
+      return NextResponse.json(
+        { success: false, message: 'Product ID is required' },
+        { status: 400 }
+      );
+    }
+    
+    const body = await request.json();
+    
+    await dbConnect();
+    const updatedProduct = await Product.findByIdAndUpdate(
+      id,
+      { $set: body },
+      { new: true, runValidators: true }
+    );
+    
+    if (!updatedProduct) {
+      return NextResponse.json(
+        { success: false, message: 'Product not found' },
+        { status: 404 }
+      );
+    }
+    
+    return NextResponse.json({ success: true, data: updatedProduct });
+  } catch (error: any) {
+    console.error('Error updating product:', error);
+    
+    // Handle validation errors
+    if (error instanceof mongoose.Error.ValidationError) {
+      const validationErrors = Object.values(error.errors).map(err => err.message);
+      return NextResponse.json(
+        { success: false, message: 'Validation failed', errors: validationErrors },
+        { status: 400 }
+      );
+    }
+    
+    return NextResponse.json(
+      { success: false, message: 'Failed to update product' },
+      { status: 500 }
+    );
+  }
+}
+
+// DELETE a product
+export async function DELETE(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+    
+    if (!id) {
+      return NextResponse.json(
+        { success: false, message: 'Product ID is required' },
+        { status: 400 }
+      );
+    }
+    
+    await dbConnect();
+    const deletedProduct = await Product.findByIdAndDelete(id);
+    
+    if (!deletedProduct) {
+      return NextResponse.json(
+        { success: false, message: 'Product not found' },
+        { status: 404 }
+      );
+    }
+    
+    return NextResponse.json({ 
+      success: true, 
+      message: 'Product deleted successfully' 
+    });
+  } catch (error) {
+    console.error('Error deleting product:', error);
+    return NextResponse.json(
+      { success: false, message: 'Failed to delete product' },
       { status: 500 }
     );
   }

@@ -1,93 +1,161 @@
 'use client';
 
-import React, { useState } from 'react';
-import { HexColorPicker } from 'react-colorful';
+import { useState, useEffect } from 'react';
+import { XCircle } from 'lucide-react';
 
-interface CouleursPickerProps {
+interface ColorSelectorProps {
+  selectedColors: string[];
   onChange: (colors: string[]) => void;
 }
 
-const CouleursPicker: React.FC<CouleursPickerProps> = ({ onChange }) => {
-  const [selectedColors, setSelectedColors] = useState<string[]>([]);
-  const [currentColor, setCurrentColor] = useState('#000000');
+// Predefined color options
+const colorOptions = [
+  { name: 'Blanc', value: '#FFFFFF', border: true },
+  { name: 'Noir', value: '#000000' },
+  { name: 'Rouge', value: '#FF0000' },
+  { name: 'Bleu', value: '#0000FF' },
+  { name: 'Vert', value: '#008000' },
+  { name: 'Jaune', value: '#FFFF00' },
+  { name: 'Rose', value: '#FFC0CB' },
+  { name: 'Violet', value: '#800080' },
+  { name: 'Orange', value: '#FFA500' },
+  { name: 'Gris', value: '#808080' },
+  { name: 'Marron', value: '#A52A2A' },
+  { name: 'Beige', value: '#F5F5DC', border: true },
+];
 
-  const handleColorAdd = () => {
-    if (!selectedColors.includes(currentColor)) {
-      const newColors = [...selectedColors, currentColor];
-      setSelectedColors(newColors);
-      onChange(newColors);
-    }
+const ColorSelector = ({ selectedColors, onChange }: ColorSelectorProps) => {
+  const [customColor, setCustomColor] = useState('');
+  const [customColorName, setCustomColorName] = useState('');
+  const [showAddCustom, setShowAddCustom] = useState(false);
+
+  // Toggle a color selection
+  const toggleColor = (colorName: string) => {
+    const newColors = selectedColors.includes(colorName)
+      ? selectedColors.filter(c => c !== colorName)
+      : [...selectedColors, colorName];
+    onChange(newColors);
   };
 
-  const handleColorRemove = (colorToRemove: string) => {
-    const newColors = selectedColors.filter(color => color !== colorToRemove);
-    setSelectedColors(newColors);
-    onChange(newColors);
+  // Add a custom color
+  const handleAddCustomColor = () => {
+    if (customColorName.trim() && customColor) {
+      // Add the custom color to the selection
+      const newColors = [...selectedColors, customColorName.trim()];
+      onChange(newColors);
+      
+      // Reset custom color inputs
+      setCustomColor('');
+      setCustomColorName('');
+      setShowAddCustom(false);
+    }
   };
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center space-x-4">
-        <div className="w-32 h-32">
-          <HexColorPicker color={currentColor} onChange={setCurrentColor} />
-        </div>
-        <div className="flex-1">
-          <div className="flex items-center space-x-2">
-            <div
-              className="w-8 h-8 rounded-full border border-gray-300"
-              style={{ backgroundColor: currentColor }}
+      <div className="flex flex-wrap gap-2">
+        {colorOptions.map((color) => (
+          <button
+            key={color.name}
+            type="button"
+            className={`flex items-center px-3 py-1 rounded-full text-sm ${
+              selectedColors.includes(color.name)
+                ? 'ring-2 ring-indigo-500 ring-offset-2'
+                : ''
+            }`}
+            onClick={() => toggleColor(color.name)}
+          >
+            <span
+              className={`inline-block w-4 h-4 rounded-full mr-2 ${
+                color.border ? 'border border-gray-300' : ''
+              }`}
+              style={{ backgroundColor: color.value }}
             />
-            <input
-              type="text"
-              value={currentColor}
-              onChange={(e) => setCurrentColor(e.target.value)}
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-            <button
-              type="button"
-              onClick={handleColorAdd}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-            >
-              Add
-            </button>
-          </div>
-        </div>
+            {color.name}
+          </button>
+        ))}
       </div>
 
       {selectedColors.length > 0 && (
-        <div className="mt-4">
-          <h4 className="text-sm font-medium text-gray-700 mb-2">Selected Colors:</h4>
+        <div className="mt-2">
+          <h4 className="text-sm font-medium text-gray-700 mb-1">Couleurs sélectionnées:</h4>
           <div className="flex flex-wrap gap-2">
-            {selectedColors.map((color, index) => (
-              <div
-                key={index}
-                className="group relative"
+            {selectedColors.map((color) => (
+              <span
+                key={color}
+                className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-gray-100"
               >
-                <div
-                  className="w-8 h-8 rounded-full border border-gray-300"
-                  style={{ backgroundColor: color }}
-                />
+                {color}
                 <button
                   type="button"
-                  onClick={() => handleColorRemove(color)}
-                  className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                  onClick={() => toggleColor(color)}
+                  className="ml-1 text-gray-500 hover:text-gray-700"
                 >
-                  <svg
-                    className="w-3 h-3"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  </svg>
+                  <XCircle size={14} />
                 </button>
-              </div>
+              </span>
             ))}
+          </div>
+        </div>
+      )}
+
+      {!showAddCustom ? (
+        <button
+          type="button"
+          onClick={() => setShowAddCustom(true)}
+          className="text-sm text-indigo-600 hover:text-indigo-500"
+        >
+          + Ajouter une couleur personnalisée
+        </button>
+      ) : (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <div>
+              <label htmlFor="customColorName" className="block text-xs font-medium text-gray-700">
+                Nom de la couleur
+              </label>
+              <input
+                type="text"
+                id="customColorName"
+                value={customColorName}
+                onChange={(e) => setCustomColorName(e.target.value)}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
+                placeholder="ex: Bleu ciel"
+              />
+            </div>
+            <div>
+              <label htmlFor="customColor" className="block text-xs font-medium text-gray-700">
+                Code couleur
+              </label>
+              <input
+                type="color"
+                id="customColor"
+                value={customColor}
+                onChange={(e) => setCustomColor(e.target.value)}
+                className="mt-1 block w-10 h-8 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              />
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={handleAddCustomColor}
+              className="text-xs px-2 py-1 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+              disabled={!customColorName.trim() || !customColor}
+            >
+              Ajouter
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setShowAddCustom(false);
+                setCustomColor('');
+                setCustomColorName('');
+              }}
+              className="text-xs px-2 py-1 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+            >
+              Annuler
+            </button>
           </div>
         </div>
       )}
@@ -95,4 +163,4 @@ const CouleursPicker: React.FC<CouleursPickerProps> = ({ onChange }) => {
   );
 };
 
-export default CouleursPicker;
+export default ColorSelector;
