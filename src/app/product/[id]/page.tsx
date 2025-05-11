@@ -185,8 +185,8 @@ export default function ProductDetailsPage() {
   const sizes = processSizes(product.taille);
   
   // Calculate discount price if promotion is active
-  const originalPrice = product.price;
-  const discountPrice = product.promotion ? product.price * 0.8 : null;
+  const originalPrice = product.price || 0;
+  const discountPrice = product.promotion && product.promoPrice ? product.promoPrice : null;
 
   const handleColorSelect = (color: string) => {
     setSelectedColor(color);
@@ -436,12 +436,14 @@ export default function ProductDetailsPage() {
             <div className="flex items-end gap-3 mb-4">
               {discountPrice ? (
                 <>
-                  <p className="text-2xl font-bold text-indigo-600">{discountPrice.toFixed(2)} DA</p>
-                  <p className="text-lg text-gray-500 line-through">{originalPrice.toFixed(2)} DA</p>
-                  <p className="text-sm font-medium bg-red-100 text-red-600 px-2 py-1 rounded">-20%</p>
+                  <p className="text-2xl font-bold text-indigo-600">{Number(discountPrice).toFixed(2)} DA</p>
+                  <p className="text-lg text-gray-500 line-through">{Number(originalPrice).toFixed(2)} DA</p>
+                  <p className="text-sm font-medium bg-red-100 text-red-600 px-2 py-1 rounded">
+                    -{Math.round(((originalPrice - Number(discountPrice)) / originalPrice) * 100)}%
+                  </p>
                 </>
               ) : (
-                <p className="text-2xl font-bold text-indigo-600">{originalPrice.toFixed(2)} DA</p>
+                <p className="text-2xl font-bold text-indigo-600">{Number(originalPrice).toFixed(2)} DA</p>
               )}
             </div>
             

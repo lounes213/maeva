@@ -167,11 +167,37 @@ export async function GET(req: NextRequest) {
   try {
     await dbConnect();
     const { searchParams } = new URL(req.url);
+    const id = searchParams.get('id');
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
     const category = searchParams.get('category');
     const search = searchParams.get('search');
 
+    if (id) {
+      // Fetch single product
+      const product = await Product.findById(id);
+      if (!product) {
+        return NextResponse.json(
+          { error: 'Product not found' },
+          { status: 404 }
+        );
+      }
+
+      // Convert numeric fields to numbers
+      const formattedProduct = {
+        ...product.toObject(),
+        price: Number(product.price) || 0,
+        stock: Number(product.stock) || 0,
+        sold: Number(product.sold) || 0,
+        promoPrice: product.promoPrice ? Number(product.promoPrice) : undefined,
+        rating: product.rating ? Number(product.rating) : 0,
+        reviewCount: product.reviewCount ? Number(product.reviewCount) : 0,
+      };
+
+      return NextResponse.json({ data: formattedProduct });
+    }
+
+    // Fetch multiple products with pagination
     const query: any = {};
     if (category) query.category = category;
     if (search) {
@@ -188,8 +214,19 @@ export async function GET(req: NextRequest) {
       Product.countDocuments(query)
     ]);
 
-    return NextResponse.json({
-      data: products,
+    // Format products
+    const formattedProducts = products.map(product => ({
+      ...product.toObject(),
+      price: Number(product.price) || 0,
+      stock: Number(product.stock) || 0,
+      sold: Number(product.sold) || 0,
+      promoPrice: product.promoPrice ? Number(product.promoPrice) : undefined,
+      rating: product.rating ? Number(product.rating) : 0,
+      reviewCount: product.reviewCount ? Number(product.reviewCount) : 0,
+    }));
+
+    return NextResponse.json({ 
+      data: formattedProducts,
       pagination: {
         total,
         page,
