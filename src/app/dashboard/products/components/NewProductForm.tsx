@@ -11,17 +11,17 @@ interface NewProductFormProps {
 }
 
 const initialProductState = {
-  name: '',
-  reference: '',
-  description: '',
-  price: 0,
-  stock: 0,
-  category: '',
-  tissu: '',
+      name: '',
+      reference: '',
+      description: '',
+      price: 0,
+      stock: 0,
+      category: '',
+      tissu: '',
   couleurs: [] as string[],
   taille: [] as string[],
-  promotion: false,
-  promoPrice: 0,
+      promotion: false,
+      promoPrice: 0,
   imageUrls: [] as string[],
 };
 
@@ -185,7 +185,7 @@ const NewProductForm = ({ onSuccess, onCancel, categories }: NewProductFormProps
       });
       
       const data = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(data.message || 'Failed to create product');
       }
@@ -206,37 +206,37 @@ const NewProductForm = ({ onSuccess, onCancel, categories }: NewProductFormProps
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Basic Information */}
         <div className="space-y-4">
-          <div>
+        <div>
             <label htmlFor="name" className="block text-sm font-medium text-gray-700">
               Nom du produit *
             </label>
-            <input
-              type="text"
+          <input
+            type="text"
               id="name"
               name="name"
               value={product.name}
               onChange={handleChange}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
               required
-            />
-          </div>
-          
-          <div>
+          />
+        </div>
+
+        <div>
             <label htmlFor="reference" className="block text-sm font-medium text-gray-700">
               Référence *
             </label>
-            <input
-              type="text"
+          <input
+            type="text"
               id="reference"
               name="reference"
               value={product.reference}
               onChange={handleChange}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
               required
-            />
-          </div>
-          
-          <div>
+          />
+      </div>
+
+      <div>
             <label htmlFor="category" className="block text-sm font-medium text-gray-700">
               Catégorie *
             </label>
@@ -266,11 +266,11 @@ const NewProductForm = ({ onSuccess, onCancel, categories }: NewProductFormProps
                   >
                     +
                   </button>
-                </div>
+      </div>
               ) : (
                 <div className="flex gap-2">
-                  <input
-                    type="text"
+          <input
+            type="text"
                     value={newCategory}
                     onChange={(e) => setNewCategory(e.target.value)}
                     placeholder="Nouvelle catégorie"
@@ -299,26 +299,26 @@ const NewProductForm = ({ onSuccess, onCancel, categories }: NewProductFormProps
                 </div>
               )}
             </div>
-          </div>
-          
-          <div>
+        </div>
+
+        <div>
             <label htmlFor="tissu" className="block text-sm font-medium text-gray-700">
               Tissu
             </label>
-            <input
-              type="text"
+          <input
+            type="text"
               id="tissu"
               name="tissu"
               value={product.tissu}
               onChange={handleChange}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-            />
-          </div>
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+          />
         </div>
-        
+      </div>
+
         {/* Pricing and Inventory */}
         <div className="space-y-4">
-          <div>
+        <div>
             <label htmlFor="price" className="block text-sm font-medium text-gray-700">
               Prix *
             </label>
@@ -326,20 +326,20 @@ const NewProductForm = ({ onSuccess, onCancel, categories }: NewProductFormProps
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <span className="text-gray-500 sm:text-sm">€</span>
               </div>
-              <input
-                type="number"
+          <input
+            type="number"
                 id="price"
                 name="price"
                 min="0"
-                step="0.01"
+            step="0.01"
                 value={product.price}
                 onChange={handleChange}
                 className="pl-7 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                 required
-              />
-            </div>
-          </div>
-          
+          />
+        </div>
+      </div>
+
           <div>
             <label htmlFor="stock" className="block text-sm font-medium text-gray-700">
               Stock *
@@ -354,10 +354,10 @@ const NewProductForm = ({ onSuccess, onCancel, categories }: NewProductFormProps
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
               required
             />
-          </div>
-          
+      </div>
+
           <div className="flex items-center">
-            <input
+          <input
               type="checkbox"
               id="promotion"
               name="promotion"
@@ -368,10 +368,10 @@ const NewProductForm = ({ onSuccess, onCancel, categories }: NewProductFormProps
             <label htmlFor="promotion" className="ml-2 block text-sm text-gray-700">
               En promotion
             </label>
-          </div>
-          
+        </div>
+
           {product.promotion && (
-            <div>
+        <div>
               <label htmlFor="promoPrice" className="block text-sm font-medium text-gray-700">
                 Prix promotionnel *
               </label>
@@ -379,11 +379,11 @@ const NewProductForm = ({ onSuccess, onCancel, categories }: NewProductFormProps
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <span className="text-gray-500 sm:text-sm">€</span>
                 </div>
-                <input
-                  type="number"
+          <input
+            type="number"
                   id="promoPrice"
                   name="promoPrice"
-                  min="0"
+            min="0"
                   max={product.price}
                   step="0.01"
                   value={product.promoPrice}
@@ -396,7 +396,7 @@ const NewProductForm = ({ onSuccess, onCancel, categories }: NewProductFormProps
           )}
         </div>
       </div>
-      
+
       {/* Description */}
       <div>
         <label htmlFor="description" className="block text-sm font-medium text-gray-700">
@@ -431,10 +431,10 @@ const NewProductForm = ({ onSuccess, onCancel, categories }: NewProductFormProps
                 <label htmlFor={`size-${size}`} className="ml-2 block text-sm text-gray-700">
                   {size}
                 </label>
-              </div>
-            ))}
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
         
         {/* Colors */}
         <div>
@@ -445,7 +445,7 @@ const NewProductForm = ({ onSuccess, onCancel, categories }: NewProductFormProps
           />
         </div>
       </div>
-      
+
       {/* Image Upload */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">Images</label>
@@ -465,7 +465,7 @@ const NewProductForm = ({ onSuccess, onCancel, categories }: NewProductFormProps
               className="hidden"
             />
           </label>
-        </div>
+      </div>
 
         {/* Image Preview */}
         {imageFiles.length > 0 && (
@@ -491,7 +491,7 @@ const NewProductForm = ({ onSuccess, onCancel, categories }: NewProductFormProps
           </div>
         )}
       </div>
-      
+
       {/* Form Actions */}
       <div className="flex justify-end space-x-3">
         <button

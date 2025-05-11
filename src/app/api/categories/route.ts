@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
-import { connectDB } from '@/lib/mongodb';
+import { dbConnect } from '@/lib/mongo';
 import { Product } from '@/app/models/Product';
 
 export async function GET() {
   try {
-    await connectDB();
+    await dbConnect();
 
     // Get all unique categories from products
     const products = await Product.find({}, 'category');
@@ -25,7 +25,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    await connectDB();
+    await dbConnect();
 
     const { name } = await request.json();
 

@@ -762,7 +762,7 @@ textarea {
     border-radius: 50%;
     background: rgba(59, 93, 80, 0.2); }
 
-:root {
+  :root {
   --radius: 0.625rem;
   --background: oklch(1 0 0);
   --foreground: oklch(0.129 0.042 264.695);
@@ -797,7 +797,7 @@ textarea {
   --sidebar-ring: oklch(0.704 0.04 256.788);
 }
 
-.dark {
+  .dark {
   --background: oklch(0.129 0.042 264.695);
   --foreground: oklch(0.984 0.003 247.858);
   --card: oklch(0.208 0.042 265.755);
@@ -831,17 +831,17 @@ textarea {
   --sidebar-ring: oklch(0.551 0.027 264.364);
 }
 
-@layer base {
+  @layer base {
   * {
     @apply border-border outline-ring/50;
   }
   body {
     @apply bg-background text-foreground;
-    font-family: "Inter", sans-serif;
-    font-weight: 400;
-    line-height: 28px;
-    color: #6a6a6a;
-    font-size: 14px;
+  font-family: "Inter", sans-serif;
+  font-weight: 400;
+  line-height: 28px;
+  color: #6a6a6a;
+  font-size: 14px;
     background-color: #eff2f1;
     overflow-x: hidden;
     position: relative;
@@ -849,7 +849,7 @@ textarea {
 }
 
 @layer components {
-  .btn {
+.btn {
     @apply font-semibold py-3 px-8 rounded-full text-white bg-[#2f2f2f] border-[#2f2f2f] transition-all duration-300;
   }
   .btn:hover {

@@ -1,52 +1,52 @@
 import mongoose from 'mongoose';
 
-const MONGO_URI = process.env.MONGODB_URI || process.env.MONGO_URI || '';
+const MONGODB_URI = process.env.MONGODB_URI;
 
-if (!MONGO_URI) {
-  throw new Error('Veuillez définir la variable d\'environnement MONGODB_URI');
+// Only throw error if we're not in a build context
+if (!MONGODB_URI && process.env.NODE_ENV !== 'production') {
+  throw new Error('Please define the MONGODB_URI environment variable inside .env');
 }
 
-// Extend the global object to include mongoose
 interface MongooseCache {
   conn: typeof mongoose | null;
   promise: Promise<typeof mongoose> | null;
 }
 
-// @ts-ignore
-let globalWithMongoose = global as typeof globalThis & { mongoose: MongooseCache };
-
-if (!globalWithMongoose.mongoose) {
-  globalWithMongoose.mongoose = { conn: null, promise: null };
+declare global {
+  var mongoose: MongooseCache | undefined;
 }
 
-async function dbConnect() {
-  try {
-    if (globalWithMongoose.mongoose.conn) {
-      return globalWithMongoose.mongoose.conn;
-    }
+let cached: MongooseCache = global.mongoose || { conn: null, promise: null };
 
-    if (!globalWithMongoose.mongoose.promise) {
-      const opts = {
-        bufferCommands: false,
-      };
+if (!global.mongoose) {
+  global.mongoose = cached;
+}
 
-      globalWithMongoose.mongoose.promise = mongoose.connect(MONGO_URI, opts)
-        .then((mongoose) => {
-          const connected = true;
-          return mongoose;
-        })
-        .catch((error) => {
-          console.error('Erreur de connexion MongoDB:', error);
-          throw error;
-        });
-    }
-
-    globalWithMongoose.mongoose.conn = await globalWithMongoose.mongoose.promise;
-    return globalWithMongoose.mongoose.conn;
-  } catch (error) {
-    console.error('Erreur lors de la connexion à MongoDB:', error);
-    throw error;
+export async function dbConnect() {
+  if (!MONGODB_URI) {
+    throw new Error('MONGODB_URI is not defined');
   }
-}
 
-export default dbConnect;
+  if (cached.conn) {
+    return cached.conn;
+  }
+
+  if (!cached.promise) {
+    const opts = {
+      bufferCommands: false,
+    };
+
+    cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
+      return mongoose;
+    });
+  }
+
+  try {
+    cached.conn = await cached.promise;
+  } catch (e) {
+    cached.promise = null;
+    throw e;
+  }
+
+  return cached.conn;
+} 

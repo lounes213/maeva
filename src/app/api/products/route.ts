@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import mongoose from 'mongoose';
-import dbConnect from '@/lib/mongo';
+import {dbConnect} from '@/lib/mongo';
 import { Product } from '@/app/models/Product';
 
 // GET all products or filter by query params
@@ -122,7 +122,7 @@ export async function PUT(request: NextRequest) {
       { $set: body },
       { new: true, runValidators: true }
     );
-    
+
     if (!updatedProduct) {
       return NextResponse.json(
         { success: false, message: 'Product not found' },
@@ -162,7 +162,7 @@ export async function DELETE(request: NextRequest) {
         { status: 400 }
       );
     }
-    
+
     await dbConnect();
     const deletedProduct = await Product.findByIdAndDelete(id);
     
@@ -172,9 +172,9 @@ export async function DELETE(request: NextRequest) {
         { status: 404 }
       );
     }
-    
-    return NextResponse.json({ 
-      success: true, 
+
+    return NextResponse.json({
+      success: true,
       message: 'Product deleted successfully' 
     });
   } catch (error) {
