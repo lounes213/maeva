@@ -5,6 +5,8 @@ import ProductTable from './components/ProductTable';
 import { Product } from '@/app/types/product';
 import NewProductForm from './components/NewProductForm';
 import CategoryManager from './components/CategoryManager';
+import DashboardHeader from '../components/DashboardHeader';
+import User from '@/models/User';
 
 const ProductsPage = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -97,6 +99,7 @@ const ProductsPage = () => {
 
   return (
     <div className="container mx-auto px-4 py-8">
+    <DashboardHeader user={User}/>
       {error && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
           {error}
