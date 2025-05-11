@@ -246,6 +246,7 @@ export async function GET(req: NextRequest) {
 export async function PUT(req: NextRequest) {
   try {
     await dbConnect();
+    console.log('Connected to database for PUT request');
 
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
@@ -257,8 +258,9 @@ export async function PUT(req: NextRequest) {
     }
 
     const formData = await req.formData();
-    console.log('Received form data:', Object.fromEntries(formData.entries()));
+    console.log('Form data received:', Object.fromEntries(formData.entries()));
 
+    // Find existing product
     const existingProduct = await Product.findById(id);
     if (!existingProduct) {
       return NextResponse.json(
@@ -267,27 +269,11 @@ export async function PUT(req: NextRequest) {
       );
     }
 
-    // Handle image uploads
-    const imageFiles = formData.getAll('images') as File[];
-    let imageUrls = existingProduct.imageUrls || [];
-
-    for (const file of imageFiles) {
-      if (file && file.size > 0) {
-        try {
-          const imageUrl = await handleImageUpload(file);
-          if (imageUrl) imageUrls.push(imageUrl);
-        } catch (err: any) {
-          console.error('Error uploading image:', err);
-        }
-      }
-    }
-
-    // Process form data
+    // Create update data object
     const updateData: any = {};
 
     // Handle numeric fields
-    const numericFields = ['price', 'stock', 'sold', 'promoPrice', 'rating', 'reviewCount'];
-    numericFields.forEach(field => {
+    ['price', 'stock', 'sold', 'promoPrice', 'rating', 'reviewCount'].forEach(field => {
       const value = formData.get(field);
       if (value !== null && value !== undefined && value !== '') {
         const numValue = Number(value);
@@ -303,8 +289,7 @@ export async function PUT(req: NextRequest) {
     }
 
     // Handle string fields
-    const stringFields = ['name', 'reference', 'description', 'category', 'tissu', 'reviews', 'deliveryAddress', 'deliveryStatus'];
-    stringFields.forEach(field => {
+    ['name', 'reference', 'description', 'category', 'tissu', 'reviews', 'deliveryAddress', 'deliveryStatus'].forEach(field => {
       const value = formData.get(field);
       if (value !== null && value !== undefined) {
         updateData[field] = value.toString();
@@ -314,30 +299,64 @@ export async function PUT(req: NextRequest) {
     // Handle arrays
     const couleurs = formData.get('couleurs');
     if (couleurs) {
-      updateData.couleurs = couleurs.toString().split(',').map(c => c.trim());
+      updateData.couleurs = couleurs.toString().split(',').map(c => c.trim()).filter(Boolean);
     }
 
     const taille = formData.get('taille');
     if (taille) {
-      updateData.taille = taille.toString().split(',').map(t => t.trim());
+      updateData.taille = taille.toString().split(',').map(t => t.trim()).filter(Boolean);
     }
 
     // Handle date fields
     const deliveryDate = formData.get('deliveryDate');
     if (deliveryDate) {
-      updateData.deliveryDate = new Date(deliveryDate.toString());
+      const date = new Date(deliveryDate.toString());
+      if (!isNaN(date.getTime())) {
+        updateData.deliveryDate = date;
+      }
     }
 
-    // Add image URLs
-    updateData.imageUrls = imageUrls;
+    // Handle image uploads
+    const imageFiles = formData.getAll('images') as File[];
+    if (imageFiles.length > 0) {
+      const imageUrls = [...(existingProduct.imageUrls || [])];
+      
+      for (const file of imageFiles) {
+        if (file && file.size > 0) {
+          try {
+            const imageUrl = await handleImageUpload(file);
+            if (imageUrl) {
+              imageUrls.push(imageUrl);
+            }
+          } catch (err) {
+            console.error('Error uploading image:', err);
+          }
+        }
+      }
+      
+      updateData.imageUrls = imageUrls;
+    }
 
-    console.log('Updating product with data:', updateData);
+    console.log('Update data:', updateData);
+
+    // Validate promotion price
+    if (updateData.promotion && updateData.promoPrice) {
+      if (updateData.promoPrice >= updateData.price) {
+        return NextResponse.json(
+          { error: 'Promotional price must be less than regular price' },
+          { status: 400 }
+        );
+      }
+    }
 
     // Update product
     const updatedProduct = await Product.findByIdAndUpdate(
       id,
-      updateData,
-      { new: true, runValidators: true }
+      { $set: updateData },
+      { 
+        new: true, 
+        runValidators: true 
+      }
     );
 
     if (!updatedProduct) {
@@ -347,7 +366,18 @@ export async function PUT(req: NextRequest) {
       );
     }
 
-    return NextResponse.json({ data: updatedProduct });
+    // Format response
+    const formattedProduct = {
+      ...updatedProduct.toObject(),
+      price: Number(updatedProduct.price) || 0,
+      stock: Number(updatedProduct.stock) || 0,
+      sold: Number(updatedProduct.sold) || 0,
+      promoPrice: updatedProduct.promoPrice ? Number(updatedProduct.promoPrice) : undefined,
+      rating: updatedProduct.rating ? Number(updatedProduct.rating) : 0,
+      reviewCount: updatedProduct.reviewCount ? Number(updatedProduct.reviewCount) : 0,
+    };
+
+    return NextResponse.json({ data: formattedProduct });
 
   } catch (err: any) {
     console.error('PUT Error:', err);

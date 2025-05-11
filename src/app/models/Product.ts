@@ -20,7 +20,6 @@ interface IProduct {
   deliveryAddress?: string;
   deliveryStatus?: string;
   imageUrls?: string[];
-  images?: string[];
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -73,6 +72,7 @@ const productSchema = new Schema<IProduct>(
     sold: {
       type: Number,
       default: 0,
+      min: 0,
     },
     promotion: {
       type: Boolean,
@@ -80,11 +80,13 @@ const productSchema = new Schema<IProduct>(
     },
     promoPrice: {
       type: Number,
+      min: [0, 'Le prix promotionnel ne peut pas être négatif'],
       validate: {
         validator: function(this: IProduct, value: number) {
-          return !this.promotion || (value >= 0 && value <= this.price);
+          if (!this.promotion) return true;
+          return value >= 0 && value < this.price;
         },
-        message: 'Le prix promotionnel doit être entre 0 et le prix normal'
+        message: 'Le prix promotionnel doit être inférieur au prix normal'
       }
     },
     reviews: {
@@ -116,12 +118,6 @@ const productSchema = new Schema<IProduct>(
     imageUrls: {
       type: [String],
       default: [],
-      validate: {
-        validator: function(urls: string[]) {
-          return urls.every(url => url.startsWith('/uploads/products/'));
-        },
-        message: 'Les URLs des images doivent commencer par /uploads/products/'
-      }
     }
   },
   {
@@ -131,7 +127,7 @@ const productSchema = new Schema<IProduct>(
 
 // Add pre-save middleware to handle validation
 productSchema.pre('save', function(next) {
-  if (this.promotion && (!this.promoPrice || this.promoPrice > this.price)) {
+  if (this.promotion && (!this.promoPrice || this.promoPrice >= this.price)) {
     next(new Error('Le prix promotionnel est requis et doit être inférieur au prix normal'));
   }
   next();
