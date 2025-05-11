@@ -85,58 +85,54 @@ const NewProductForm: React.FC<ProductFormProps> = ({ initialData, onSuccess, on
   };
 
   const onSubmit = async (formData: ProductFormData) => {
-    setIsLoading(true);
-
     try {
-      const data = new FormData();
+      const submitData = new FormData();
       
-      // Add basic fields
-      data.append('name', formData.name);
-      data.append('reference', formData.reference);
-      data.append('description', formData.description);
-      data.append('price', formData.price.toString());
-      data.append('stock', formData.stock.toString());
-      data.append('category', formData.category);
-      if (formData.tissu) data.append('tissu', formData.tissu);
-      if (selectedColors.length) data.append('couleurs', selectedColors.join(','));
-      if (formData.promotion) {
-        data.append('promotion', 'true');
-        if (formData.promoPrice) data.append('promoPrice', formData.promoPrice.toString());
-      }
-
-      // Add images
-      selectedImages.forEach(image => {
-        data.append('images', image);
+      // Add all form fields
+      Object.entries(formData).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          if (Array.isArray(value)) {
+            submitData.append(key, value.join(','));
+          } else {
+            submitData.append(key, value.toString());
+          }
+        }
       });
 
+      // Add images
+      if (selectedImages.length > 0) {
+        selectedImages.forEach((file) => {
+          submitData.append('images', file);
+        });
+      }
+
       console.log('Submitting form data:', {
-        fields: Object.fromEntries(data.entries()),
-        images: selectedImages.map(img => ({
-          name: img.name,
-          size: img.size,
-          type: img.type
-        }))
+        fields: Object.fromEntries(submitData.entries()),
+        images: selectedImages.map(img => img.name)
       });
 
       const response = await fetch('/api/products', {
         method: 'POST',
-        body: data,
+        body: submitData,
       });
 
-      const responseData = await response.json();
-
       if (!response.ok) {
-        throw new Error(responseData.error || 'Failed to create product');
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to create product');
       }
 
-      toast.success('Product created successfully');
-      router.push('/dashboard/products');
-      router.refresh();
+      const data = await response.json();
+      console.log('Product created:', data);
+
+      toast.success('Produit créé avec succès!');
+      if (onSuccess) {
+        onSuccess();
+      } else {
+        router.push('/dashboard/products');
+      }
     } catch (error: any) {
       console.error('Error creating product:', error);
-      toast.error(error.message || 'Failed to create product');
-    } finally {
-      setIsLoading(false);
+      toast.error(error.message || 'Une erreur est survenue lors de la création du produit');
     }
   };
 

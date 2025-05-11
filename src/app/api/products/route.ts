@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongo';
 import { Product } from '@/app/models/Product';
 import path from 'path';
-import { writeFile } from 'fs/promises';
+import { writeFile, mkdir } from 'fs/promises';
 import { v4 as uuidv4 } from 'uuid';
 import mime from 'mime-types';
 import { ALLOWED_FILE_TYPES, MAX_FILE_SIZE } from '@/lib/constant';
@@ -24,15 +24,30 @@ async function handleImageUpload(imageFile: File | null): Promise<string | undef
     throw new Error(`Only ${ALLOWED_FILE_TYPES.join(', ')} files are allowed`);
   }
 
-  const uploadDir = path.join(process.cwd(), 'public/uploads/products');
+  // Create upload directory if it doesn't exist
+  const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'products');
   try {
-    await writeFile(path.join(uploadDir, imageFile.name), Buffer.from(await imageFile.arrayBuffer()));
+    await mkdir(uploadDir, { recursive: true });
   } catch (err) {
-    console.error('Error processing image:', err);
-    return undefined;
+    console.error('Error creating upload directory:', err);
   }
 
-  return `/uploads/products/${imageFile.name}`;
+  // Generate unique filename
+  const uniqueFilename = `${uuidv4()}-${imageFile.name}`;
+  const filepath = path.join(uploadDir, uniqueFilename);
+
+  try {
+    // Convert File to Buffer and save
+    const bytes = await imageFile.arrayBuffer();
+    const buffer = Buffer.from(bytes);
+    await writeFile(filepath, buffer);
+    
+    // Return the public URL path
+    return `/uploads/products/${uniqueFilename}`;
+  } catch (err) {
+    console.error('Error saving image:', err);
+    return undefined;
+  }
 }
 
 async function cleanupOldImage(imageUrl: string | undefined) {
@@ -103,7 +118,9 @@ export async function POST(req: NextRequest) {
     // Process images
     const imageFiles = formData.getAll('images') as File[];
     const imageUrls: string[] = [];
-
+    
+    console.log('Processing images:', imageFiles.length);
+    
     for (const file of imageFiles) {
       if (!file || !(file instanceof File)) {
         console.warn('Invalid file:', file);
@@ -111,8 +128,10 @@ export async function POST(req: NextRequest) {
       }
 
       try {
+        console.log('Processing image:', file.name);
         const imageUrl = await handleImageUpload(file);
         if (imageUrl) {
+          console.log('Image uploaded successfully:', imageUrl);
           imageUrls.push(imageUrl);
         }
       } catch (error) {
@@ -123,6 +142,8 @@ export async function POST(req: NextRequest) {
         );
       }
     }
+
+    console.log('Processed image URLs:', imageUrls);
 
     // Create product data
     const productData = {
