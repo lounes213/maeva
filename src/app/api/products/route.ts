@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
   try {
     await dbConnect();
     const formData = await req.formData();
-
+    
     // Required fields validation
     const requiredFields = ['name', 'description', 'price', 'stock', 'category', 'reference'];
     for (const field of requiredFields) {
@@ -103,13 +103,23 @@ export async function POST(req: NextRequest) {
     const imageFiles = formData.getAll('images') as File[];
     const uploadedImages: string[] = [];
 
+    console.log('Processing images:', imageFiles.length); // Debug log
+
     for (const file of imageFiles) {
       if (file && file.size > 0) {
         try {
+          console.log('Processing file:', file.name, file.size); // Debug log
           const imageUrl = await handleImageUpload(file);
-          if (imageUrl) uploadedImages.push(imageUrl);
+          if (imageUrl) {
+            console.log('Image uploaded successfully:', imageUrl); // Debug log
+            uploadedImages.push(imageUrl);
+          }
         } catch (err: any) {
           console.error('Error uploading image:', err);
+          return NextResponse.json(
+            { error: `Erreur lors du téléchargement de l'image: ${err.message}` },
+            { status: 400 }
+          );
         }
       }
     }
@@ -136,6 +146,8 @@ export async function POST(req: NextRequest) {
       deliveryStatus: formData.get('deliveryStatus') || '',
       imageUrls: uploadedImages,
     });
+
+    console.log('Saving product with images:', uploadedImages); // Debug log
 
     const savedProduct = await newProduct.save();
     return NextResponse.json({ data: savedProduct }, { status: 201 });

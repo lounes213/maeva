@@ -40,10 +40,13 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData, onSuccess, onCan
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    setSelectedImages(prev => [...prev, ...files]);
-    
-    const newPreviewUrls = files.map(file => URL.createObjectURL(file));
-    setPreviewUrls(prev => [...prev, ...newPreviewUrls]);
+    if (files.length > 0) {
+      setSelectedImages(prev => [...prev, ...files]);
+      
+      // Create preview URLs for the new files
+      const newPreviewUrls = files.map(file => URL.createObjectURL(file));
+      setPreviewUrls(prev => [...prev, ...newPreviewUrls]);
+    }
   };
 
   const removeImage = (index: number) => {
@@ -81,7 +84,19 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData, onSuccess, onCan
       if (key === 'promoPrice' && !processedData.promotion) {
         return; // Ne pas inclure promoPrice si promotion est false
       }
-      formData.append(key, processedData[key]);
+      if (key === 'couleurs') {
+        // Handle colors array
+        processedData[key].forEach((color: string) => {
+          formData.append('couleurs', color);
+        });
+      } else if (key === 'taille') {
+        // Handle sizes array
+        processedData[key].forEach((size: string) => {
+          formData.append('taille', size);
+        });
+      } else {
+        formData.append(key, processedData[key]);
+      }
     });
 
     // Ajouter les fichiers d'images
@@ -93,20 +108,26 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData, onSuccess, onCan
       const url = initialData ? `/api/products?id=${initialData._id}` : '/api/products';
       const method = initialData ? 'PUT' : 'POST';
 
+      console.log('Sending form data:', {
+        images: selectedImages.length,
+        data: Object.fromEntries(formData.entries())
+      });
+
       const response = await fetch(url, {
         method,
         body: formData
       });
 
       if (!response.ok) {
-        throw new Error('Erreur lors de l\'enregistrement du produit');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erreur lors de l\'enregistrement du produit');
       }
 
       toast.success(initialData ? 'Produit mis à jour avec succès' : 'Produit créé avec succès');
       onSuccess();
     } catch (error) {
       console.error('Erreur lors de l\'enregistrement :', error);
-      toast.error('Une erreur est survenue');
+      toast.error(error instanceof Error ? error.message : 'Une erreur est survenue');
     } finally {
       setIsLoading(false);
     }
@@ -286,40 +307,60 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData, onSuccess, onCan
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Images</label>
-        <div className="grid grid-cols-4 gap-4">
-          {previewUrls.map((url, index) => (
-            <div key={index} className="relative group">
-              <div className="aspect-w-1 aspect-h-1 w-full overflow-hidden rounded-lg bg-gray-100">
-                <Image
-                  src={url}
-                  alt={`Preview ${index + 1}`}
-                  layout="fill"
-                  objectFit="cover"
-                  className="object-center"
-                />
-              </div>
-              <button
-                type="button"
-                onClick={() => removeImage(index)}
-                className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Images du produit
+        </label>
+        <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+          <div className="space-y-1 text-center">
+            <FiUpload className="mx-auto h-12 w-12 text-gray-400" />
+            <div className="flex text-sm text-gray-600">
+              <label
+                htmlFor="file-upload"
+                className="relative cursor-pointer bg-white rounded-md font-medium text-indigo-600 hover:text-indigo-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-indigo-500"
               >
-                <FiX className="w-4 h-4" />
-              </button>
+                <span>Télécharger des images</span>
+                <input
+                  id="file-upload"
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  className="sr-only"
+                  onChange={handleImageChange}
+                />
+              </label>
+              <p className="pl-1">ou glisser-déposer</p>
             </div>
-          ))}
-          <label className="cursor-pointer border-2 border-dashed border-gray-300 rounded-lg p-4 flex flex-col items-center justify-center hover:border-indigo-500 transition-colors">
-            <FiUpload className="w-8 h-8 text-gray-400" />
-            <span className="mt-2 text-sm text-gray-500">Ajouter des images</span>
-            <input
-              type="file"
-              multiple
-              accept="image/*"
-              onChange={handleImageChange}
-              className="hidden"
-            />
-          </label>
+            <p className="text-xs text-gray-500">
+              PNG, JPG, GIF jusqu'à 10MB
+            </p>
+          </div>
         </div>
+
+        {/* Image previews */}
+        {previewUrls.length > 0 && (
+          <div className="mt-4 grid grid-cols-4 gap-4">
+            {previewUrls.map((url, index) => (
+              <div key={index} className="relative group">
+                <div className="aspect-square rounded-lg overflow-hidden bg-gray-100">
+                  <Image
+                    src={url}
+                    alt={`Preview ${index + 1}`}
+                    width={200}
+                    height={200}
+                    className="object-cover w-full h-full"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => removeImage(index)}
+                  className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <FiX className="h-4 w-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-6">
