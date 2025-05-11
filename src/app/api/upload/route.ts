@@ -1,8 +1,13 @@
 import { NextResponse } from 'next/server';
-import { v4 as uuidv4 } from 'uuid';
-import path from 'path';
-import fs from 'fs/promises';
+import { v2 as cloudinary } from 'cloudinary';
 import { MAX_FILE_SIZE } from '@/lib/constant';
+
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
 export async function POST(request: Request) {
   try {
@@ -14,14 +19,6 @@ export async function POST(request: Request) {
         { error: 'No files uploaded' },
         { status: 400 }
       );
-    }
-
-    // Create upload directory if it doesn't exist
-    const uploadDir = path.join(process.cwd(), 'public/uploads/products');
-    try {
-      await fs.access(uploadDir);
-    } catch {
-      await fs.mkdir(uploadDir, { recursive: true });
     }
 
     const uploadedUrls: string[] = [];
@@ -44,22 +41,45 @@ export async function POST(request: Request) {
         );
       }
 
-      // Generate unique filename
-      const buffer = await file.arrayBuffer();
-      const ext = path.extname(file.name) || '.jpg'; // Default to .jpg if extension is missing
-      const filename = `${uuidv4()}${ext}`;
-      const filepath = path.join(uploadDir, filename);
+      try {
+        // Convert file to base64 string for Cloudinary upload
+        const arrayBuffer = await file.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        const base64String = `data:${file.type};base64,${buffer.toString('base64')}`;
 
-      // Save file
-      await fs.writeFile(filepath, Buffer.from(buffer));
-      
-      // Add URL to response
-      uploadedUrls.push(`/uploads/products/${filename}`);
+        // Upload to Cloudinary
+        const result = await new Promise((resolve, reject) => {
+          cloudinary.uploader.upload(
+            base64String,
+            {
+              folder: 'maiva-shop/products',
+              resource_type: 'auto',
+            },
+            (error, result) => {
+              if (error) {
+                console.error('Cloudinary upload error:', error);
+                reject(error);
+              } else {
+                resolve(result);
+              }
+            }
+          );
+        });
+
+        // Add the secure URL from Cloudinary to our response
+        uploadedUrls.push((result as any).secure_url);
+      } catch (uploadError) {
+        console.error('Error uploading to Cloudinary:', uploadError);
+        return NextResponse.json(
+          { error: 'Failed to upload image to Cloudinary' },
+          { status: 500 }
+        );
+      }
     }
 
     return NextResponse.json(uploadedUrls);
   } catch (error: any) {
-    console.error('Error uploading files:', error);
+    console.error('Error processing upload:', error);
     return NextResponse.json(
       { error: error.message || 'Failed to upload files' },
       { status: 500 }

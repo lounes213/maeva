@@ -95,11 +95,18 @@ const ProductTable = ({
                           <img
                             src={product.imageUrls[0]}
                             alt={product.name}
-                    className="h-10 w-10 object-cover rounded"
+                            className="h-10 w-10 object-cover rounded"
+                            onError={(e) => {
+                              console.log('Image error:', product.imageUrls && product.imageUrls[0] ? product.imageUrls[0] : 'No image URL');
+                              // Fallback to a placeholder image
+                              e.currentTarget.src = 'https://res.cloudinary.com/demo/image/upload/v1312461204/sample.jpg';
+                            }}
                           />
                         ) : (
-                  <div className="h-10 w-10 bg-gray-200 rounded"></div>
-                )}
+                          <div className="h-10 w-10 bg-gray-200 rounded flex items-center justify-center text-gray-500">
+                            <span className="text-xs">No image</span>
+                          </div>
+                        )}
               </td>
               <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-gray-900">{product.name}</div>

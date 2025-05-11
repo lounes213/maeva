@@ -19,6 +19,10 @@ const nextConfig = {
         protocol: 'https',
         hostname: '**',
       },
+      {
+        protocol: 'http',
+        hostname: 'localhost',
+      }
     ],
     unoptimized: process.env.NODE_ENV === 'development',
   },
