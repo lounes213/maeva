@@ -303,7 +303,7 @@ export default function ProductManager() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Basic Information */}
                 <div>
-                  <Label htmlFor="name">Name*</Label>
+                  <Label from="name">Name*</Label>
                   <Input
                     id="name"
                     name="name"
@@ -313,7 +313,7 @@ export default function ProductManager() {
                   {errors.name && <p className="text-red-500 text-sm">{errors.name}</p>}
                 </div>
                 <div>
-                  <Label htmlFor="reference">Reference*</Label>
+                  <Label from="reference">Reference*</Label>
                   <Input
                     id="reference"
                     name="reference"
@@ -323,7 +323,7 @@ export default function ProductManager() {
                   {errors.reference && <p className="text-red-500 text-sm">{errors.reference}</p>}
                 </div>
                 <div className="md:col-span-2">
-                  <Label htmlFor="description">Description*</Label>
+                  <Label from="description">Description*</Label>
                   <Input
                     id="description"
                     name="description"
@@ -332,7 +332,7 @@ export default function ProductManager() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="price">Price*</Label>
+                  <Label from="price">Price*</Label>
                   <Input
                     id="price"
                     name="price"
@@ -345,7 +345,7 @@ export default function ProductManager() {
                   {errors.price && <p className="text-red-500 text-sm">{errors.price}</p>}
                 </div>
                 <div>
-                  <Label htmlFor="stock">Stock*</Label>
+                  <Label from="stock">Stock*</Label>
                   <Input
                     id="stock"
                     name="stock"
@@ -357,7 +357,7 @@ export default function ProductManager() {
                   {errors.stock && <p className="text-red-500 text-sm">{errors.stock}</p>}
                 </div>
                 <div>
-                  <Label htmlFor="category">Category*</Label>
+                  <Label from="category">Category*</Label>
                   <Input
                     id="category"
                     name="category"
@@ -367,7 +367,7 @@ export default function ProductManager() {
                   {errors.category && <p className="text-red-500 text-sm">{errors.category}</p>}
                 </div>
                 <div>
-                  <Label htmlFor="tissu">Fabric</Label>
+                  <Label from="tissu">Fabric</Label>
                   <Input
                     id="tissu"
                     name="tissu"
@@ -432,7 +432,7 @@ export default function ProductManager() {
                 
                 {/* Sales and Promotion */}
                 <div>
-                  <Label htmlFor="sold">Sold</Label>
+                  <Label from="sold">Sold</Label>
                   <Input
                     id="sold"
                     name="sold"
@@ -451,11 +451,11 @@ export default function ProductManager() {
                     onChange={handleCheckboxChange}
                     className="h-4 w-4"
                   />
-                  <Label htmlFor="promotion">Promotion</Label>
+                  <Label from="promotion">Promotion</Label>
                 </div>
                 {formData.promotion && (
                   <div>
-                    <Label htmlFor="promoPrice">Promo Price*</Label>
+                    <Label from="promoPrice">Promo Price*</Label>
                     <Input
                       id="promoPrice"
                       name="promoPrice"
@@ -471,7 +471,7 @@ export default function ProductManager() {
                 
                 {/* Reviews */}
                 <div>
-                  <Label htmlFor="rating">Rating</Label>
+                  <Label from="rating">Rating</Label>
                   <Input
                     id="rating"
                     name="rating"
@@ -485,7 +485,7 @@ export default function ProductManager() {
                   {errors.rating && <p className="text-red-500 text-sm">{errors.rating}</p>}
                 </div>
                 <div>
-                  <Label htmlFor="reviewCount">Review Count</Label>
+                  <Label from="reviewCount">Review Count</Label>
                   <Input
                     id="reviewCount"
                     name="reviewCount"
@@ -496,7 +496,7 @@ export default function ProductManager() {
                   />
                 </div>
                 <div className="md:col-span-2">
-                  <Label htmlFor="reviews">Reviews</Label>
+                  <Label from="reviews">Reviews</Label>
                   <Input
                     id="reviews"
                     name="reviews"
@@ -507,7 +507,7 @@ export default function ProductManager() {
                 
                 {/* Delivery Information */}
                 <div>
-                  <Label htmlFor="deliveryDate">Delivery Date</Label>
+                  <Label from="deliveryDate">Delivery Date</Label>
                   <Input
                     id="deliveryDate"
                     name="deliveryDate"
@@ -517,7 +517,7 @@ export default function ProductManager() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="deliveryStatus">Delivery Status</Label>
+                  <Label from="deliveryStatus">Delivery Status</Label>
                   <Select 
                     value={formData.deliveryStatus} 
                     onValueChange={(value: string) => handleSelectChange('deliveryStatus', value)}
@@ -533,7 +533,7 @@ export default function ProductManager() {
                   </Select>
                 </div>
                 <div className="md:col-span-2">
-                  <Label htmlFor="deliveryAddress">Delivery Address</Label>
+                  <Label from="deliveryAddress">Delivery Address</Label>
                   <Input
                     id="deliveryAddress"
                     name="deliveryAddress"
