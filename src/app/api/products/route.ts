@@ -168,7 +168,17 @@ export async function GET(req: NextRequest) {
           { status: 404 }
         );
       }
-      return NextResponse.json({ data: product });
+      // Ensure imageUrls are absolute URLs
+      const productData = product.toObject();
+      if (productData.imageUrls && productData.imageUrls.length > 0) {
+        productData.imageUrls = productData.imageUrls.map((url: string) => {
+          if (url.startsWith('/')) {
+            return url;
+          }
+          return `/${url}`;
+        });
+      }
+      return NextResponse.json({ data: productData });
     }
 
     const query: any = {};

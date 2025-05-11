@@ -75,6 +75,7 @@ export default function ProductDetailsPage() {
         if (!data.data) {
           throw new Error('Product data not found');
         }
+        console.log('Product data:', data.data); // Debug log
         setProduct(data.data);
       } catch (error) {
         console.error('Error fetching product:', error);
@@ -358,14 +359,21 @@ export default function ProductDetailsPage() {
         <div>
           <div className="aspect-square rounded-xl overflow-hidden bg-gray-100 mb-4">
             {product.imageUrls && product.imageUrls.length > 0 ? (
-              <Image
-                src={product.imageUrls[selectedImage]}
-                alt={product.name}
-                width={800}
-                height={800}
-                className="object-contain w-full h-full"
-                unoptimized
-              />
+              <div className="relative w-full h-full">
+                <Image
+                  src={product.imageUrls[selectedImage]}
+                  alt={product.name}
+                  fill
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                  className="object-contain"
+                  unoptimized
+                  priority
+                  onError={(e) => {
+                    console.error('Image load error:', e);
+                    toast.error('Erreur lors du chargement de l\'image');
+                  }}
+                />
+              </div>
             ) : (
               <div className="w-full h-full flex items-center justify-center text-gray-400">
                 Aucune image disponible
@@ -379,16 +387,20 @@ export default function ProductDetailsPage() {
                 <button
                   key={i}
                   onClick={() => setSelectedImage(i)}
-                  className={`aspect-square rounded-lg overflow-hidden border bg-gray-100
+                  className={`relative aspect-square rounded-lg overflow-hidden border bg-gray-100
                     ${selectedImage === i ? 'ring-2 ring-indigo-600' : 'hover:ring-1 hover:ring-indigo-300'}`}
                 >
                   <Image 
                     src={url} 
                     alt={`${product.name} - image ${i+1}`} 
-                    width={150} 
-                    height={150} 
-                    className="object-cover w-full h-full"
+                    fill
+                    sizes="(max-width: 768px) 25vw, (max-width: 1200px) 20vw, 15vw"
+                    className="object-cover"
                     unoptimized
+                    onError={(e) => {
+                      console.error('Thumbnail load error:', e);
+                      toast.error('Erreur lors du chargement de la miniature');
+                    }}
                   />
                 </button>
               ))}
