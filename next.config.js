@@ -13,6 +13,7 @@ const nextConfig = {
   
   // Image configuration
   images: {
+    domains: ['maeva-gamma.vercel.app', 'localhost'],
     remotePatterns: [
       {
         protocol: 'https',

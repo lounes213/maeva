@@ -366,7 +366,6 @@ export default function ProductDetailsPage() {
                   fill
                   sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                   className="object-contain"
-                  unoptimized
                   priority
                   onError={(e) => {
                     console.error('Image load error:', e);
@@ -396,7 +395,6 @@ export default function ProductDetailsPage() {
                     fill
                     sizes="(max-width: 768px) 25vw, (max-width: 1200px) 20vw, 15vw"
                     className="object-cover"
-                    unoptimized
                     onError={(e) => {
                       console.error('Thumbnail load error:', e);
                       toast.error('Erreur lors du chargement de la miniature');
