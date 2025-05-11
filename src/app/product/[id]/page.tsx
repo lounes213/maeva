@@ -47,6 +47,7 @@ export default function ProductDetailsPage() {
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [addedToCart, setAddedToCart] = useState(false);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+  const [imageError, setImageError] = useState(false);
 
   const handleReviewSubmitted = () => {
     // Rafraîchir les données du produit après l'ajout d'un avis
@@ -358,7 +359,7 @@ export default function ProductDetailsPage() {
         {/* Left column - Images */}
         <div>
           <div className="aspect-square rounded-xl overflow-hidden bg-gray-100 mb-4">
-            {product.imageUrls && product.imageUrls.length > 0 ? (
+            {product.imageUrls && product.imageUrls.length > 0 && !imageError ? (
               <div className="relative w-full h-full">
                 <Image
                   src={product.imageUrls[selectedImage]}
@@ -367,20 +368,23 @@ export default function ProductDetailsPage() {
                   sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                   className="object-contain"
                   priority
-                  onError={(e) => {
-                    console.error('Image load error:', e);
-                    toast.error('Erreur lors du chargement de l\'image');
+                  onError={() => {
+                    console.error('Image load error');
+                    setImageError(true);
                   }}
                 />
               </div>
             ) : (
               <div className="w-full h-full flex items-center justify-center text-gray-400">
-                Aucune image disponible
+                <div className="text-center">
+                  <div className="text-4xl mb-2">📷</div>
+                  <p>Aucune image disponible</p>
+                </div>
               </div>
             )}
           </div>
           
-          {product.imageUrls && product.imageUrls.length > 0 && (
+          {product.imageUrls && product.imageUrls.length > 0 && !imageError ? (
             <div className="grid grid-cols-4 gap-3">
               {product.imageUrls.map((url, i) => (
                 <button
@@ -395,15 +399,15 @@ export default function ProductDetailsPage() {
                     fill
                     sizes="(max-width: 768px) 25vw, (max-width: 1200px) 20vw, 15vw"
                     className="object-cover"
-                    onError={(e) => {
-                      console.error('Thumbnail load error:', e);
-                      toast.error('Erreur lors du chargement de la miniature');
+                    onError={() => {
+                      console.error('Thumbnail load error');
+                      setImageError(true);
                     }}
                   />
                 </button>
               ))}
             </div>
-          )}
+          ) : null}
         </div>
 
         {/* Right column - Product info */}

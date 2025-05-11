@@ -20,6 +20,7 @@ const nextConfig = {
         hostname: '**',
       },
     ],
+    unoptimized: process.env.NODE_ENV === 'development',
   },
   
   // Server runtime configuration
