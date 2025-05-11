@@ -1,652 +1,388 @@
 'use client';
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@radix-ui/react-select'
-import { Trash, Edit, X, Check, Star, Truck, Calendar, Image } from 'lucide-react'
-import { SetStateAction, useState } from 'react'
-import { Label } from 'recharts'
 
-type Product = {
-  id: string
-  name: string
-  reference: string
-  description: string
-  price: number
-  stock: number
-  category: string
-  tissu?: string
-  couleurs?: string[]
-  taille?: string[]
-  sold?: number
-  promotion?: boolean
-  promoPrice?: number
-  reviews?: string
-  rating?: number
-  reviewCount?: number
-  deliveryDate?: string
-  deliveryAddress?: string
-  deliveryStatus?: string
-  imageUrls?: string[]
-  createdAt?: string
-  updatedAt?: string
+import { useState, useEffect, SetStateAction} from 'react';
+import { PlusCircle, Filter, Search, RefreshCw } from 'lucide-react';
+import ProductTable from './components/ProductTable';
+import Modal from './components/modal';
+import NewProductForm from './components/NewProductForm';
+import UpdateProductForm from './components/updateProduct';
+import { toast } from 'react-hot-toast';
+
+interface Product {
+  _id: string;
+  name: string;
+  reference: string;
+  description: string;
+  price: number;
+  stock: number;
+  category: string;
+  tissu?: string;
+  couleurs?: string[];
+  taille?: string[];
+  imageUrls: string[];
+  promotion?: boolean;
+  promoPrice?: number;
+  sold?: number;
+  rating?: number;
+  reviewCount?: number;
+  reviews?: string;
+  deliveryDate?: string;
+  deliveryAddress?: string;
+  deliveryStatus?: string;
 }
 
-const deliveryStatuses = [
-  'en attente',
-  'expédié',
-  'livré',
-  'annulé',
-  'retourné'
-]
+const ProductPage = () => {
+  // State for product data and UI controls
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  // Modals
+  const [isNewModalOpen, setIsNewModalOpen] = useState(false);
+  const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [currentProduct, setCurrentProduct] = useState<Product | null>(null);
+  
+  // Filter states
+  const [searchTerm, setSearchTerm] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('');
+  const [promotionFilter, setPromotionFilter] = useState('');
+  const [categories, setCategories] = useState<string[]>([]);
+  
+  // Pagination
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalProducts, setTotalProducts] = useState(0);
+  
+  // Sorting
+  const [sortBy, setSortBy] = useState('createdAt');
+  const [sortOrder, setSortOrder] = useState('desc');
 
-export default function ProductManager() {
-  const [products, setProducts] = useState<Product[]>([
-    {
-      id: '1',
-      name: 'Chemise en coton',
-      reference: 'CH-1001',
-      description: 'Chemise élégante en coton biologique',
-      price: 59.99,
-      stock: 100,
-      category: 'Vêtements',
-      tissu: 'Coton',
-      couleurs: ['Blanc', 'Bleu', 'Noir'],
-      taille: ['S', 'M', 'L', 'XL'],
-      sold: 25,
-      promotion: true,
-      promoPrice: 49.99,
-      rating: 4.5,
-      reviewCount: 12,
-      deliveryStatus: 'livré',
-      imageUrls: ['chemise1.jpg', 'chemise2.jpg']
-    },
-    {
-      id: '2',
-      name: 'Pantalon en lin',
-      reference: 'PN-2001',
-      description: 'Pantalon décontracté en lin',
-      price: 79.99,
-      stock: 50,
-      category: 'Vêtements',
-      tissu: 'Lin',
-      couleurs: ['Beige', 'Marron'],
-      taille: ['M', 'L', 'XL'],
-      rating: 4.2,
-      reviewCount: 8,
-      deliveryStatus: 'expédié',
-      imageUrls: ['pantalon1.jpg']
-    }
-  ])
-
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null)
-  const [isCreating, setIsCreating] = useState(false)
-  const [formData, setFormData] = useState<Omit<Product, 'id'>>({
-    name: '',
-    reference: '',
-    description: '',
-    price: 0,
-    stock: 0,
-    category: '',
-    tissu: '',
-    couleurs: [],
-    taille: [],
-    sold: 0,
-    promotion: false,
-    promoPrice: undefined,
-    reviews: '',
-    rating: 0,
-    reviewCount: 0,
-    deliveryDate: '',
-    deliveryAddress: '',
-    deliveryStatus: '',
-    imageUrls: []
-  })
-  const [errors, setErrors] = useState<Record<string, string>>({})
-  const [currentColorInput, setCurrentColorInput] = useState('')
-  const [currentSizeInput, setCurrentSizeInput] = useState('')
-  const [currentImageInput, setCurrentImageInput] = useState('')
-
-  const validateForm = () => {
-    const newErrors: Record<string, string> = {}
-    if (!formData.name.trim()) newErrors.name = 'Name is required'
-    if (!formData.reference.trim()) newErrors.reference = 'Reference is required'
-    if (formData.price <= 0) newErrors.price = 'Price must be greater than 0'
-    if (formData.stock < 0) newErrors.stock = 'Stock cannot be negative'
-    if (!formData.category.trim()) newErrors.category = 'Category is required'
-    if (formData.promotion && (!formData.promoPrice || formData.promoPrice >= formData.price)) {
-      newErrors.promoPrice = 'Promo price must be less than regular price'
-    }
-    if (formData.rating && (formData.rating < 0 || formData.rating > 5)) {
-      newErrors.rating = 'Rating must be between 0 and 5'
-    }
-
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target
-    setFormData(prev => ({
-      ...prev,
-      [name]: name === 'price' || name === 'stock' || name === 'sold' || name === 'rating' || name === 'reviewCount' || name === 'promoPrice' 
-        ? parseFloat(value) || 0 
-        : value
-    }))
-  }
-
-  const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, checked } = e.target
-    setFormData(prev => ({
-      ...prev,
-      [name]: checked
-    }))
-  }
-
-  const handleSelectChange = (name: string, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }))
-  }
-
-  const addColor = () => {
-    if (currentColorInput.trim() && !formData.couleurs?.includes(currentColorInput.trim())) {
-      setFormData(prev => ({
-        ...prev,
-        couleurs: [...(prev.couleurs || []), currentColorInput.trim()]
-      }))
-      setCurrentColorInput('')
-    }
-  }
-
-  const removeColor = (color: string) => {
-    setFormData(prev => ({
-      ...prev,
-      couleurs: prev.couleurs?.filter(c => c !== color) || []
-    }))
-  }
-
-  const addSize = () => {
-    if (currentSizeInput.trim() && !formData.taille?.includes(currentSizeInput.trim())) {
-      setFormData(prev => ({
-        ...prev,
-        taille: [...(prev.taille || []), currentSizeInput.trim()]
-      }))
-      setCurrentSizeInput('')
-    }
-  }
-
-  const removeSize = (size: string) => {
-    setFormData(prev => ({
-      ...prev,
-      taille: prev.taille?.filter(t => t !== size) || []
-    }))
-  }
-
-  const addImage = () => {
-    if (currentImageInput.trim()) {
-      setFormData(prev => ({
-        ...prev,
-        imageUrls: [...(prev.imageUrls || []), currentImageInput.trim()]
-      }))
-      setCurrentImageInput('')
-    }
-  }
-
-  const removeImage = (image: string) => {
-    setFormData(prev => ({
-      ...prev,
-      imageUrls: prev.imageUrls?.filter(i => i !== image) || []
-    }))
-  }
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!validateForm()) return
-
-    if (editingProduct) {
-      // Update existing product
-      setProducts(products.map(p => 
-        p.id === editingProduct.id ? { ...formData, id: editingProduct.id } : p
-      ))
-      setEditingProduct(null)
-    } else {
-      // Add new product
-      const newProduct = {
-        ...formData,
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+  // Fetch products with filters, pagination, and sorting
+  const fetchProducts = async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      // Build query string with all filters
+      const queryParams = new URLSearchParams();
+      
+      if (searchTerm) queryParams.append('search', searchTerm);
+      if (categoryFilter) queryParams.append('category', categoryFilter);
+      if (promotionFilter) queryParams.append('promotion', promotionFilter);
+      
+      queryParams.append('page', page.toString());
+      queryParams.append('limit', limit.toString());
+      queryParams.append('sortBy', sortBy);
+      queryParams.append('sortOrder', sortOrder);
+      
+      const response = await fetch(`/api/products?${queryParams.toString()}`);
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to fetch products');
       }
-      setProducts([...products, newProduct])
-      setIsCreating(false)
+      
+      setProducts(data.data);
+      setTotalPages(data.pagination?.pages || 1);
+      setTotalProducts(data.pagination?.total || 0);
+    } catch (err: any) {
+      setError(err.message);
+      toast.error('Erreur lors du chargement des produits');
+    } finally {
+      setLoading(false);
     }
-    resetForm()
-  }
+  };
 
-  const handleEdit = (product: Product) => {
-    setEditingProduct(product)
-    setFormData({
-      name: product.name,
-      reference: product.reference,
-      description: product.description,
-      price: product.price,
-      stock: product.stock,
-      category: product.category,
-      tissu: product.tissu || '',
-      couleurs: product.couleurs || [],
-      taille: product.taille || [],
-      sold: product.sold || 0,
-      promotion: product.promotion || false,
-      promoPrice: product.promoPrice,
-      reviews: product.reviews || '',
-      rating: product.rating || 0,
-      reviewCount: product.reviewCount || 0,
-      deliveryDate: product.deliveryDate || '',
-      deliveryAddress: product.deliveryAddress || '',
-      deliveryStatus: product.deliveryStatus || '',
-      imageUrls: product.imageUrls || []
-    })
-  }
+  // Fetch categories (only once)
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await fetch('/api/categories');
+        const data = await response.json();
+        if (data.success) {
+          setCategories(data.data);
+        } else {
+          // If categories API fails, try to get categories from products
+          const productsResponse = await fetch('/api/products');
+          const productsData = await productsResponse.json();
+          if (productsData.success) {
+            const uniqueCategories = Array.from(
+              new Set(productsData.data.map((product: Product) => product.category))
+            ).filter(Boolean) as string[];
+            setCategories(uniqueCategories);
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching categories:', err);
+        // Fallback to getting categories from products
+        try {
+          const productsResponse = await fetch('/api/products');
+          const productsData = await productsResponse.json();
+          if (productsData.success) {
+            const uniqueCategories = Array.from(
+              new Set(productsData.data.map((product: Product) => product.category))
+            ).filter(Boolean) as string[];
+            setCategories(uniqueCategories);
+          }
+        } catch (fallbackErr) {
+          console.error('Error fetching categories from products:', fallbackErr);
+        }
+      }
+    };
+    
+    fetchCategories();
+  }, []);
 
-  const handleDelete = (id: string) => {
-    setProducts(products.filter(p => p.id !== id))
-  }
+  // Fetch products on mount and when filters/pagination/sorting change
+  useEffect(() => {
+    fetchProducts();
+  }, [page, limit, sortBy, sortOrder, categoryFilter, promotionFilter]);
 
-  const resetForm = () => {
-    setFormData({
-      name: '',
-      reference: '',
-      description: '',
-      price: 0,
-      stock: 0,
-      category: '',
-      tissu: '',
-      couleurs: [],
-      taille: [],
-      sold: 0,
-      promotion: false,
-      promoPrice: undefined,
-      reviews: '',
-      rating: 0,
-      reviewCount: 0,
-      deliveryDate: '',
-      deliveryAddress: '',
-      deliveryStatus: '',
-      imageUrls: []
-    })
-    setErrors({})
-    setCurrentColorInput('')
-    setCurrentSizeInput('')
-    setCurrentImageInput('')
-  }
+  // Search products (with debounce)
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (page !== 1) {
+        setPage(1); // Reset to page 1 when search changes
+      } else {
+        fetchProducts();
+      }
+    }, 500);
+    
+    return () => clearTimeout(timeoutId);
+  }, [searchTerm]);
 
-  const cancelForm = () => {
-    resetForm()
-    setEditingProduct(null)
-    setIsCreating(false)
-  }
+  // Handle product creation success
+  const handleProductCreated = async () => {
+    setIsNewModalOpen(false);
+    await fetchProducts();
+    // Refresh categories
+    try {
+      const response = await fetch('/api/categories');
+      const data = await response.json();
+      if (data.success) {
+        setCategories(data.data);
+      }
+    } catch (err) {
+      console.error('Error refreshing categories:', err);
+    }
+    toast.success('Produit créé avec succès');
+  };
+
+  // Handle product update success
+  const handleProductUpdated = () => {
+    setIsUpdateModalOpen(false);
+    setCurrentProduct(null);
+    fetchProducts();
+    toast.success('Produit mis à jour avec succès');
+  };
+
+  // Handle product deletion
+  const handleDeleteProduct = async () => {
+    if (!currentProduct) return;
+    
+    try {
+      const response = await fetch(`/api/product?id=${currentProduct._id}`, {
+        method: 'DELETE',
+      });
+      
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to delete product');
+      }
+      
+      setIsDeleteModalOpen(false);
+      setCurrentProduct(null);
+      fetchProducts();
+      toast.success('Produit supprimé avec succès');
+    } catch (err: any) {
+      toast.error(err.message || 'Erreur lors de la suppression du produit');
+    }
+  };
 
   return (
-    <div className="container mx-auto p-4 max-w-6xl">
-      <Card>
-        <CardHeader className="flex flex-row justify-between items-center">
-          <CardTitle>Product Manager</CardTitle>
-          {!isCreating && !editingProduct && (
-            <Button onClick={() => setIsCreating(true)}>Add Product</Button>
-          )}
-        </CardHeader>
-        <CardContent>
-          {(isCreating || editingProduct) && (
-            <form onSubmit={handleSubmit} className="mb-8 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Basic Information */}
-                <div>
-                  <Label from="name">Name*</Label>
-                  <Input
-                    id="name"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleInputChange}
-                  />
-                  {errors.name && <p className="text-red-500 text-sm">{errors.name}</p>}
-                </div>
-                <div>
-                  <Label from="reference">Reference*</Label>
-                  <Input
-                    id="reference"
-                    name="reference"
-                    value={formData.reference}
-                    onChange={handleInputChange}
-                  />
-                  {errors.reference && <p className="text-red-500 text-sm">{errors.reference}</p>}
-                </div>
-                <div className="md:col-span-2">
-                  <Label from="description">Description*</Label>
-                  <Input
-                    id="description"
-                    name="description"
-                    value={formData.description}
-                    onChange={handleInputChange}
-                  />
-                </div>
-                <div>
-                  <Label from="price">Price*</Label>
-                  <Input
-                    id="price"
-                    name="price"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={formData.price}
-                    onChange={handleInputChange}
-                  />
-                  {errors.price && <p className="text-red-500 text-sm">{errors.price}</p>}
-                </div>
-                <div>
-                  <Label from="stock">Stock*</Label>
-                  <Input
-                    id="stock"
-                    name="stock"
-                    type="number"
-                    min="0"
-                    value={formData.stock}
-                    onChange={handleInputChange}
-                  />
-                  {errors.stock && <p className="text-red-500 text-sm">{errors.stock}</p>}
-                </div>
-                <div>
-                  <Label from="category">Category*</Label>
-                  <Input
-                    id="category"
-                    name="category"
-                    value={formData.category}
-                    onChange={handleInputChange}
-                  />
-                  {errors.category && <p className="text-red-500 text-sm">{errors.category}</p>}
-                </div>
-                <div>
-                  <Label from="tissu">Fabric</Label>
-                  <Input
-                    id="tissu"
-                    name="tissu"
-                    value={formData.tissu}
-                    onChange={handleInputChange}
-                  />
-                </div>
-                
-                {/* Colors */}
-                <div className="md:col-span-2">
-                  <Label>Colors</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      value={currentColorInput}
-                      onChange={(e: { target: { value: SetStateAction<string> } }) => setCurrentColorInput(e.target.value)}
-                      placeholder="Add color"
-                    />
-                    <Button type="button" onClick={addColor}>Add</Button>
-                  </div>
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {formData.couleurs?.map(color => (
-                      <div key={color} className="flex items-center gap-1 bg-gray-100 px-2 py-1 rounded">
-                        <span>{color}</span>
-                        <button 
-                          type="button" 
-                          onClick={() => removeColor(color)}
-                          className="text-red-500"
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                
-                {/* Sizes */}
-                <div className="md:col-span-2">
-                  <Label>Sizes</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      value={currentSizeInput}
-                      onChange={(e: { target: { value: SetStateAction<string> } }) => setCurrentSizeInput(e.target.value)}
-                      placeholder="Add size"
-                    />
-                    <Button type="button" onClick={addSize}>Add</Button>
-                  </div>
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {formData.taille?.map(size => (
-                      <div key={size} className="flex items-center gap-1 bg-gray-100 px-2 py-1 rounded">
-                        <span>{size}</span>
-                        <button 
-                          type="button" 
-                          onClick={() => removeSize(size)}
-                          className="text-red-500"
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                
-                {/* Sales and Promotion */}
-                <div>
-                  <Label from="sold">Sold</Label>
-                  <Input
-                    id="sold"
-                    name="sold"
-                    type="number"
-                    min="0"
-                    value={formData.sold}
-                    onChange={handleInputChange}
-                  />
-                </div>
-                <div className="flex items-center gap-2">
-                  <input
-                    id="promotion"
-                    name="promotion"
-                    type="checkbox"
-                    checked={formData.promotion}
-                    onChange={handleCheckboxChange}
-                    className="h-4 w-4"
-                  />
-                  <Label from="promotion">Promotion</Label>
-                </div>
-                {formData.promotion && (
-                  <div>
-                    <Label from="promoPrice">Promo Price*</Label>
-                    <Input
-                      id="promoPrice"
-                      name="promoPrice"
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={formData.promoPrice || ''}
-                      onChange={handleInputChange}
-                    />
-                    {errors.promoPrice && <p className="text-red-500 text-sm">{errors.promoPrice}</p>}
-                  </div>
-                )}
-                
-                {/* Reviews */}
-                <div>
-                  <Label from="rating">Rating</Label>
-                  <Input
-                    id="rating"
-                    name="rating"
-                    type="number"
-                    min="0"
-                    max="5"
-                    step="0.1"
-                    value={formData.rating}
-                    onChange={handleInputChange}
-                  />
-                  {errors.rating && <p className="text-red-500 text-sm">{errors.rating}</p>}
-                </div>
-                <div>
-                  <Label from="reviewCount">Review Count</Label>
-                  <Input
-                    id="reviewCount"
-                    name="reviewCount"
-                    type="number"
-                    min="0"
-                    value={formData.reviewCount}
-                    onChange={handleInputChange}
-                  />
-                </div>
-                <div className="md:col-span-2">
-                  <Label from="reviews">Reviews</Label>
-                  <Input
-                    id="reviews"
-                    name="reviews"
-                    value={formData.reviews}
-                    onChange={handleInputChange}
-                  />
-                </div>
-                
-                {/* Delivery Information */}
-                <div>
-                  <Label from="deliveryDate">Delivery Date</Label>
-                  <Input
-                    id="deliveryDate"
-                    name="deliveryDate"
-                    type="date"
-                    value={formData.deliveryDate}
-                    onChange={handleInputChange}
-                  />
-                </div>
-                <div>
-                  <Label from="deliveryStatus">Delivery Status</Label>
-                  <Select 
-                    value={formData.deliveryStatus} 
-                    onValueChange={(value: string) => handleSelectChange('deliveryStatus', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {deliveryStatuses.map(status => (
-                        <SelectItem key={status} value={status}>{status}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="md:col-span-2">
-                  <Label from="deliveryAddress">Delivery Address</Label>
-                  <Input
-                    id="deliveryAddress"
-                    name="deliveryAddress"
-                    value={formData.deliveryAddress}
-                    onChange={handleInputChange}
-                  />
-                </div>
-                
-                {/* Images */}
-                <div className="md:col-span-2">
-                  <Label>Images</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      type="text"
-                      value={currentImageInput}
-                      onChange={(e: { target: { value: SetStateAction<string> } }) => setCurrentImageInput(e.target.value)}
-                      placeholder="Add image URL"
-                    />
-                    <Button type="button" onClick={addImage}>Add</Button>
-                  </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 mt-2">
-                    {formData.imageUrls?.map((image, index) => (
-                      <div key={index} className="relative">
-                        <div className="bg-gray-200 border-2 border-dashed rounded-xl w-full h-24 flex items-center justify-center">
-                          <Image className="h-8 w-8 text-gray-400" />
-                        </div>
-                        <button 
-                          type="button" 
-                          onClick={() => removeImage(image)}
-                          className="absolute top-1 right-1 bg-white rounded-full p-1"
-                        >
-                          <X className="h-4 w-4 text-red-500" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-              <div className="flex justify-end space-x-2">
-                <Button variant="outline" type="button" onClick={cancelForm}>
-                  <X className="mr-2 h-4 w-4" /> Cancel
-                </Button>
-                <Button type="submit">
-                  <Check className="mr-2 h-4 w-4" /> {editingProduct ? 'Update' : 'Create'}
-                </Button>
-              </div>
-            </form>
-          )}
+    <div className="container mx-auto px-4 py-8">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Gestion des Produits</h1>
+        <button
+          onClick={() => setIsNewModalOpen(true)}
+          className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition-colors"
+        >
+          <PlusCircle size={20} />
+          Ajouter un produit
+        </button>
+      </div>
 
-          <div className="space-y-4">
-            <div className="grid grid-cols-12 gap-2 font-semibold p-2 bg-gray-100 rounded">
-              <div className="col-span-3">Name</div>
-              <div className="col-span-2">Reference</div>
-              <div className="col-span-1">Price</div>
-              <div className="col-span-1">Stock</div>
-              <div className="col-span-2">Category</div>
-              <div className="col-span-1">Rating</div>
-              <div className="col-span-1">Status</div>
-              <div className="col-span-1">Actions</div>
+      {/* Filters */}
+      <div className="bg-white p-4 rounded-md shadow mb-6">
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex-1">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+              <input
+                type="text"
+                placeholder="Rechercher un produit..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              />
             </div>
-            {products.length === 0 ? (
-              <p className="text-center py-4 text-gray-500">No products found</p>
-            ) : (
-              products.map(product => (
-                <div key={product.id} className="grid grid-cols-12 gap-2 items-center p-2 border-b">
-                  <div className="col-span-3">{product.name}</div>
-                  <div className="col-span-2">{product.reference}</div>
-                  <div className="col-span-1">
-                    {product.promotion ? (
-                      <div className="flex flex-col">
-                        <span className="line-through text-sm text-gray-500">${product.price.toFixed(2)}</span>
-                        <span className="text-red-500">${product.promoPrice?.toFixed(2)}</span>
-                      </div>
-                    ) : (
-                      `$${product.price.toFixed(2)}`
-                    )}
-                  </div>
-                  <div className="col-span-1">{product.stock}</div>
-                  <div className="col-span-2">{product.category}</div>
-                  <div className="col-span-1 flex items-center">
-                    <Star className="h-4 w-4 text-yellow-500 mr-1" />
-                    {product.rating?.toFixed(1)}
-                  </div>
-                  <div className="col-span-1 flex items-center">
-                    {product.deliveryStatus && (
-                      <>
-                        <Truck className="h-4 w-4 mr-1" />
-                        {product.deliveryStatus}
-                      </>
-                    )}
-                  </div>
-                  <div className="col-span-1 flex space-x-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleEdit(product)}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDelete(product.id)}
-                    >
-                      <Trash className="h-4 w-4 text-red-500" />
-                    </Button>
-                  </div>
-                </div>
-              ))
-            )}
           </div>
-        </CardContent>
-      </Card>
+          
+          <div className="flex gap-3">
+            <div>
+              <select
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+                className="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              >
+                <option value="">Toutes les catégories</option>
+                {categories.map((category) => (
+                  <option key={category} value={category}>
+                    {category}
+                  </option>
+                ))}
+              </select>
+            </div>
+            
+            <div>
+              <select
+                value={promotionFilter}
+                onChange={(e) => setPromotionFilter(e.target.value)}
+                className="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              >
+                <option value="">Tous les produits</option>
+                <option value="true">En promotion</option>
+                <option value="false">Prix normal</option>
+              </select>
+            </div>
+            
+            <button
+              onClick={() => {
+                setSearchTerm('');
+                setCategoryFilter('');
+                setPromotionFilter('');
+                setPage(1);
+                setSortBy('createdAt');
+                setSortOrder('desc');
+              }}
+              className="flex items-center gap-1 bg-gray-100 px-3 py-2 rounded-md hover:bg-gray-200 transition-colors"
+            >
+              <RefreshCw size={16} />
+              Réinitialiser
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Products Table */}
+      {error ? (
+        <div className="bg-red-50 text-red-600 p-4 rounded-md mb-4">{error}</div>
+      ) : (
+        <ProductTable
+          products={products}
+          loading={loading}
+          onEdit={(product: Product) => {
+            setCurrentProduct(product);
+            setIsUpdateModalOpen(true);
+          }}
+          onDelete={(product: Product) => {
+            setCurrentProduct(product);
+            setIsDeleteModalOpen(true);
+          }}
+          page={page}
+          limit={limit}
+          totalPages={totalPages}
+          totalItems={totalProducts}
+          onPageChange={setPage}
+          onLimitChange={setLimit}
+          sortBy={sortBy}
+          sortOrder={sortOrder}
+          onSort={(field: string) => {
+            if (sortBy === field) {
+              setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+            } else {
+              setSortBy(field);
+              setSortOrder('asc');
+            }
+          }}
+          categories={categories}
+        />
+      )}
+
+      {/* New Product Modal */}
+      <Modal
+        isOpen={isNewModalOpen}
+        onClose={() => setIsNewModalOpen(false)}
+        title="Ajouter un nouveau produit"
+      >
+        <NewProductForm 
+          onSuccess={handleProductCreated} 
+          onCancel={() => setIsNewModalOpen(false)} 
+          categories={categories}
+        />
+      </Modal>
+
+      {/* Update Product Modal */}
+      {currentProduct && (
+        <Modal
+          isOpen={isUpdateModalOpen}
+          onClose={() => {
+            setIsUpdateModalOpen(false);
+            setCurrentProduct(null);
+          }}
+          title={`Modifier: ${currentProduct.name}`}
+        >
+          <UpdateProductForm
+            product={currentProduct}
+            onSuccess={handleProductUpdated}
+            onCancel={() => {
+              setIsUpdateModalOpen(false);
+              setCurrentProduct(null);
+            }}
+            categories={categories}
+          />
+        </Modal>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {currentProduct && (
+        <Modal
+          isOpen={isDeleteModalOpen}
+          onClose={() => {
+            setIsDeleteModalOpen(false);
+            setCurrentProduct(null);
+          }}
+          title="Confirmer la suppression"
+        >
+          <div className="p-4">
+            <p className="mb-4">
+              Êtes-vous sûr de vouloir supprimer le produit "{currentProduct.name}" ?
+              Cette action ne peut pas être annulée.
+            </p>
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={() => {
+                  setIsDeleteModalOpen(false);
+                  setCurrentProduct(null);
+                }}
+                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleDeleteProduct}
+                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+              >
+                Supprimer
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
-  )
-}
+  );
+};
+
+export default ProductPage;
