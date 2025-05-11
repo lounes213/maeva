@@ -1,129 +1,132 @@
-'use client';
-
-import { useState, useEffect } from 'react';
-
-import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
-import ProductTable from './components/ProductTable';
-import NewProductForm from './components/NewProductForm';
 import { Product } from '@/app/types/product';
+import { useState } from 'react';
+import ProductTable from './components/ProductTable';
+import UpdateProductForm from './components/UpdateProductForm';
 
-export default function ProductsPage() {
-  const [products, setProducts] = useState<any[]>([]);
-  const [categories, setCategories] = useState<string[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [isFormOpen, setIsFormOpen] = useState(false);
 
-  // Fetch products and categories
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setIsLoading(true);
-        
-        // Fetch products
-        const productsResponse = await fetch('/api/products');
-        if (!productsResponse.ok) throw new Error('Failed to fetch products');
-        const productsData = await productsResponse.json();
-        
-        // Fetch categories
-        const categoriesResponse = await fetch('/api/categories');
-        if (!categoriesResponse.ok) throw new Error('Failed to fetch categories');
-        const categoriesData = await categoriesResponse.json();
-        
-        setProducts(productsData.data);
-        setCategories(categoriesData.data);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'An unknown error occurred');
-      } finally {
-        setIsLoading(false);
-      }
-    };
+const ProductsPage = () => {
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(false);
+  // Add other necessary state variables (pagination, sorting, etc.)
 
-    fetchData();
-  }, []);
-
-  const handleRefresh = async () => {
+  // Fetch products function (example)
+  const fetchProducts = async () => {
+    setLoading(true);
     try {
-      setIsLoading(true);
       const response = await fetch('/api/products');
-      if (!response.ok) throw new Error('Failed to refresh products');
       const data = await response.json();
       setProducts(data.data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to refresh');
+    } catch (error) {
+      console.error('Error fetching products:', error);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-      </div>
-    );
-  }
+  // Edit handler
+  const handleEdit = (product: Product) => {
+    setSelectedProduct(product);
+    setIsEditModalOpen(true);
+  };
 
-  if (error) {
-    return (
-      <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-        {error}
-      </div>
-    );
-  }
+  // Delete handler
+  const handleDelete = async (product: Product) => {
+    setSelectedProduct(product);
+    setIsDeleteConfirmOpen(true);
+  };
+
+  // Confirm delete
+  const confirmDelete = async () => {
+    if (!selectedProduct) return;
+    
+    setLoading(true);
+    try {
+      const response = await fetch(`/api/products?id=${selectedProduct._id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete product');
+      }
+
+      // Refresh the products list
+      await fetchProducts();
+      setIsDeleteConfirmOpen(false);
+    } catch (error) {
+      console.error('Error deleting product:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Update success handler
+  const handleUpdateSuccess = () => {
+    setIsEditModalOpen(false);
+    fetchProducts(); // Refresh the list
+  };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Gestion des Produits</h1>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={handleRefresh}>
-            Actualiser
-          </Button>
-          <Button onClick={() => setIsFormOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Nouveau Produit
-          </Button>
-        </div>
-      </div>
+    <div>
+      <ProductTable
+        products={products}
+        loading={loading}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+        // Add other required props...
+        page={1}
+        limit={10}
+        totalPages={5}
+        totalItems={50}
+        onPageChange={(page) => console.log('Page changed:', page)}
+        onLimitChange={(limit) => console.log('Limit changed:', limit)}
+        sortBy="name"
+        sortOrder="asc"
+        onSort={(field) => console.log('Sort by:', field)}
+        categories={['Category1', 'Category2']}
+      />
 
-      {products.length === 0 ? (
-        <div className="text-center py-12">
-          <p className="text-gray-500">Aucun produit trouvé</p>
-          <Button 
-            onClick={() => setIsFormOpen(true)} 
-            className="mt-4"
-          >
-            Créer un nouveau produit
-          </Button>
-        </div>
-      ) : (
-        <ProductTable 
-            products={products}
-            categories={categories} loading={false} onEdit={function (product: Product): void {
-              throw new Error('Function not implemented.');
-            } } onDelete={function (product: Product): void {
-              throw new Error('Function not implemented.');
-            } } page={0} limit={0} totalPages={0} totalItems={0} onPageChange={function (page: number): void {
-              throw new Error('Function not implemented.');
-            } } onLimitChange={function (limit: number): void {
-              throw new Error('Function not implemented.');
-            } } sortBy={''} sortOrder={''} onSort={function (field: string): void {
-              throw new Error('Function not implemented.');
-            } }        />
+      {/* Edit Modal */}
+      {isEditModalOpen && selectedProduct && (
+        <UpdateProductForm
+          product={selectedProduct}
+          onSuccess={handleUpdateSuccess}
+          onCancel={() => setIsEditModalOpen(false)}
+          categories={['Category1', 'Category2']}
+        />
       )}
 
-      {/* New Product Form Modal */}
-      {isFormOpen && (
-        <NewProductForm 
-          categories={categories} 
-          onClose={() => {
-            setIsFormOpen(false);
-            handleRefresh();
-          }} 
-        />
+      {/* Delete Confirmation Modal */}
+      {isDeleteConfirmOpen && selectedProduct && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <h3 className="text-lg font-medium mb-4">Confirm Deletion</h3>
+            <p className="mb-6">
+              Are you sure you want to delete "{selectedProduct.name}"? This action cannot be undone.
+            </p>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setIsDeleteConfirmOpen(false)}
+                className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700"
+                disabled={loading}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="px-4 py-2 bg-red-600 text-white rounded-md text-sm font-medium hover:bg-red-700"
+                disabled={loading}
+              >
+                {loading ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
-}
+};
+
+export default ProductsPage;
