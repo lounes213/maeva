@@ -31,7 +31,7 @@ const ProductsPage = () => {
 
     fetchUser();
   }, []);
-  
+
   const fetchProducts = async () => {
     setLoading(true);
     try {
@@ -116,7 +116,7 @@ const ProductsPage = () => {
 
   return (
     <div className="container mx-auto px-4 py-8">
-    <DashboardHeader user={User}/>
+    <DashboardHeader user={user}/>
       {error && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
           {error}
