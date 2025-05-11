@@ -59,27 +59,6 @@ const ProductPage = () => {
   const [sortBy, setSortBy] = useState('createdAt');
   const [sortOrder, setSortOrder] = useState('desc');
 
-  // Fetch categories (only once)
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const response = await fetch('/api/products');
-        const data = await response.json();
-        if (data.success) {
-          // Convert the Set to an array of strings
-          const uniqueCategories = Array.from(
-            new Set(data.data.map((product: Product) => product.category))
-          ) as string[];
-          setCategories(uniqueCategories);
-        }
-      } catch (err) {
-        console.error('Error fetching categories:', err);
-      }
-    };
-    
-    fetchCategories();
-  }, []);
-
   // Fetch products with filters, pagination, and sorting
   const fetchProducts = async () => {
     setLoading(true);
@@ -98,16 +77,16 @@ const ProductPage = () => {
       queryParams.append('sortBy', sortBy);
       queryParams.append('sortOrder', sortOrder);
       
-      const response = await fetch(`/api/product?${queryParams.toString()}`);
+      const response = await fetch(`/api/products?${queryParams.toString()}`);
       const data = await response.json();
       
       if (!response.ok) {
         throw new Error(data.error || 'Failed to fetch products');
       }
       
-      setProducts(data.products);
-      setTotalPages(data.pagination.pages);
-      setTotalProducts(data.pagination.total);
+      setProducts(data.data);
+      setTotalPages(data.pagination?.pages || 1);
+      setTotalProducts(data.pagination?.total || 0);
     } catch (err: any) {
       setError(err.message);
       toast.error('Erreur lors du chargement des produits');
@@ -115,6 +94,46 @@ const ProductPage = () => {
       setLoading(false);
     }
   };
+
+  // Fetch categories (only once)
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await fetch('/api/categories');
+        const data = await response.json();
+        if (data.success) {
+          setCategories(data.data);
+        } else {
+          // If categories API fails, try to get categories from products
+          const productsResponse = await fetch('/api/products');
+          const productsData = await productsResponse.json();
+          if (productsData.success) {
+            const uniqueCategories = Array.from(
+              new Set(productsData.data.map((product: Product) => product.category))
+            ).filter(Boolean) as string[];
+            setCategories(uniqueCategories);
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching categories:', err);
+        // Fallback to getting categories from products
+        try {
+          const productsResponse = await fetch('/api/products');
+          const productsData = await productsResponse.json();
+          if (productsData.success) {
+            const uniqueCategories = Array.from(
+              new Set(productsData.data.map((product: Product) => product.category))
+            ).filter(Boolean) as string[];
+            setCategories(uniqueCategories);
+          }
+        } catch (fallbackErr) {
+          console.error('Error fetching categories from products:', fallbackErr);
+        }
+      }
+    };
+    
+    fetchCategories();
+  }, []);
 
   // Fetch products on mount and when filters/pagination/sorting change
   useEffect(() => {
