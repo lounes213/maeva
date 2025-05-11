@@ -154,9 +154,19 @@ const ProductPage = () => {
   }, [searchTerm]);
 
   // Handle product creation success
-  const handleProductCreated = () => {
+  const handleProductCreated = async () => {
     setIsNewModalOpen(false);
-    fetchProducts();
+    await fetchProducts();
+    // Refresh categories
+    try {
+      const response = await fetch('/api/categories');
+      const data = await response.json();
+      if (data.success) {
+        setCategories(data.data);
+      }
+    } catch (err) {
+      console.error('Error refreshing categories:', err);
+    }
     toast.success('Produit créé avec succès');
   };
 

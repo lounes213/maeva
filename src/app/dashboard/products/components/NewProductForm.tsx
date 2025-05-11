@@ -32,6 +32,9 @@ const NewProductForm = ({ onSuccess, onCancel, categories }: NewProductFormProps
   const [loading, setLoading] = useState(false);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [newCategory, setNewCategory] = useState('');
+  const [showNewCategoryInput, setShowNewCategoryInput] = useState(false);
+  const [addingCategory, setAddingCategory] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
@@ -95,6 +98,44 @@ const NewProductForm = ({ onSuccess, onCancel, categories }: NewProductFormProps
 
   const handleRemoveImage = (index: number) => {
     setImageFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleAddCategory = async () => {
+    if (!newCategory.trim()) {
+      toast.error('Veuillez entrer un nom de catégorie');
+      return;
+    }
+
+    setAddingCategory(true);
+    try {
+      const response = await fetch('/api/categories', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name: newCategory.trim() }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to add category');
+      }
+
+      if (data.success) {
+        setProduct(prev => ({ ...prev, category: newCategory.trim() }));
+        setNewCategory('');
+        setShowNewCategoryInput(false);
+        toast.success('Catégorie ajoutée avec succès');
+        
+        if (onSuccess) {
+          onSuccess();
+        }
+      }
+    } catch (error: any) {
+      toast.error(error.message || 'Erreur lors de l\'ajout de la catégorie');
+    } finally {
+      setAddingCategory(false);
+    }
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -199,21 +240,65 @@ const NewProductForm = ({ onSuccess, onCancel, categories }: NewProductFormProps
             <label htmlFor="category" className="block text-sm font-medium text-gray-700">
               Catégorie *
             </label>
-            <select
-              id="category"
-              name="category"
-              value={product.category}
-              onChange={handleChange}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-              required
-            >
-              <option value="">Sélectionner une catégorie</option>
-              {categories.map((category) => (
-                <option key={category} value={category}>
-                  {category}
-                </option>
-              ))}
-            </select>
+            <div className="mt-1">
+              {!showNewCategoryInput ? (
+                <div className="flex gap-2">
+                  <select
+                    id="category"
+                    name="category"
+                    value={product.category}
+                    onChange={handleChange}
+                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                    required
+                  >
+                    <option value="">Sélectionner une catégorie</option>
+                    {categories.map((category) => (
+                      <option key={category} value={category}>
+                        {category}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => setShowNewCategoryInput(true)}
+                    className="px-3 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
+                    title="Ajouter une nouvelle catégorie"
+                  >
+                    +
+                  </button>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newCategory}
+                    onChange={(e) => setNewCategory(e.target.value)}
+                    placeholder="Nouvelle catégorie"
+                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                    disabled={addingCategory}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddCategory}
+                    className="px-3 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={addingCategory || !newCategory.trim()}
+                  >
+                    {addingCategory ? 'Ajout...' : 'Ajouter'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowNewCategoryInput(false);
+                      setNewCategory('');
+                    }}
+                    className="px-3 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
+                    disabled={addingCategory}
+                  >
+                    Annuler
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
           
           <div>
