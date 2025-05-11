@@ -2,7 +2,7 @@
 
 import { useState, FormEvent, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
-import ColorSelector from './createColors';
+import ColorSelector from './createColor';
 
 interface Product {
   _id: string;
