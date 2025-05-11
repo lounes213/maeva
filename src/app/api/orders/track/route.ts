@@ -1,7 +1,7 @@
 // app/api/orders/track/route.ts
 import { NextResponse } from 'next/server';
 import Order from '@/app/models/Order';
-import dbConnect from '@/lib/mongo';
+import {dbConnect} from '@/lib/mongo';
 
 export async function GET(request: Request) {
   try {

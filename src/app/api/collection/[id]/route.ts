@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import dbConnect from '@/lib/mongo';
+import {dbConnect} from '@/lib/mongo';
 import Collection from '@/app/models/collection';
 import { ObjectId } from 'mongodb';
 

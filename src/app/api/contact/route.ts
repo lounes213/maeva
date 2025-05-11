@@ -1,6 +1,6 @@
 // app/api/contact/route.ts
 import { NextResponse } from 'next/server';
-import dbConnect from '@/lib/mongo';
+import {dbConnect} from '@/lib/mongo';
 import Contact from '@/app/models/contact';
 
 export async function GET(request: Request) {

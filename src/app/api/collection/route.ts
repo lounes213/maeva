@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import dbConnect from '@/lib/mongo';
+import {dbConnect} from '@/lib/mongo';
 import Collection from '@/app/models/collection';
 import path from 'path';
 import fs from 'fs/promises';

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import dbConnect from '@/lib/mongo';
+import {dbConnect} from '@/lib/mongo';
 import BlogPost from '@/app/models/blog';
 export async function PUT(request: NextRequest) {
   try {

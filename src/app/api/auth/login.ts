@@ -1,6 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import dotenv from 'dotenv';
-import dbConnect from '@/lib/mongo';
 
 dotenv.config();
 

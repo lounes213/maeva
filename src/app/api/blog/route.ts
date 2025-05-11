@@ -5,7 +5,7 @@ import path from 'path';
 import fs from 'fs';
 import { promises as fsp } from 'fs';
 import { v4 as uuidv4 } from 'uuid';
-import dbConnect from "@/lib/mongo";
+import {dbConnect} from "@/lib/mongo";
 import slugify from "@/lib/utils";
 import toast from "react-hot-toast";
 
