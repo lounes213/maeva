@@ -68,9 +68,17 @@ export default function ProductDetailsPage() {
     const fetchProduct = async () => {
       try {
         const res = await fetch(`/api/products?id=${id}`);
+        if (!res.ok) {
+          throw new Error('Failed to fetch product');
+        }
         const data = await res.json();
+        if (!data.data) {
+          throw new Error('Product data not found');
+        }
         setProduct(data.data);
       } catch (error) {
+        console.error('Error fetching product:', error);
+        toast.error('Erreur lors du chargement du produit');
       } finally {
         setLoading(false);
       }
@@ -349,33 +357,43 @@ export default function ProductDetailsPage() {
         {/* Left column - Images */}
         <div>
           <div className="aspect-square rounded-xl overflow-hidden bg-gray-100 mb-4">
-            <Image
-              src={product.imageUrls[selectedImage]}
-              alt={product.name}
-              width={800}
-              height={800}
-              className="object-contain w-full h-full"
-            />
+            {product.imageUrls && product.imageUrls.length > 0 ? (
+              <Image
+                src={product.imageUrls[selectedImage]}
+                alt={product.name}
+                width={800}
+                height={800}
+                className="object-contain w-full h-full"
+                unoptimized
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-gray-400">
+                Aucune image disponible
+              </div>
+            )}
           </div>
           
-          <div className="grid grid-cols-4 gap-3">
-            {product.imageUrls.map((url, i) => (
-              <button
-                key={i}
-                onClick={() => setSelectedImage(i)}
-                className={`aspect-square rounded-lg overflow-hidden border bg-gray-100
-                  ${selectedImage === i ? 'ring-2 ring-indigo-600' : 'hover:ring-1 hover:ring-indigo-300'}`}
-              >
-                <Image 
-                  src={url} 
-                  alt={`${product.name} - image ${i+1}`} 
-                  width={150} 
-                  height={150} 
-                  className="object-cover w-full h-full" 
-                />
-              </button>
-            ))}
-          </div>
+          {product.imageUrls && product.imageUrls.length > 0 && (
+            <div className="grid grid-cols-4 gap-3">
+              {product.imageUrls.map((url, i) => (
+                <button
+                  key={i}
+                  onClick={() => setSelectedImage(i)}
+                  className={`aspect-square rounded-lg overflow-hidden border bg-gray-100
+                    ${selectedImage === i ? 'ring-2 ring-indigo-600' : 'hover:ring-1 hover:ring-indigo-300'}`}
+                >
+                  <Image 
+                    src={url} 
+                    alt={`${product.name} - image ${i+1}`} 
+                    width={150} 
+                    height={150} 
+                    className="object-cover w-full h-full"
+                    unoptimized
+                  />
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Right column - Product info */}

@@ -138,7 +138,7 @@ export async function POST(req: NextRequest) {
     });
 
     const savedProduct = await newProduct.save();
-    return NextResponse.json(savedProduct, { status: 201 });
+    return NextResponse.json({ data: savedProduct }, { status: 201 });
 
   } catch (err: any) {
     console.error('POST Error:', err);
@@ -168,7 +168,7 @@ export async function GET(req: NextRequest) {
           { status: 404 }
         );
       }
-      return NextResponse.json(product);
+      return NextResponse.json({ data: product });
     }
 
     const query: any = {};
@@ -272,7 +272,14 @@ export async function PUT(req: NextRequest) {
       { new: true, runValidators: true }
     );
 
-    return NextResponse.json(updatedProduct);
+    if (!updatedProduct) {
+      return NextResponse.json(
+        { error: 'Produit non trouvé' },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({ data: updatedProduct });
 
   } catch (err: any) {
     console.error('PUT Error:', err);
