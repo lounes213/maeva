@@ -214,16 +214,18 @@ export async function PUT(req: NextRequest) {
     const id = searchParams.get('id');
     if (!id) {
       return NextResponse.json(
-        { error: 'ID du produit est requis' },
+        { error: 'Product ID is required' },
         { status: 400 }
       );
     }
 
     const formData = await req.formData();
+    console.log('Received form data:', Object.fromEntries(formData.entries()));
+
     const existingProduct = await Product.findById(id);
     if (!existingProduct) {
       return NextResponse.json(
-        { error: 'Produit non trouvé' },
+        { error: 'Product not found' },
         { status: 404 }
       );
     }
@@ -243,37 +245,68 @@ export async function PUT(req: NextRequest) {
       }
     }
 
+    // Process form data
+    const updateData: any = {};
+
+    // Handle numeric fields
+    const numericFields = ['price', 'stock', 'sold', 'promoPrice', 'rating', 'reviewCount'];
+    numericFields.forEach(field => {
+      const value = formData.get(field);
+      if (value !== null && value !== undefined && value !== '') {
+        const numValue = Number(value);
+        if (!isNaN(numValue)) {
+          updateData[field] = numValue;
+        }
+      }
+    });
+
+    // Handle boolean fields
+    if (formData.has('promotion')) {
+      updateData.promotion = formData.get('promotion') === 'true';
+    }
+
+    // Handle string fields
+    const stringFields = ['name', 'reference', 'description', 'category', 'tissu', 'reviews', 'deliveryAddress', 'deliveryStatus'];
+    stringFields.forEach(field => {
+      const value = formData.get(field);
+      if (value !== null && value !== undefined) {
+        updateData[field] = value.toString();
+      }
+    });
+
+    // Handle arrays
+    const couleurs = formData.get('couleurs');
+    if (couleurs) {
+      updateData.couleurs = couleurs.toString().split(',').map(c => c.trim());
+    }
+
+    const taille = formData.get('taille');
+    if (taille) {
+      updateData.taille = taille.toString().split(',').map(t => t.trim());
+    }
+
+    // Handle date fields
+    const deliveryDate = formData.get('deliveryDate');
+    if (deliveryDate) {
+      updateData.deliveryDate = new Date(deliveryDate.toString());
+    }
+
+    // Add image URLs
+    updateData.imageUrls = imageUrls;
+
+    console.log('Updating product with data:', updateData);
+
     // Update product
     const updatedProduct = await Product.findByIdAndUpdate(
       id,
-      {
-        name: formData.get('name') || existingProduct.name,
-        reference: formData.get('reference') || existingProduct.reference,
-        description: formData.get('description') || existingProduct.description,
-        price: formData.get('price') ? parseFloat(formData.get('price') as string) : existingProduct.price,
-        stock: formData.get('stock') ? parseInt(formData.get('stock') as string) : existingProduct.stock,
-        category: formData.get('category') || existingProduct.category,
-        tissu: formData.get('tissu') || existingProduct.tissu,
-        couleurs: formData.getAll('couleurs').length > 0 ? formData.getAll('couleurs') : existingProduct.couleurs,
-        taille: formData.getAll('taille').length > 0 ? formData.getAll('taille') : existingProduct.taille,
-        sold: formData.get('sold') ? parseInt(formData.get('sold') as string) : existingProduct.sold,
-        promotion: formData.get('promotion') ? formData.get('promotion') === 'true' : existingProduct.promotion,
-        promoPrice: formData.get('promoPrice') ? parseFloat(formData.get('promoPrice') as string) : existingProduct.promoPrice,
-        rating: formData.get('rating') ? parseFloat(formData.get('rating') as string) : existingProduct.rating,
-        reviewCount: formData.get('reviewCount') ? parseInt(formData.get('reviewCount') as string) : existingProduct.reviewCount,
-        reviews: formData.get('reviews') || existingProduct.reviews,
-        deliveryDate: formData.get('deliveryDate') || existingProduct.deliveryDate,
-        deliveryAddress: formData.get('deliveryAddress') || existingProduct.deliveryAddress,
-        deliveryStatus: formData.get('deliveryStatus') || existingProduct.deliveryStatus,
-        imageUrls,
-      },
+      updateData,
       { new: true, runValidators: true }
     );
 
     if (!updatedProduct) {
       return NextResponse.json(
-        { error: 'Produit non trouvé' },
-        { status: 404 }
+        { error: 'Failed to update product' },
+        { status: 500 }
       );
     }
 
@@ -282,7 +315,7 @@ export async function PUT(req: NextRequest) {
   } catch (err: any) {
     console.error('PUT Error:', err);
     return NextResponse.json(
-      { error: err.message || 'Erreur serveur' },
+      { error: err.message || 'Server error' },
       { status: 500 }
     );
   }

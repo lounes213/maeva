@@ -17,32 +17,37 @@ interface ProductFormData {
   name: string;
   reference: string;
   description: string;
-  price: string;
-  stock: string;
+  price: number;
+  stock: number;
   category: string;
   tissu?: string;
   promotion: boolean;
-  promoPrice?: string;
+  promoPrice?: number;
 }
 
 const NewProductForm: React.FC<ProductFormProps> = ({ initialData, onSuccess, onCancel }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
-  const [previewUrls, setPreviewUrls] = useState<string[]>(initialData?.images || []);
+  const [previewUrls, setPreviewUrls] = useState<string[]>(initialData?.imageUrls || []);
   const [selectedColors, setSelectedColors] = useState<string[]>(initialData?.couleurs || []);
   const router = useRouter();
 
   const { register, handleSubmit, formState: { errors }, watch, setValue } = useForm<ProductFormData>({
-    defaultValues: initialData || {
+    defaultValues: initialData ? {
+      ...initialData,
+      price: Number(initialData.price) || 0,
+      stock: Number(initialData.stock) || 0,
+      promoPrice: initialData.promoPrice ? Number(initialData.promoPrice) : undefined,
+    } : {
       name: '',
       reference: '',
       description: '',
-      price: '',
-      stock: '',
+      price: 0,
+      stock: 0,
       category: '',
       tissu: '',
       promotion: false,
-      promoPrice: '',
+      promoPrice: undefined,
     }
   });
 
@@ -181,7 +186,8 @@ const NewProductForm: React.FC<ProductFormProps> = ({ initialData, onSuccess, on
             step="0.01"
             {...register('price', { 
               required: 'Price is required',
-              min: { value: 0, message: 'Price must be positive' }
+              min: { value: 0, message: 'Price must be positive' },
+              valueAsNumber: true
             })}
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
           />
@@ -196,7 +202,8 @@ const NewProductForm: React.FC<ProductFormProps> = ({ initialData, onSuccess, on
             type="number"
             {...register('stock', { 
               required: 'Stock is required',
-              min: { value: 0, message: 'Stock must be positive' }
+              min: { value: 0, message: 'Stock must be positive' },
+              valueAsNumber: true
             })}
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
           />
@@ -302,7 +309,8 @@ const NewProductForm: React.FC<ProductFormProps> = ({ initialData, onSuccess, on
               type="number"
               step="0.01"
               {...register('promoPrice', {
-                min: { value: 0, message: 'Price must be positive' }
+                min: { value: 0, message: 'Price must be positive' },
+                valueAsNumber: true
               })}
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
             />
