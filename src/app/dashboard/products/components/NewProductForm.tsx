@@ -39,6 +39,12 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData, onSuccess, onCan
   });
 
 
+// Hardcoded fallback values in case environment variables are not available
+const CLOUDINARY_DEFAULTS = {
+  UPLOAD_PRESET: 'maiva_uploads',
+  CLOUD_NAME: 'dxnvewivi'
+};
+
 const uploadToCloudinary = async (file: File): Promise<string> => {
   try {
     // Check if file is valid
@@ -49,13 +55,11 @@ const uploadToCloudinary = async (file: File): Promise<string> => {
     const formData = new FormData();
     formData.append('file', file);
 
-    const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
-    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+    // Use environment variables with fallbacks
+    const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || CLOUDINARY_DEFAULTS.UPLOAD_PRESET;
+    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || CLOUDINARY_DEFAULTS.CLOUD_NAME;
 
-    if (!uploadPreset || !cloudName) {
-      console.error('Missing Cloudinary config:', { uploadPreset, cloudName });
-      throw new Error('Missing Cloudinary configuration in environment variables');
-    }
+    console.log('Using Cloudinary config:', { uploadPreset, cloudName });
 
     formData.append('upload_preset', uploadPreset);
     formData.append('cloud_name', cloudName);
@@ -110,14 +114,36 @@ const onSubmit = async (data: any) => {
     
     // Only process images if there are any selected
     if (selectedImages.length > 0) {
-      for (const image of selectedImages) {
-        try {
-          const url = await uploadToCloudinary(image);
-          uploadedImageUrls.push(url);
-        } catch (uploadError) {
-          console.error('Error uploading image to Cloudinary:', uploadError);
-          throw new Error('Échec du téléchargement des images. Veuillez réessayer.');
+      // Show toast for image upload
+      const uploadToast = toast.loading('Téléchargement des images en cours...');
+      
+      try {
+        for (const image of selectedImages) {
+          try {
+            const url = await uploadToCloudinary(image);
+            uploadedImageUrls.push(url);
+          } catch (uploadError) {
+            console.error('Error uploading image to Cloudinary:', uploadError);
+            toast.error(`Échec du téléchargement de l'image: ${image.name}`);
+            // Continue with other images
+          }
         }
+        
+        if (uploadedImageUrls.length === 0 && selectedImages.length > 0) {
+          // All uploads failed
+          toast.error('Toutes les images ont échoué au téléchargement. Veuillez réessayer.');
+          toast.dismiss(uploadToast);
+          return; // Exit early
+        }
+        
+        toast.success(`${uploadedImageUrls.length} image(s) téléchargée(s) avec succès`, {
+          id: uploadToast
+        });
+      } catch (error) {
+        toast.error('Erreur lors du téléchargement des images', {
+          id: uploadToast
+        });
+        console.error('Error in image upload process:', error);
       }
     }
 
@@ -140,6 +166,9 @@ const onSubmit = async (data: any) => {
     // Log the data being sent to the API for debugging
     console.log('Processed data before sending to API:', productData);
 
+    // Show toast for product saving
+    const saveToast = toast.loading('Enregistrement du produit...');
+
     // Send to backend as JSON
     const url = initialData ? `/api/products?id=${initialData._id}` : '/api/products';
     const method = initialData ? 'PUT' : 'POST';
@@ -153,10 +182,15 @@ const onSubmit = async (data: any) => {
     if (!response.ok) {
       const errorData = await response.text();
       console.error('Server Error Response:', errorData);
+      toast.error("Erreur lors de l'enregistrement du produit", {
+        id: saveToast
+      });
       throw new Error("Erreur lors de l'enregistrement du produit");
     }
 
-    toast.success(initialData ? 'Produit mis à jour avec succès' : 'Produit créé avec succès');
+    toast.success(initialData ? 'Produit mis à jour avec succès' : 'Produit créé avec succès', {
+      id: saveToast
+    });
     onSuccess();
   } catch (error) {
     console.error("Erreur lors de l'enregistrement :", error);
