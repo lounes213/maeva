@@ -33,7 +33,8 @@ interface Product {
 }
 
 export default function ProductDetailsPage() {
-  const { id } = useParams();
+  const params = useParams();
+  const id = params?.id as string;
   const router = useRouter();
   const { addToCart } = useCart(); // Get the addToCart function from our context
 

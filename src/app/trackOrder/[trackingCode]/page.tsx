@@ -61,9 +61,11 @@ export default function TrackOrderPage() {
   const [error, setError] = useState('');
 
   // Get tracking code from URL
-  const trackingCode = Array.isArray(params.trackingCode) 
-    ? params.trackingCode[0] 
-    : params.trackingCode || '';
+  const trackingCode = params ? (
+    Array.isArray(params.trackingCode) 
+      ? params.trackingCode[0] 
+      : params.trackingCode || ''
+  ) : '';
 
   useEffect(() => {
     if (trackingCode) {
