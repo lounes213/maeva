@@ -21,8 +21,8 @@ export async function middleware(req: NextRequest) {
   const isAuthRoute = req.nextUrl.pathname === '/api/auth/login' || 
                      req.nextUrl.pathname === '/api/auth/register';
   
-  // Skip authentication for upload route
-  if (req.nextUrl.pathname === '/api/upload') {
+  // Skip authentication for upload routes
+  if (req.nextUrl.pathname === '/api/upload' || req.nextUrl.pathname === '/api/cloudinary-upload') {
     return NextResponse.next();
   }
 
@@ -57,9 +57,7 @@ export async function middleware(req: NextRequest) {
 export const config = {
   matcher: [
     '/dashboard/:path*',
-    // Exclude the upload API route
-    '/api/(?!upload).*',
-    // Exclude static files
-    '/((?!_next/static|_next/image|favicon.ico|api/upload|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    // Only include specific API routes that need authentication
+    '/api/((?!cloudinary-upload|upload).)*',
   ]
 };
