@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Upload Test</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .container {
+      background-color: #f9f9f9;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    h1, h2 {
+      color: #333;
+    }
+    button {
+      background-color: #4f46e5;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-right: 10px;
+      margin-bottom: 10px;
+    }
+    button:hover {
+      background-color: #4338ca;
+    }
+    button:disabled {
+      background-color: #9ca3af;
+      cursor: not-allowed;
+    }
+    input[type="file"] {
+      margin-bottom: 15px;
+    }
+    pre {
+      background-color: #f1f1f1;
+      padding: 10px;
+      border-radius: 4px;
+      overflow-x: auto;
+    }
+    .result {
+      margin-top: 20px;
+    }
+    .error {
+      color: #ef4444;
+      background-color: #fee2e2;
+      padding: 10px;
+      border-radius: 4px;
+      margin-top: 10px;
+    }
+    .success {
+      color: #10b981;
+      background-color: #d1fae5;
+      padding: 10px;
+      border-radius: 4px;
+      margin-top: 10px;
+    }
+    .image-preview {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 15px;
+    }
+    .image-preview img {
+      width: 150px;
+      height: 150px;
+      object-fit: cover;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Upload Test Page</h1>
+  
+  <div class="container">
+    <h2>Test API Endpoints</h2>
+    <button id="testApiBtn">Test API Endpoint</button>
+    <button id="testDirectUploadBtn">Test Direct Upload Endpoint</button>
+    <div id="apiTestResult" class="result"></div>
+  </div>
+
+  <div class="container">
+    <h2>Direct Upload Test</h2>
+    <input type="file" id="fileInput" accept="image/*" multiple>
+    <button id="uploadBtn" disabled>Upload Images</button>
+    <div id="uploadResult" class="result"></div>
+    <div id="imagePreview" class="image-preview"></div>
+  </div>
+
+  <script>
+    // Test API endpoint
+    document.getElementById('testApiBtn').addEventListener('click', async () => {
+      const resultDiv = document.getElementById('apiTestResult');
+      resultDiv.innerHTML = 'Testing API...';
+      
+      try {
+        const response = await fetch('/api/test-upload', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ test: true, timestamp: new Date().toISOString() })
+        });
+        
+        const data = await response.json();
+        
+        resultDiv.innerHTML = `
+          <div class="success">API test successful!</div>
+          <pre>${JSON.stringify(data, null, 2)}</pre>
+        `;
+      } catch (error) {
+        resultDiv.innerHTML = `
+          <div class="error">API test failed: ${error.message}</div>
+        `;
+      }
+    });
+
+    // Test direct upload endpoint
+    document.getElementById('testDirectUploadBtn').addEventListener('click', async () => {
+      const resultDiv = document.getElementById('apiTestResult');
+      resultDiv.innerHTML = 'Testing direct upload API...';
+      
+      try {
+        const response = await fetch('/api/direct-upload', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ 
+            dataUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==' 
+          })
+        });
+        
+        const data = await response.json();
+        
+        resultDiv.innerHTML = `
+          <div class="success">Direct upload test successful!</div>
+          <pre>${JSON.stringify(data, null, 2)}</pre>
+        `;
+      } catch (error) {
+        resultDiv.innerHTML = `
+          <div class="error">Direct upload test failed: ${error.message}</div>
+        `;
+      }
+    });
+
+    // Handle file selection
+    const fileInput = document.getElementById('fileInput');
+    const uploadBtn = document.getElementById('uploadBtn');
+    
+    fileInput.addEventListener('change', () => {
+      uploadBtn.disabled = fileInput.files.length === 0;
+    });
+
+    // Handle file upload
+    uploadBtn.addEventListener('click', async () => {
+      const files = fileInput.files;
+      if (!files || files.length === 0) return;
+      
+      const resultDiv = document.getElementById('uploadResult');
+      const previewDiv = document.getElementById('imagePreview');
+      
+      resultDiv.innerHTML = 'Uploading...';
+      previewDiv.innerHTML = '';
+      
+      try {
+        const uploadedUrls = await uploadImages(Array.from(files));
+        
+        resultDiv.innerHTML = `
+          <div class="success">Successfully uploaded ${uploadedUrls.length} images!</div>
+        `;
+        
+        // Display image previews
+        uploadedUrls.forEach(url => {
+          const img = document.createElement('img');
+          img.src = url;
+          img.alt = 'Uploaded image';
+          previewDiv.appendChild(img);
+        });
+      } catch (error) {
+        resultDiv.innerHTML = `
+          <div class="error">Upload failed: ${error.message}</div>
+        `;
+      }
+    });
+
+    // Function to upload images
+    async function uploadImages(files) {
+      const uploadedUrls = [];
+      
+      for (const file of files) {
+        // Convert file to data URL
+        const dataUrl = await fileToDataUrl(file);
+        
+        // Upload to server
+        const response = await fetch('/api/direct-upload', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ dataUrl })
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Upload failed: ${response.status} ${errorText}`);
+        }
+        
+        const data = await response.json();
+        if (data.url) {
+          uploadedUrls.push(data.url);
+        }
+      }
+      
+      return uploadedUrls;
+    }
+
+    // Function to convert File to data URL
+    function fileToDataUrl(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+  </script>
+</body>
+</html>

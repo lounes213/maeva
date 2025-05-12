@@ -29,6 +29,7 @@ export async function middleware(req: NextRequest) {
     req.nextUrl.pathname === '/api/cloudinary-upload' ||
     req.nextUrl.pathname === '/api/upload-cloudinary' ||
     req.nextUrl.pathname === '/api/direct-upload' ||
+    req.nextUrl.pathname === '/api/test-upload' ||
     req.nextUrl.pathname === '/api/products' ||
     req.nextUrl.pathname === '/api/blog' ||
     req.nextUrl.pathname === '/api/categories' ||
@@ -86,6 +87,6 @@ export const config = {
     '/dashboard',
     '/dashboard/:path*',
     // Only include specific API routes that need authentication
-    '/api/((?!cloudinary-upload|upload|upload-cloudinary|direct-upload|products|blog|categories).)*',
+    '/api/((?!cloudinary-upload|upload|upload-cloudinary|direct-upload|test-upload|products|blog|categories).)*',
   ]
 };
