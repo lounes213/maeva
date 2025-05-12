@@ -26,7 +26,12 @@ export async function uploadImages(files: File[]): Promise<string[]> {
     if (!uploadResponse.ok) {
       const errorText = await uploadResponse.text();
       console.error('Upload response error:', uploadResponse.status, errorText);
-      throw new Error(`Failed to upload images: ${uploadResponse.status} ${errorText}`);
+      
+      if (uploadResponse.status === 405) {
+        throw new Error(`Method Not Allowed: The server does not support the POST method for this endpoint. Please check the API route configuration.`);
+      } else {
+        throw new Error(`Failed to upload images: ${uploadResponse.status} ${errorText}`);
+      }
     }
 
     const uploadedUrls = await uploadResponse.json();

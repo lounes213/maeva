@@ -17,23 +17,14 @@ export async function middleware(req: NextRequest) {
     });
   }
 
-  // Allow OPTIONS requests for CORS preflight
-  if (req.method === 'OPTIONS') {
-    return new NextResponse(null, {
-      status: 204,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-        'Access-Control-Max-Age': '86400',
-      },
-    });
-  }
-
   const token = req.cookies.get('token')?.value;
   const isAuthRoute = req.nextUrl.pathname === '/api/auth/login' || 
-                     req.nextUrl.pathname === '/api/auth/register' ||
-                     req.nextUrl.pathname === '/api/upload';
+                     req.nextUrl.pathname === '/api/auth/register';
+  
+  // Skip authentication for upload route
+  if (req.nextUrl.pathname === '/api/upload') {
+    return NextResponse.next();
+  }
 
   // Ne pas vérifier le token pour les routes d'authentification
   if (isAuthRoute) {
@@ -67,7 +58,6 @@ export const config = {
   matcher: [
     '/dashboard/:path*',
     '/api/:path*',
-    '/api/blog',
     // Exclude OPTIONS requests for CORS preflight
     '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ]
