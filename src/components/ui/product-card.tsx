@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Heart, ShoppingCart, Star, Eye } from 'lucide-react';
 import { useCart } from '@/app/context/cartContext';
 import { ModernButton } from './modern-button';
 import toast from 'react-hot-toast';
+import { toggleWishlistItem, isInWishlist } from '@/lib/wishlist';
 
 interface ProductCardProps {
   product: {
@@ -32,6 +33,11 @@ export function ProductCard({ product, variant = 'default', className = '' }: Pr
   const [isHovered, setIsHovered] = useState(false);
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  
+  // Check if product is in wishlist on component mount
+  useEffect(() => {
+    setIsWishlisted(isInWishlist(product._id));
+  }, [product._id]);
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -56,8 +62,13 @@ export function ProductCard({ product, variant = 'default', className = '' }: Pr
   const handleToggleWishlist = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setIsWishlisted(!isWishlisted);
-    toast.success(isWishlisted ? 'Retiré des favoris' : 'Ajouté aux favoris');
+    
+    // Toggle wishlist status and update localStorage
+    const isAdded = toggleWishlistItem(product._id);
+    setIsWishlisted(isAdded);
+    
+    // Show toast notification
+    toast.success(isAdded ? 'Ajouté aux favoris' : 'Retiré des favoris');
   };
 
   const handleImageChange = () => {
