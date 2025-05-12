@@ -723,8 +723,8 @@ export default function ProductDetailsPage() {
                                   <Image
                                     src={image}
                                     alt={`Review image ${i + 1}`}
-                                    layout="fill"
-                                    objectFit="cover"
+                                    fill
+                                    style={{ objectFit: 'cover' }}
                                   />
                                 </div>
                               ))}

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, FormEvent, ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import slugify from "@/lib/utils";
 
 interface FormDataState {
@@ -284,7 +285,14 @@ export default function CreateBlogForm({ blog, onCreated, onEdited }: CreateBlog
             <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
               {imagePreviews.map((src, index) => (
                 <div key={index} className="relative">
-                  <img src={src} alt={`preview-${index}`} className="h-32 w-full object-cover rounded-md" />
+                  <div className="relative h-32 w-full rounded-md overflow-hidden">
+                    <Image 
+                      src={src} 
+                      alt={`preview-${index}`} 
+                      fill 
+                      style={{ objectFit: 'cover' }} 
+                    />
+                  </div>
                   <button
                     type="button"
                     onClick={() => handleRemoveImage(index)}

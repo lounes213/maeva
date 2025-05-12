@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { toast } from 'react-hot-toast';
 import { FiX, FiImage, FiTag, FiStar, FiCheckCircle, FiTrash2 } from 'react-icons/fi';
+import Image from 'next/image';
 import {
   Dialog,
   DialogTrigger,
@@ -59,10 +60,11 @@ function SortableImage({ id, src, index, removeImage }: { id: string; src: strin
       {...listeners}
       className="relative w-24 h-24 rounded-md overflow-hidden group cursor-move"
     >
-      <img
+      <Image
         src={src}
         alt={`Preview ${index}`}
-        className="object-cover w-full h-full"
+        fill
+        style={{ objectFit: 'cover' }}
       />
       <button
         type="button"
