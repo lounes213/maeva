@@ -1,11 +1,14 @@
 // app/page.tsx
 'use client';
 import { useState, useEffect } from 'react';
-import { FiShoppingBag, FiStar, FiTruck, FiRefreshCw, FiShield, FiChevronRight } from 'react-icons/fi';
+import { FiStar, FiTruck, FiRefreshCw, FiShield, FiChevronRight, FiShoppingBag } from 'react-icons/fi';
 import Image from 'next/image';
 import Link from 'next/link';
 import Navigation from './components/header';
 import Footer from './components/footer';
+import { ProductCard } from '@/components/ui/product-card';
+import { ModernButton } from '@/components/ui/modern-button';
+import { HeroBanner } from '@/components/ui/hero-banner';
 
 import BlogGrid from './components/blogGrid';
 import CollectionGrid from './collection/components/collectionGrid';
@@ -79,68 +82,17 @@ export default function HomePage() {
       {/* Navigation */}
       <Navigation />
    {/* Hero Banner with Algerian motifs and modern design */}
-
-<div className="relative overflow-hidden bg-gradient-to-b from-amber-50 to-white">
-  {/* Top Wave Shape */}
-  <svg
-    className="absolute top-0 left-0 w-full z-0"
-    viewBox="0 0 1440 160"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-    preserveAspectRatio="none"
-  >
-    <path
-      fill="#fff"
-      d="M0,64L60,80C120,96,240,128,360,138.7C480,149,600,139,720,122.7C840,107,960,85,1080,96C1200,107,1320,149,1380,170.7L1440,192L1440,0L1380,0C1320,0,1200,0,1080,0C960,0,840,0,720,0C600,0,480,0,360,0C240,0,120,0,60,0L0,0Z"
-    />
-  </svg>
-
-  {/* Algerian pattern background layer */}
-  <div className="absolute inset-0 bg-[url('/images/geometric-pattern.png')] bg-repeat opacity-10 z-0" />
-
-  {/* Content Container */}
-  <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 md:py-40 flex flex-col md:flex-row items-center">
-    {/* Text Column */}
-    <div className="md:w-1/2 text-center md:text-left mb-16 md:mb-0">
-      <h1 className="text-4xl md:text-6xl font-bold text-gray-900 leading-tight font-serif drop-shadow-md">
-        L'Élégance <span className="text-amber-600">Algérienne</span> Réinventée
-      </h1>
-      <p className="mt-6 text-xl text-gray-600 max-w-md mx-auto md:mx-0">
-        Découvrez notre collection exclusive de vêtements traditionnels modernisés, fabriqués à la main par nos artisans locaux.
-      </p>
-      <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
-        <Link 
-          href="/shop" 
-          className="px-8 py-3 bg-amber-600 text-white font-semibold rounded-full hover:bg-amber-700 transition inline-flex items-center shadow-lg hover:shadow-amber-200"
-        >
-          <FiShoppingBag className="mr-2" />
-          Explorer la collection
-        </Link>
-        <Link 
-          href="/about" 
-          className="px-8 py-3 border-2 border-amber-600 text-amber-600 font-semibold rounded-full hover:bg-amber-50 transition inline-flex items-center"
-        >
-          Notre histoire
-        </Link>
-      </div>
-    </div>
-
-    {/* Image Column */}
-    <div className="md:w-1/2 relative">
-      <div className="relative rounded-3xl overflow-hidden shadow-2xl border-8 border-white">
-        <Image 
-          src="/images/picture(1).jpg" 
-          alt="Modèle vêtement MAEVA" 
-          width={600} 
-          height={800} 
-          className="w-full h-auto"
-          priority
-        />
-      
-      </div>
-    </div>
-  </div>
-</div>
+   <HeroBanner
+     title="L'Élégance <amber>Algérienne</amber> Réinventée"
+     subtitle="Découvrez notre collection exclusive de vêtements traditionnels modernisés, fabriqués à la main par nos artisans locaux."
+     primaryButtonText="Explorer la collection"
+     primaryButtonLink="/shop"
+     secondaryButtonText="Notre histoire"
+     secondaryButtonLink="/about"
+     imageSrc="/images/picture(1).jpg"
+     imageAlt="Modèle vêtement MAEVA"
+     backgroundPattern="/images/geometric-pattern.png"
+   />
 
 
       {/* Benefits Section with Algerian geometric design */}
@@ -202,77 +154,44 @@ export default function HomePage() {
           {loading ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
               {[...Array(4)].map((_, i) => (
-                <div key={i} className="bg-gray-100 rounded-lg animate-pulse aspect-square"></div>
+                <div key={i} className="bg-gray-100 rounded-xl animate-pulse aspect-square">
+                  <div className="w-full h-full relative overflow-hidden rounded-t-xl">
+                    <div className="absolute inset-0 animate-shimmer bg-gradient-to-r from-gray-100 via-gray-200 to-gray-100"></div>
+                  </div>
+                  <div className="p-4 space-y-3">
+                    <div className="h-4 bg-gray-200 rounded animate-pulse"></div>
+                    <div className="h-3 bg-gray-200 rounded w-2/3 animate-pulse"></div>
+                    <div className="flex justify-between items-center pt-2">
+                      <div className="h-5 bg-gray-200 rounded w-1/3 animate-pulse"></div>
+                      <div className="h-3 bg-gray-200 rounded w-1/4 animate-pulse"></div>
+                    </div>
+                  </div>
+                </div>
               ))}
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
               {featuredProducts.map((product) => (
-                <div key={product._id} className="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow group">
-                  <Link href={`/product/${product._id}`} className="block">
-                    <div className="relative aspect-square overflow-hidden">
-                      {product.imageUrls?.[0] ? (
-                        <Image
-                          src={product.imageUrls[0]}
-                          alt={product.name}
-                          fill
-                          sizes='40'
-                          className="object-cover group-hover:opacity-90 transition-opacity"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400">
-                          <FiShoppingBag className="w-8 h-8" />
-                        </div>
-                      )}
-                      {product.promotion && (
-                        <span className="absolute top-2 left-2 bg-amber-600 text-white text-xs font-bold px-2 py-1 rounded">
-                          PROMO
-                        </span>
-                      )}
-                      {product.sold && product.sold > 10 && (
-                        <span className="absolute top-2 right-2 bg-white text-amber-600 text-xs font-bold px-2 py-1 rounded-full shadow-sm">
-                          {product.sold}+ vendus
-                        </span>
-                      )}
-                    </div>
-                    <div className="p-4">
-                      <h3 className="font-medium text-gray-900 mb-1 line-clamp-1">{product.name}</h3>
-                      <p className="text-sm text-gray-500 mb-2 capitalize">{product.category}</p>
-                      <div className="flex justify-between items-center">
-                        <div>
-                          {product.promotion && product.promoPrice ? (
-                            <>
-                              <span className="font-bold text-amber-600">{product.promoPrice.toFixed(2)} DA</span>
-                              <span className="ml-2 text-xs text-gray-500 line-through">{product.price.toFixed(2)} DA</span>
-                            </>
-                          ) : (
-                            <span className="font-bold text-amber-600">{product.price.toFixed(2)} DA</span>
-                          )}
-                        </div>
-                        {product.stock > 0 ? (
-                          <span className="text-xs text-green-500">En stock</span>
-                        ) : (
-                          <span className="text-xs text-red-500">Rupture</span>
-                        )}
-                      </div>
-                    </div>
-                  </Link>
-                  <button className="w-full py-2 bg-amber-600 text-white hover:bg-amber-700 transition-colors flex items-center justify-center gap-2 text-sm">
-                    <FiShoppingBag size={14} />
-                    Ajouter au panier
-                  </button>
+                <div key={product._id} className="animate-slide-up" style={{ animationDelay: `${featuredProducts.indexOf(product) * 0.1}s` }}>
+                  <ProductCard 
+                    product={product} 
+                    variant="featured" 
+                  />
                 </div>
               ))}
             </div>
           )}
           
           <div className="text-center mt-12">
-            <Link 
-              href="/shop" 
-              className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-black bg-amber-500 hover:bg-amber-400"
-            >
-              Voir toute la boutique
-              <FiChevronRight className="ml-2" />
+            <Link href="/shop">
+              <ModernButton 
+                variant="primary" 
+                size="lg" 
+                rightIcon={<FiChevronRight />}
+                className="hover-lift"
+              >
+                Voir toute la boutique
+              </ModernButton>
             </Link>
           </div>
         </div>
