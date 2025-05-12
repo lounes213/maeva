@@ -55,35 +55,46 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData, onSuccess, onCan
     setSelectedColors(colors);
     setValue('couleurs', colors);
   };
-
 const onSubmit = async (data: any) => {
   setIsLoading(true);
   const formData = new FormData();
 
-  // Normalize taille and couleurs if they're comma-separated strings
+  // Normalize taille and couleurs to arrays
   if (typeof data.taille === 'string') {
-    data.taille = data.taille.split(',').map((t: string) => t.trim()).filter(Boolean);
-  }
-  if (typeof data.couleurs === 'string') {
-    data.couleurs = data.couleurs.split(',').map((c: string) => c.trim()).filter(Boolean);
+    data.taille = data.taille
+      .split(',')
+      .map((t: string) => t.trim())
+      .filter(Boolean);
   }
 
-  // Append all fields to FormData
-  Object.keys(data).forEach(key => {
-    if ((key === 'couleurs' || key === 'taille') && Array.isArray(data[key])) {
-      data[key].forEach((item: string) => formData.append(key, item));
+  if (typeof data.couleurs === 'string') {
+    data.couleurs = data.couleurs
+      .split(',')
+      .map((c: string) => c.trim())
+      .filter(Boolean);
+  }
+
+  // Append all fields to FormData safely
+  Object.keys(data).forEach((key) => {
+    if ((key === 'couleurs' || key === 'taille')) {
+      const items = Array.isArray(data[key]) ? data[key] : [data[key]];
+      items.forEach((item: string) => {
+        if (item) formData.append(key, item);
+      });
     } else if (key !== 'images') {
       formData.append(key, data[key]);
     }
   });
 
   // Append selected images
-  selectedImages.forEach(image => {
+  selectedImages.forEach((image) => {
     formData.append('images', image);
   });
 
   try {
-    const url = initialData ? `/api/products?id=${initialData._id}` : '/api/products';
+    const url = initialData
+      ? `/api/products?id=${initialData._id}`
+      : '/api/products';
     const method = initialData ? 'PUT' : 'POST';
 
     const response = await fetch(url, {
@@ -94,18 +105,25 @@ const onSubmit = async (data: any) => {
     if (!response.ok) {
       const errorText = await response.text();
       console.error('Server Error Response:', errorText);
-      throw new Error('Erreur lors de l\'enregistrement du produit');
+      throw new Error("Erreur lors de l'enregistrement du produit");
     }
 
-    toast.success(initialData ? 'Produit mis à jour avec succès' : 'Produit créé avec succès');
+    toast.success(
+      initialData
+        ? 'Produit mis à jour avec succès'
+        : 'Produit créé avec succès'
+    );
     onSuccess();
   } catch (error) {
-    console.error('Erreur lors de l\'enregistrement :', error);
-    toast.error(error instanceof Error ? error.message : 'Une erreur est survenue');
+    console.error("Erreur lors de l'enregistrement :", error);
+    toast.error(
+      error instanceof Error ? error.message : 'Une erreur est survenue'
+    );
   } finally {
     setIsLoading(false);
   }
 };
+
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
