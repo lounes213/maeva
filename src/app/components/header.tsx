@@ -39,16 +39,7 @@ export default function Navigation() {
 
   const navLinks = [
     { href: '/', label: 'Accueil' },
-    { 
-      href: '/shop', 
-      label: 'Boutique',
-      children: [
-        { href: '/shop/femmes', label: 'Femmes' },
-        { href: '/shop/hommes', label: 'Hommes' },
-        { href: '/shop/enfants', label: 'Enfants' },
-        { href: '/shop/accessoires', label: 'Accessoires' },
-      ]
-    },
+    { href: '/shop', label: 'Boutique' },
     { href: '/collections', label: 'Collections' },
     { href: '/about', label: 'À propos' },
     { href: '/blog', label: 'Blog' },
@@ -76,7 +67,7 @@ export default function Navigation() {
   };
 
   return (
-    <header className={`fixed w-full z-50 transition-all duration-300 ${scrolled ? 'bg-white/95 backdrop-blur-md shadow-md py-2' : 'bg-white py-4'}`}>
+    <header className={`fixed w-full z-50 transition-all duration-300 ${scrolled ? 'bg-white/95 backdrop-blur-md shadow-md py-2' : 'bg-white py-3'}`}>
       {/* Top bar with announcement or secondary navigation */}
       <div className="bg-amber-600 text-white py-1.5 text-center text-sm font-medium">
         <p>Livraison gratuite à partir de 5000 DA d'achat | Paiement à la livraison disponible</p>
@@ -190,10 +181,7 @@ export default function Navigation() {
               <Heart className="w-5 h-5 text-gray-700" />
             </Link>
 
-            {/* Account */}
-            <Link href="/account" className="p-2 rounded-full hover:bg-gray-100 transition-colors">
-              <User className="w-5 h-5 text-gray-700" />
-            </Link>
+            {/* Account link removed */}
 
             {/* Cart */}
             <Link href="/cart" className="relative p-2 rounded-full hover:bg-gray-100 transition-colors">
@@ -293,14 +281,7 @@ export default function Navigation() {
             
             {/* Mobile actions */}
             <div className="space-y-4 border-t border-gray-200 pt-6 mt-6">
-              <Link
-                href="/account"
-                onClick={() => setMobileOpen(false)}
-                className="flex items-center py-2 text-gray-800"
-              >
-                <User className="w-5 h-5 mr-3" />
-                <span>Mon compte</span>
-              </Link>
+              {/* Account link removed */}
               
               <Link
                 href="/wishlist"

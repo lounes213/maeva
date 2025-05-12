@@ -286,8 +286,10 @@ export default function ProductDetailsPage() {
   };
 
   return (
-    <>
+    <div className="bg-white min-h-screen flex flex-col">
       <Header/> 
+      <div className="pt-20">
+      
       
       <main className="pt-32 pb-16">
         {/* Breadcrumb */}

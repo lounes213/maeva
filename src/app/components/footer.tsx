@@ -10,34 +10,7 @@ export default function Footer() {
   
   return (
     <footer className="bg-gray-900 text-white pt-16 pb-8">
-      {/* Newsletter Section */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-16">
-        <div className="bg-amber-600 rounded-2xl p-8 md:p-12 shadow-xl relative overflow-hidden">
-          {/* Background Pattern */}
-          <div className="absolute inset-0 opacity-10 bg-[url('/images/geometric-pattern.png')] bg-repeat"></div>
-          
-          <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
-            <div className="md:w-1/2">
-              <h3 className="text-2xl md:text-3xl font-bold text-white mb-2">Rejoignez notre newsletter</h3>
-              <p className="text-amber-100 md:text-lg">
-                Recevez nos dernières collections et offres exclusives directement dans votre boîte mail.
-              </p>
-            </div>
-            <div className="md:w-1/2 w-full">
-              <form className="flex flex-col sm:flex-row gap-3 w-full">
-                <Input 
-                  type="email" 
-                  placeholder="Votre adresse email" 
-                  className="flex-grow bg-white/20 border-0 placeholder:text-amber-100 text-white focus-visible:ring-white"
-                />
-                <ModernButton variant="secondary" type="submit">
-                  S'abonner
-                </ModernButton>
-              </form>
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* Newsletter Section Removed */}
       
       {/* Main Footer Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

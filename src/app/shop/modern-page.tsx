@@ -262,9 +262,9 @@ export default function ModernShopPage() {
       <Header />
       
       {/* Hero Banner */}
-      <div className="relative bg-gradient-to-b from-amber-50 to-white overflow-hidden">
+      <div className="relative bg-gradient-to-b from-amber-50 to-white overflow-hidden pt-20">
         <div className="absolute inset-0 bg-[url('/images/geometric-pattern.png')] bg-repeat opacity-10"></div>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24 relative z-10 text-center">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-20 relative z-10 text-center">
           <motion.h1 
             className="text-4xl md:text-5xl font-bold text-gray-900 font-serif mb-4"
             initial={{ opacity: 0, y: 20 }}
@@ -317,7 +317,7 @@ export default function ModernShopPage() {
       </div>
 
       {/* Shop Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-grow">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 flex-grow">
         <div className="flex items-center justify-between mb-8">
           <h2 className="text-2xl font-bold text-gray-900 font-serif">
             {filteredProducts.length === products.length ? (
@@ -417,35 +417,7 @@ export default function ModernShopPage() {
         </div>
       </section>
       
-      {/* Newsletter */}
-      <section className="py-16 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-amber-600 rounded-2xl p-8 md:p-12 shadow-xl relative overflow-hidden">
-            <div className="absolute inset-0 opacity-10 bg-[url('/images/geometric-pattern.png')] bg-repeat"></div>
-            
-            <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
-              <div className="md:w-1/2">
-                <h3 className="text-2xl md:text-3xl font-bold text-white mb-2">Restez informé</h3>
-                <p className="text-amber-100 md:text-lg">
-                  Inscrivez-vous à notre newsletter pour recevoir nos dernières collections et offres exclusives.
-                </p>
-              </div>
-              <div className="md:w-1/2 w-full">
-                <form className="flex flex-col sm:flex-row gap-3 w-full">
-                  <Input 
-                    type="email" 
-                    placeholder="Votre adresse email" 
-                    className="flex-grow bg-white/20 border-0 placeholder:text-amber-100 text-white focus-visible:ring-white"
-                  />
-                  <ModernButton variant="secondary" type="submit">
-                    S'abonner
-                  </ModernButton>
-                </form>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* Newsletter section removed */}
       
       <Footer />
     </div>
