@@ -17,6 +17,10 @@ export async function uploadImages(files: File[]): Promise<string[]> {
     const uploadResponse = await fetch('/api/upload', {
       method: 'POST',
       body: uploadFormData,
+      headers: {
+        // Don't set Content-Type header when sending FormData
+        // The browser will automatically set the correct multipart/form-data with boundary
+      }
     });
 
     if (!uploadResponse.ok) {

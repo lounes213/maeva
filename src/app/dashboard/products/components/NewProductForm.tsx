@@ -93,25 +93,11 @@ export default function NewProductForm({ product, onSubmit, onCancel, categories
       
       if (selectedImages.length > 0) {
         try {
-          const uploadFormData = new FormData();
-          selectedImages.forEach(file => {
-            uploadFormData.append('files', file);
-          });
-
           console.log('Uploading images to Cloudinary...');
           
-          const uploadResponse = await fetch('/api/upload', {
-            method: 'POST',
-            body: uploadFormData,
-          });
-
-          if (!uploadResponse.ok) {
-            const errorData = await uploadResponse.text();
-            console.error('Upload response error:', uploadResponse.status, errorData);
-            throw new Error(`Failed to upload images: ${uploadResponse.status} ${errorData}`);
-          }
-
-          const uploadedUrls = await uploadResponse.json();
+          // Use the uploadImages helper function
+          const uploadedUrls = await uploadImages(selectedImages);
+          
           console.log('Successfully uploaded images:', uploadedUrls);
           imageUrls = [...imageUrls, ...uploadedUrls];
         } catch (uploadError) {
@@ -125,11 +111,12 @@ export default function NewProductForm({ product, onSubmit, onCancel, categories
       // Then create the product with all data
       const productData = {
         ...formData,
+          
         _id: product._id, // Preserve the _id if it exists
         imageUrls,
         price: parseFloat(formData.price.toString()),
         stock: parseFloat(formData.stock.toString()),
-        promoPrice: formData.promotion ? parseFloat((formData.promoPrice || 0).toString()) : undefined,
+        promoPrice: formData.promotion ? parseFloat(formData.promoPrice?.toString() || "0") : undefined,
       };
 
       // Use the onSubmit prop to handle the form submission

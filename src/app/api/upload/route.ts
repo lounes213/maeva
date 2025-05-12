@@ -13,15 +13,38 @@ cloudinary.config({
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60; // Set maximum duration for the API route (in seconds)
 
+// Add OPTIONS method to handle preflight requests
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 200,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    },
+  });
+}
+
 export async function POST(request: Request) {
+  // Add CORS headers to the response
+  const headers = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  };
+
   try {
+    console.log('Received upload request');
+    console.log('Received upload request');
     const formData = await request.formData();
+    console.log('FormData received');
     const files = formData.getAll('files') as File[];
+    console.log(`Found ${files.length} files in the request`);
 
     if (!files || files.length === 0) {
       return NextResponse.json(
         { error: 'No files uploaded' },
-        { status: 400 }
+        { status: 400, headers }
       );
     }
 
@@ -32,7 +55,7 @@ export async function POST(request: Request) {
       if (file.size > MAX_FILE_SIZE) {
         return NextResponse.json(
           { error: `File size exceeds the ${MAX_FILE_SIZE / (1024 * 1024)}MB limit` },
-          { status: 400 }
+          { status: 400, headers }
         );
       }
 
@@ -41,7 +64,7 @@ export async function POST(request: Request) {
       if (!fileType.startsWith('image/')) {
         return NextResponse.json(
           { error: 'Only image files are allowed' },
-          { status: 400 }
+          { status: 400, headers }
         );
       }
 
@@ -76,17 +99,17 @@ export async function POST(request: Request) {
         console.error('Error uploading to Cloudinary:', uploadError);
         return NextResponse.json(
           { error: 'Failed to upload image to Cloudinary' },
-          { status: 500 }
+          { status: 500, headers }
         );
       }
     }
 
-    return NextResponse.json(uploadedUrls);
+    return NextResponse.json(uploadedUrls, { headers });
   } catch (error: any) {
     console.error('Error processing upload:', error);
     return NextResponse.json(
       { error: error.message || 'Failed to upload files' },
-      { status: 500 }
+      { status: 500, headers }
     );
   }
 }
