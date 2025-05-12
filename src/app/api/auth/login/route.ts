@@ -52,8 +52,9 @@ export async function POST(req: NextRequest) {
         user: {
           id: user._id,
           email: user.email,
-          name: user.name
-        }
+          name: user.name || user.email.split('@')[0]
+        },
+        redirectTo: '/dashboard'
       },
       { status: 200 }
     );

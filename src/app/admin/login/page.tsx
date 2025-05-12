@@ -22,6 +22,7 @@ export default function AdminLogin() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
+        credentials: 'include' // Important: include cookies in the request
       });
 
       console.log('Login response status:', response.status);
@@ -35,10 +36,27 @@ export default function AdminLogin() {
       toast.success('Connexion réussie');
       console.log('Login successful, redirecting to dashboard...');
       
-      // Add a delay before redirecting
-      setTimeout(() => {
-        router.push('/dashboard');
-      }, 1000);
+      // First try to verify the authentication
+      try {
+        console.log('Verifying authentication before redirect...');
+        const verifyResponse = await fetch('/api/auth/me', { 
+          credentials: 'include',
+          cache: 'no-store'
+        });
+        
+        if (verifyResponse.ok) {
+          console.log('Authentication verified, redirecting...');
+          // Redirect to the auth test page first to verify everything is working
+          window.location.href = '/auth-test';
+        } else {
+          console.error('Authentication verification failed, redirecting anyway...');
+          window.location.href = '/dashboard';
+        }
+      } catch (verifyError) {
+        console.error('Error verifying authentication:', verifyError);
+        // Redirect anyway
+        window.location.href = '/dashboard';
+      }
     } catch (err: any) {
       console.error('Login error:', err);
       toast.error(err.message || 'Une erreur est survenue');

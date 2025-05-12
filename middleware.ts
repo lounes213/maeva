@@ -80,6 +80,7 @@ export async function middleware(req: NextRequest) {
 
 export const config = {
   matcher: [
+    '/dashboard',
     '/dashboard/:path*',
     // Only include specific API routes that need authentication
     '/api/((?!cloudinary-upload|upload).)*',
