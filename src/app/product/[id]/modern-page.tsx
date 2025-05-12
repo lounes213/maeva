@@ -15,6 +15,7 @@ import { ProductCard } from '@/components/ui/product-card';
 import toast from 'react-hot-toast';
 import ReviewModal from '@/app/components/ReviewModal';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import Link from 'next/link';
 
 interface Product {
   _id: string;
@@ -241,13 +242,13 @@ export default function ProductDetailsPage() {
     
     // Create cart item object
     const cartItem = {
-      id: product._id,
+      _id: product._id,
       name: product.name,
       price: actualPrice,
-      image: product.imageUrls[0], // Use first image as thumbnail
+      imageUrl: product.imageUrls[0], // Use first image as thumbnail
       quantity: quantity,
-      color: selectedColor,
-      size: selectedSize
+      color: selectedColor || undefined, // Convert null to undefined
+      size: selectedSize || undefined    // Convert null to undefined
     };
     
     // Add to cart using the context function
