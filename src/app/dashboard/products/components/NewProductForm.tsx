@@ -57,60 +57,47 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData, onSuccess, onCan
   };
 
   const onSubmit = async (data: any) => {
-    setIsLoading(true);
-    const formData = new FormData();
+  setIsLoading(true);
+  const formData = new FormData();
 
-    // Vérifier que le champ 'category' est renseigné
-    if (!data.category || data.category.trim() === '') {
-      toast.error('Le champ catégorie est requis.');
-      setIsLoading(false);
-      return;
+  // Append all fields
+  Object.keys(data).forEach(key => {
+    if (key === 'couleurs' || key === 'taille') {
+      // Handle arrays
+      data[key].forEach((item: string) => formData.append(key, item));
+    } else if (key !== 'images') {
+      formData.append(key, data[key]);
     }
+  });
 
-    // Convertir les champs numériques en nombres
-    const processedData = {
-      ...data,
-      price: parseFloat(data.price),
-      reviewCount: parseInt(data.reviewCount, 10),
-      sold: parseInt(data.sold, 10),
-      stock: parseInt(data.stock, 10),
-    };
+  // Append images
+  selectedImages.forEach(image => {
+    formData.append('images', image);
+  });
 
-    // Ajouter les données au FormData
-    Object.keys(processedData).forEach(key => {
-      if (key === 'promoPrice' && !processedData.promotion) {
-        return; // Ne pas inclure promoPrice si promotion est false
-      }
-      formData.append(key, processedData[key]);
+  try {
+    const url = initialData ? `/api/products?id=${initialData._id}` : '/api/products';
+    const method = initialData ? 'PUT' : 'POST';
+
+    const response = await fetch(url, {
+      method,
+      body: formData // No Content-Type header for FormData
     });
 
-    // Ajouter les fichiers d'images
-    selectedImages.forEach(image => {
-      formData.append('images', image);
-    });
-
-    try {
-      const url = initialData ? `/api/products?id=${initialData._id}` : '/api/products';
-      const method = initialData ? 'PUT' : 'POST';
-
-      const response = await fetch(url, {
-        method,
-        body: formData
-      });
-
-      if (!response.ok) {
-        throw new Error('Erreur lors de l\'enregistrement du produit');
-      }
-
-      toast.success(initialData ? 'Produit mis à jour avec succès' : 'Produit créé avec succès');
-      onSuccess();
-    } catch (error) {
-      console.error('Erreur lors de l\'enregistrement :', error);
-      toast.error('Une erreur est survenue');
-    } finally {
-      setIsLoading(false);
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Erreur lors de l\'enregistrement du produit');
     }
-  };
+
+    toast.success(initialData ? 'Produit mis à jour avec succès' : 'Produit créé avec succès');
+    onSuccess();
+  } catch (error) {
+    console.error('Erreur lors de l\'enregistrement :', error);
+    toast.error(error instanceof Error ? error.message : 'Une erreur est survenue');
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
