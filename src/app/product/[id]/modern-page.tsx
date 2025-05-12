@@ -290,7 +290,6 @@ export default function ProductDetailsPage() {
       <Header/> 
       <div className="pt-20">
       
-      
       <main className="pt-32 pb-16">
         {/* Breadcrumb */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6">
@@ -973,6 +972,7 @@ export default function ProductDetailsPage() {
       />
       
       <Footer />
-    </>
+      </div>
+    </div>
   );
 }

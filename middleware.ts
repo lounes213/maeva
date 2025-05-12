@@ -44,8 +44,6 @@ export async function middleware(req: NextRequest) {
   if (req.nextUrl.pathname.startsWith('/dashboard') || req.nextUrl.pathname.startsWith('/api/')) {
     // If no token is present, redirect to login
     if (!token) {
-      console.log('No token found, redirecting to login');
-      
       if (req.nextUrl.pathname.startsWith('/api/')) {
         return NextResponse.json({ message: 'Non authentifié' }, { status: 401 });
       }
@@ -61,11 +59,8 @@ export async function middleware(req: NextRequest) {
     try {
       // Verify the token
       const decoded = jwt.verify(token, JWT_SECRET);
-      console.log('Token verified successfully:', decoded);
       return NextResponse.next();
     } catch (error) {
-      console.error('Token verification failed:', error);
-      
       if (req.nextUrl.pathname.startsWith('/api/')) {
         return NextResponse.json({ message: 'Token invalide' }, { status: 401 });
       }

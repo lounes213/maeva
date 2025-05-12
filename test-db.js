@@ -6,9 +6,7 @@ const MONGODB_URI = 'mongodb+srv://lounisbousbaine:85ptd7q7IwFofcPJ@cluster0.je0
 
 async function main() {
   try {
-    console.log('Connecting to MongoDB...');
     await mongoose.connect(MONGODB_URI);
-    console.log('Connected to MongoDB successfully!');
 
     // Define User schema
     const UserSchema = new mongoose.Schema({
@@ -25,7 +23,7 @@ async function main() {
     const existingUser = await User.findOne({ email: adminEmail });
 
     if (existingUser) {
-      console.log('Admin user already exists:', existingUser);
+      // Admin user already exists
     } else {
       // Create admin user
       const hashedPassword = await bcrypt.hash('admin123', 10);
@@ -36,18 +34,15 @@ async function main() {
       });
 
       await newUser.save();
-      console.log('Admin user created successfully:', newUser);
     }
 
     // List all users
     const allUsers = await User.find({});
-    console.log('All users in database:', allUsers);
 
   } catch (error) {
-    console.error('Error:', error);
+    // Handle error silently
   } finally {
     await mongoose.disconnect();
-    console.log('Disconnected from MongoDB');
   }
 }
 

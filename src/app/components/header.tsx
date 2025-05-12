@@ -37,9 +37,27 @@ export default function Navigation() {
     };
   }, [scrolled]);
 
-  const navLinks = [
+  // Define the type for navigation links
+  type NavLink = {
+    href: string;
+    label: string;
+    children?: Array<{
+      href: string;
+      label: string;
+    }>;
+  };
+
+  const navLinks: NavLink[] = [
     { href: '/', label: 'Accueil' },
-    { href: '/shop', label: 'Boutique' },
+    { 
+      href: '/shop', 
+      label: 'Boutique',
+      children: [
+        { href: '/shop/women', label: 'Femmes' },
+        { href: '/shop/men', label: 'Hommes' },
+        { href: '/shop/accessories', label: 'Accessoires' }
+      ] 
+    },
     { href: '/collections', label: 'Collections' },
     { href: '/about', label: 'À propos' },
     { href: '/blog', label: 'Blog' },
