@@ -26,8 +26,6 @@ export async function OPTIONS() {
 }
 
 export async function POST(request: Request) {
-  console.log('POST request received at /api/upload');
-  
   // Add CORS headers to the response
   const headers = {
     'Access-Control-Allow-Origin': '*',
@@ -36,7 +34,7 @@ export async function POST(request: Request) {
   };
 
   try {
-    console.log('Received upload request');
+    console.log('Received upload request at /api/cloudinary-upload');
     const formData = await request.formData();
     console.log('FormData received');
     const files = formData.getAll('files') as File[];
