@@ -43,61 +43,88 @@ export async function GET(req: Request) {
 }
 
 // POST - Create new product
-// POST - Create new product
 export async function POST(req: Request) {
   try {
-    const formData = await req.formData();
-    
-    // Required fields
-    const requiredFields = ['name', 'description', 'price', 'stock', 'category'];
-    for (const field of requiredFields) {
-      if (!formData.get(field)) {
-        return errorResponse(`${field} est requis`, 400);
-      }
-    }
-
-    // Process images
-    const imageFiles = formData.getAll('images') as File[];
-    const imageUrls: string[] = [];
-    
-    for (const image of imageFiles) {
-      if (image.size > 0) {
-        const buffer = await image.arrayBuffer();
-        const fileExtension = image.name.split('.').pop();
-        const fileName = `${uuidv4()}.${fileExtension}`;
-        const uploadDir = path.join(process.cwd(), 'public/uploads/products');
-        
-        if (!fs.existsSync(uploadDir)) {
-          fs.mkdirSync(uploadDir, { recursive: true });
+    // For JSON requests from the frontend
+    if (req.headers.get('content-type')?.includes('application/json')) {
+      const data = await req.json();
+      
+      // Required fields validation
+      const requiredFields = ['name', 'description', 'price', 'stock', 'category', 'reference'];
+      for (const field of requiredFields) {
+        if (!data[field]) {
+          return errorResponse(`${field} est requis`, 400);
         }
-
-        const filePath = path.join(uploadDir, fileName);
-        await fs.promises.writeFile(filePath, Buffer.from(buffer));
-        imageUrls.push(`/uploads/products/${fileName}`);
       }
+
+      // Create product with Cloudinary image URLs
+      await dbConnect();
+      const product = await Product.create({
+        name: data.name,
+        reference: data.reference,
+        description: data.description,
+        price: parseFloat(data.price),
+        stock: parseInt(data.stock),
+        category: data.category,
+        tissu: data.tissu || '',
+        couleurs: Array.isArray(data.couleurs) ? data.couleurs : [],
+        taille: Array.isArray(data.taille) ? data.taille : [],
+        sold: parseInt(data.sold) || 0,
+        promotion: Boolean(data.promotion),
+        promoPrice: data.promoPrice ? parseFloat(data.promoPrice) : undefined,
+        rating: data.rating ? parseFloat(data.rating) : 0,
+        reviewCount: data.reviewCount ? parseInt(data.reviewCount) : 0,
+        images: data.images || [],
+        imageUrls: data.images || [] // Store in both fields for compatibility
+      });
+
+      return NextResponse.json({ 
+        success: true, 
+        data: product,
+        message: 'Produit créé avec succès' 
+      });
+    } 
+    // For FormData requests (legacy support)
+    else {
+      const formData = await req.formData();
+      
+      // Required fields
+      const requiredFields = ['name', 'description', 'price', 'stock', 'category', 'reference'];
+      for (const field of requiredFields) {
+        if (!formData.get(field)) {
+          return errorResponse(`${field} est requis`, 400);
+        }
+      }
+
+      // We don't process images here anymore - they should be uploaded to Cloudinary first
+      // and the URLs should be passed in the request
+
+      // Create product
+      await dbConnect();
+      const product = await Product.create({
+        name: formData.get('name'),
+        reference: formData.get('reference'),
+        description: formData.get('description'),
+        price: parseFloat(formData.get('price') as string),
+        stock: parseInt(formData.get('stock') as string),
+        category: formData.get('category'),
+        tissu: formData.get('tissu') || '',
+        couleurs: (formData.getAll('couleurs') as string[]).filter(Boolean),
+        taille: (formData.getAll('taille') as string[]).filter(Boolean),
+        sold: parseInt(formData.get('sold') as string) || 0,
+        promotion: formData.get('promotion') === 'true',
+        promoPrice: formData.get('promoPrice') ? parseFloat(formData.get('promoPrice') as string) : undefined,
+        // Use the image URLs passed from the frontend
+        images: formData.getAll('images') as string[],
+        imageUrls: formData.getAll('images') as string[]
+      });
+
+      return NextResponse.json({ 
+        success: true, 
+        data: product,
+        message: 'Produit créé avec succès' 
+      });
     }
-
-    // Create product
-    await dbConnect();
-    const product = await Product.create({
-      name: formData.get('name'),
-      description: formData.get('description'),
-      price: parseFloat(formData.get('price') as string),
-      stock: parseInt(formData.get('stock') as string),
-      category: formData.get('category'),
-      tissu: formData.get('tissu') || '',
-      couleurs: (formData.getAll('couleurs') as string[]).filter(Boolean),
-      taille: (formData.getAll('taille') as string[]).filter(Boolean),
-      sold: parseInt(formData.get('sold') as string) || 0,
-      promotion: formData.get('promotion') === 'true',
-      image: imageUrls.length === 1 ? imageUrls[0] : imageUrls
-    });
-
-    return NextResponse.json({ 
-      success: true, 
-      data: product,
-      message: 'Produit créé avec succès' 
-    });
   } catch (error) {
     const errorMessage = logError(error);
     return errorResponse(`Échec de la création du produit: ${errorMessage}`);
@@ -105,95 +132,126 @@ export async function POST(req: Request) {
 }
 
 // PUT - Update product
-// PUT - Update product
 export async function PUT(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
     if (!id) return errorResponse('ID du produit est requis', 400);
 
-    const formData = await req.formData();
     await dbConnect();
-
+    
     // Find existing product
     const existingProduct = await Product.findById(id);
     if (!existingProduct) return errorResponse('Produit non trouvé', 404);
 
-    // Process images - handle both single and multiple images
-    const imageFiles = formData.getAll('images') as File[];
-    let currentImages = Array.isArray(existingProduct.image) 
-      ? existingProduct.image 
-      : existingProduct.image ? [existingProduct.image] : [];
+    // For JSON requests from the frontend
+    if (req.headers.get('content-type')?.includes('application/json')) {
+      const data = await req.json();
+      
+      // Get existing images
+      const existingImages = existingProduct.images || 
+                            (existingProduct.imageUrls || []) || 
+                            (Array.isArray(existingProduct.image) ? existingProduct.image : 
+                              existingProduct.image ? [existingProduct.image] : []);
+      
+      // Combine existing and new images
+      const allImages = [...(data.images || [])];
+      
+      // Update data
+      const updateData = {
+        name: data.name || existingProduct.name,
+        reference: data.reference || existingProduct.reference,
+        description: data.description || existingProduct.description,
+        price: data.price !== undefined ? parseFloat(data.price) : existingProduct.price,
+        stock: data.stock !== undefined ? parseInt(data.stock) : existingProduct.stock,
+        category: data.category || existingProduct.category,
+        tissu: data.tissu || existingProduct.tissu,
+        couleurs: Array.isArray(data.couleurs) ? data.couleurs : existingProduct.couleurs,
+        taille: Array.isArray(data.taille) ? data.taille : existingProduct.taille,
+        sold: data.sold !== undefined ? parseInt(data.sold) : existingProduct.sold,
+        promotion: data.promotion !== undefined ? Boolean(data.promotion) : existingProduct.promotion,
+        promoPrice: data.promoPrice !== undefined ? parseFloat(data.promoPrice) : existingProduct.promoPrice,
+        rating: data.rating !== undefined ? parseFloat(data.rating) : existingProduct.rating,
+        reviewCount: data.reviewCount !== undefined ? parseInt(data.reviewCount) : existingProduct.reviewCount,
+        images: allImages,
+        imageUrls: allImages // Store in both fields for compatibility
+      };
 
-    // Handle new image uploads
-    const newImages: string[] = [];
-    for (const image of imageFiles) {
-      if (image.size > 0) {
-        const buffer = await image.arrayBuffer();
-        const fileExtension = image.name.split('.').pop();
-        const fileName = `${uuidv4()}.${fileExtension}`;
-        const uploadDir = path.join(process.cwd(), 'public/uploads/products');
-        
-        if (!fs.existsSync(uploadDir)) {
-          fs.mkdirSync(uploadDir, { recursive: true });
-        }
+      const updatedProduct = await Product.findByIdAndUpdate(
+        id,
+        updateData,
+        { new: true, runValidators: true }
+      );
 
-        const filePath = path.join(uploadDir, fileName);
-        await fs.promises.writeFile(filePath, Buffer.from(buffer));
-        newImages.push(`/uploads/products/${fileName}`);
-      }
+      return NextResponse.json({ 
+        success: true, 
+        data: updatedProduct,
+        message: 'Produit mis à jour avec succès' 
+      });
     }
-
-    // Handle image removals if needed
-    const imagesToRemove = formData.get('imagesToRemove') 
-      ? JSON.parse(formData.get('imagesToRemove') as string) as string[]
-      : [];
-
-    // Clean up removed images
-    for (const imageUrl of imagesToRemove) {
-      const filePath = path.join(process.cwd(), 'public', imageUrl);
-      if (fs.existsSync(filePath)) {
-        await fs.promises.unlink(filePath);
+    // For FormData requests (legacy support)
+    else {
+      const formData = await req.formData();
+      
+      // Get existing images from various possible fields
+      let existingImages = [];
+      if (existingProduct.images && existingProduct.images.length > 0) {
+        existingImages = existingProduct.images;
+      } else if (existingProduct.imageUrls && existingProduct.imageUrls.length > 0) {
+        existingImages = existingProduct.imageUrls;
+      } else if (existingProduct.image) {
+        existingImages = Array.isArray(existingProduct.image) ? existingProduct.image : [existingProduct.image];
       }
+      
+      // Handle image removals if needed
+      const imagesToRemove = formData.get('imagesToRemove') 
+        ? JSON.parse(formData.get('imagesToRemove') as string) as string[]
+        : [];
+      
+      // Filter out removed images - no need to delete files from disk
+      const remainingImages = existingImages.filter((img: string) => !imagesToRemove.includes(img));
+      
+      // Get new images from form data (these should be URLs, not files)
+      const newImageUrls = formData.getAll('images') as string[];
+      const allImages = [...remainingImages, ...newImageUrls.filter(url => typeof url === 'string' && url.startsWith('http'))];
+
+      // Process other fields
+      const updateData = {
+        name: formData.get('name') || existingProduct.name,
+        reference: formData.get('reference') || existingProduct.reference,
+        description: formData.get('description') || existingProduct.description,
+        price: formData.get('price') ? parseFloat(formData.get('price') as string) : existingProduct.price,
+        stock: formData.get('stock') ? parseInt(formData.get('stock') as string) : existingProduct.stock,
+        category: formData.get('category') || existingProduct.category,
+        tissu: formData.get('tissu') || existingProduct.tissu,
+        couleurs: formData.getAll('couleurs').length > 0 
+          ? (formData.getAll('couleurs') as string[]).filter(Boolean) 
+          : existingProduct.couleurs,
+        taille: formData.getAll('taille').length > 0
+          ? (formData.getAll('taille') as string[]).filter(Boolean)
+          : existingProduct.taille,
+        sold: formData.get('sold') ? parseInt(formData.get('sold') as string) : existingProduct.sold,
+        promotion: formData.get('promotion') ? formData.get('promotion') === 'true' : existingProduct.promotion,
+        promoPrice: formData.get('promoPrice') ? parseFloat(formData.get('promoPrice') as string) : existingProduct.promoPrice,
+        images: allImages,
+        imageUrls: allImages
+      };
+
+      const updatedProduct = await Product.findByIdAndUpdate(
+        id,
+        updateData,
+        { new: true, runValidators: true }
+      );
+
+      return NextResponse.json({ 
+        success: true, 
+        data: updatedProduct,
+        message: 'Produit mis à jour avec succès' 
+      });
     }
-
-    // Filter out removed images
-    const remainingImages = currentImages.filter((img: string) => !imagesToRemove.includes(img));
-    const allImages = [...remainingImages, ...newImages];
-
-    // Process other fields
-    const updateData = {
-      name: formData.get('name') || existingProduct.name,
-      description: formData.get('description') || existingProduct.description,
-      price: formData.get('price') ? parseFloat(formData.get('price') as string) : existingProduct.price,
-      stock: formData.get('stock') ? parseInt(formData.get('stock') as string) : existingProduct.stock,
-      category: formData.get('category') || existingProduct.category,
-      tissu: formData.get('tissu') || existingProduct.tissu,
-      couleurs: formData.getAll('couleurs').length > 0 
-        ? (formData.getAll('couleurs') as string[]).filter(Boolean) 
-        : existingProduct.couleurs,
-      taille: formData.getAll('taille').length > 0
-        ? (formData.getAll('taille') as string[]).filter(Boolean)
-        : existingProduct.taille,
-      sold: formData.get('sold') ? parseInt(formData.get('sold') as string) : existingProduct.sold,
-      promotion: formData.get('promotion') ? formData.get('promotion') === 'true' : existingProduct.promotion,
-      image: allImages.length === 1 ? allImages[0] : allImages
-    };
-
-    const updatedProduct = await Product.findByIdAndUpdate(
-      id,
-      updateData,
-      { new: true, runValidators: true }
-    );
-
-    return NextResponse.json({ 
-      success: true, 
-      data: updatedProduct,
-      message: 'Produit mis à jour avec succès' 
-    });
   } catch (error) {
-    console.error('Erreur lors de la mise à jour du produit:', error);
-    return errorResponse('Échec de la mise à jour du produit');
+    const errorMessage = logError(error);
+    return errorResponse(`Échec de la mise à jour du produit: ${errorMessage}`);
   }
 }
 
@@ -203,35 +261,18 @@ export async function DELETE(req: Request) {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
     if (!id) {
-      return NextResponse.json(
-        { error: 'ID du produit est requis' },
-        { status: 400 }
-      );
+      return errorResponse('ID du produit est requis', 400);
     }
 
     await dbConnect();
     const product = await Product.findById(id);
     if (!product) {
-      return NextResponse.json(
-        { error: 'Produit non trouvé' },
-        { status: 404 }
-      );
+      return errorResponse('Produit non trouvé', 404);
     }
 
-    // Check if running locally (skip deletion on Netlify/Vercel)
-    const isLocal = process.env.NODE_ENV === 'development';
-
-    if (isLocal && product.imageUrls && product.imageUrls.length > 0) {
-      for (const imageUrl of product.imageUrls) {
-        const fileName = imageUrl.split('/').pop();
-        if (!fileName) continue;
-
-        const filePath = path.join(process.cwd(), 'public', 'uploads', 'products', fileName);
-        if (fs.existsSync(filePath)) {
-          await fs.promises.unlink(filePath);
-        }
-      }
-    }
+    // Note: We're not deleting files from the file system anymore
+    // Images stored in Cloudinary would need to be deleted via Cloudinary API
+    // if that functionality is needed in the future
 
     await Product.findByIdAndDelete(id);
 
@@ -240,10 +281,7 @@ export async function DELETE(req: Request) {
       message: 'Produit supprimé avec succès',
     });
   } catch (error: any) {
-    console.error('Erreur de suppression:', error);
-    return NextResponse.json(
-      { error: error.message || 'Échec de la suppression du produit' },
-      { status: 500 }
-    );
+    const errorMessage = logError(error);
+    return errorResponse(`Échec de la suppression du produit: ${errorMessage}`);
   }
 }
