@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Modal from './modal';
 import ColorSelector from './createColor';
 import { Product } from '@/app/types/product';
-import { directUploadImages } from './directUpload';
+import { pagesUploadImages } from './pagesUpload';
 
 interface NewProductFormProps {
   product: Product;
@@ -95,8 +95,8 @@ export default function NewProductForm({ product, onSubmit, onCancel, categories
         try {
           console.log('Uploading images to Cloudinary...');
           
-          // Use the directUploadImages helper function
-          const uploadedUrls = await directUploadImages(selectedImages);
+          // Use the pagesUploadImages helper function
+          const uploadedUrls = await pagesUploadImages(selectedImages);
           
           console.log('Successfully uploaded images:', uploadedUrls);
           imageUrls = [...imageUrls, ...uploadedUrls];

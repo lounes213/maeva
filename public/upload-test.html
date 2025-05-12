@@ -129,7 +129,7 @@
       resultDiv.innerHTML = 'Testing direct upload API...';
       
       try {
-        const response = await fetch('/api/direct-upload', {
+        const response = await fetch('/api/image-upload', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -200,8 +200,8 @@
         // Convert file to data URL
         const dataUrl = await fileToDataUrl(file);
         
-        // Upload to server
-        const response = await fetch('/api/direct-upload', {
+        // Upload to server using Pages Router API
+        const response = await fetch('/api/image-upload', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
