@@ -60,6 +60,6 @@ export const config = {
     // Exclude the upload API route
     '/api/(?!upload).*',
     // Exclude static files
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|api/upload|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ]
 };
