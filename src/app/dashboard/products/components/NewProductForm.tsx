@@ -38,6 +38,37 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData, onSuccess, onCan
     }
   });
 
+
+const uploadToCloudinary = async (file: File): Promise<string> => {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
+  const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+
+  if (!uploadPreset || !cloudName) {
+    throw new Error('Missing Cloudinary config in environment variables');
+  }
+
+  formData.append('upload_preset', uploadPreset);
+  formData.append('cloud_name', cloudName);
+
+  const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+    method: 'POST',
+    body: formData,
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error?.message || 'Cloudinary upload failed');
+  }
+
+  return data.secure_url;
+};
+
+
+
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     setSelectedImages(prev => [...prev, ...files]);
@@ -57,51 +88,34 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData, onSuccess, onCan
   };
 const onSubmit = async (data: any) => {
   setIsLoading(true);
-  const formData = new FormData();
-
-  // Normalize 'taille' and 'couleurs'
-  const normalizeArrayField = (field: any): string[] => {
-    if (Array.isArray(field)) {
-      return field.map((item) => item?.toString().trim()).filter(Boolean);
-    } else if (typeof field === 'string') {
-      return field.split(',').map((item) => item.trim()).filter(Boolean);
-    }
-    return [];
-  };
-
-  data.taille = normalizeArrayField(data.taille);
-  data.couleurs = normalizeArrayField(data.couleurs);
-
-  console.log('Processed data before FormData:', data);
-
-  // Append all fields to FormData safely
-  Object.keys(data).forEach((key) => {
-    if ((key === 'couleurs' || key === 'taille')) {
-      const items = Array.isArray(data[key]) ? data[key] : [];
-      items.forEach((item: string) => {
-        if (typeof item === 'string') {
-          formData.append(key, item);
-        }
-      });
-    } else if (key !== 'images') {
-      formData.append(key, data[key]);
-    }
-  });
-
-  // Append selected images
-  selectedImages?.forEach((image) => {
-    formData.append('images', image);
-  });
 
   try {
-    const url = initialData
-      ? `/api/products?id=${initialData._id}`
-      : '/api/products';
+    // Upload images first
+    const uploadedImageUrls: string[] = [];
+    for (const image of selectedImages) {
+      const url = await uploadToCloudinary(image);
+      uploadedImageUrls.push(url);
+    }
+
+    // Normalize fields
+    const normalizeArrayField = (field: any): string[] => {
+      if (Array.isArray(field)) return field.map((v) => v?.toString().trim()).filter(Boolean);
+      if (typeof field === 'string') return field.split(',').map((v) => v.trim()).filter(Boolean);
+      return [];
+    };
+
+    data.taille = normalizeArrayField(data.taille);
+    data.couleurs = normalizeArrayField(data.couleurs);
+    data.images = uploadedImageUrls;
+
+    // Send to backend as JSON
+    const url = initialData ? `/api/products?id=${initialData._id}` : '/api/products';
     const method = initialData ? 'PUT' : 'POST';
 
     const response = await fetch(url, {
       method,
-      body: formData,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
     });
 
     if (!response.ok) {
@@ -110,9 +124,7 @@ const onSubmit = async (data: any) => {
       throw new Error("Erreur lors de l'enregistrement du produit");
     }
 
-    toast.success(
-      initialData ? 'Produit mis à jour avec succès' : 'Produit créé avec succès'
-    );
+    toast.success(initialData ? 'Produit mis à jour avec succès' : 'Produit créé avec succès');
     onSuccess();
   } catch (error) {
     console.error("Erreur lors de l'enregistrement :", error);
