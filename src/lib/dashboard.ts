@@ -3,7 +3,7 @@ import Order from "@/app/models/Order";
 import { Contact } from "lucide-react";
 import Collection from "@/app/models/collection";
 import contact from "@/app/models/contact";
-import {dbConnect} from "@/lib/mongo";
+import dbConnect from "@/lib/mongo";
 
 
 export async function getCounts() {

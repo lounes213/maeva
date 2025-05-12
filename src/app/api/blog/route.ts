@@ -5,14 +5,15 @@ import path from 'path';
 import fs from 'fs';
 import { promises as fsp } from 'fs';
 import { v4 as uuidv4 } from 'uuid';
-import {dbConnect} from "@/lib/mongo";
+import dbConnect from "@/lib/mongo";
 import slugify from "@/lib/utils";
 import toast from "react-hot-toast";
 
-// Update the config to the new syntax for Next.js 15
-export const dynamic = 'force-dynamic';
-export const runtime = 'nodejs';
-// Remove the deprecated config export
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
 
 // Amélioration des messages d'erreur avec des toasts spécifiques
 export async function POST(req: NextRequest) {
@@ -212,7 +213,6 @@ export async function PUT(req: NextRequest) {
     );
   }
 }
-
 export async function DELETE(req: NextRequest) {
   try {
     await dbConnect();

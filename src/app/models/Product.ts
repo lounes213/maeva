@@ -1,8 +1,6 @@
 import mongoose, { Schema, model, models } from 'mongoose';
 
-// app/types/product.ts
-export interface Product {
-  _id: string;
+interface IProduct {
   name: string;
   reference: string;
   description: string;
@@ -20,13 +18,14 @@ export interface Product {
   reviewCount?: number;
   deliveryDate?: Date | string;
   deliveryAddress?: string;
-  deliveryStatus?: 'en attente' | 'expédié' | 'livré' | 'annulé' | 'retourné' | '';
+  deliveryStatus?: string;
   imageUrls?: string[];
+  images?: string[];
   createdAt?: Date;
   updatedAt?: Date;
 }
 
-const productSchema = new Schema<Product>(
+const productSchema = new Schema<IProduct>(
   {
     name: {
       type: String,
@@ -74,7 +73,6 @@ const productSchema = new Schema<Product>(
     sold: {
       type: Number,
       default: 0,
-      min: 0,
     },
     promotion: {
       type: Boolean,
@@ -82,14 +80,6 @@ const productSchema = new Schema<Product>(
     },
     promoPrice: {
       type: Number,
-      min: [0, 'Le prix promotionnel ne peut pas être négatif'],
-      validate: {
-        validator: function(this: Product, value: number) {
-          if (!this.promotion) return true;
-          return value >= 0 && value < this.price;
-        },
-        message: 'Le prix promotionnel doit être inférieur au prix normal'
-      }
     },
     reviews: {
       type: String,
@@ -117,22 +107,16 @@ const productSchema = new Schema<Product>(
       enum: ['en attente', 'expédié', 'livré', 'annulé', 'retourné', ''],
       default: '',
     },
-    imageUrls: {
-      type: [String],
-      default: [],
-    }
+    imageUrls: [{
+      type: String,
+    }],
+    images: [{
+      type: String,
+    }],
   },
   {
     timestamps: true,
   }
 );
 
-// Add pre-save middleware to handle validation
-productSchema.pre('save', function(next) {
-  if (this.promotion && (!this.promoPrice || this.promoPrice >= this.price)) {
-    next(new Error('Le prix promotionnel est requis et doit être inférieur au prix normal'));
-  }
-  next();
-});
-
-export const Product = models.Product || model<Product>('Product', productSchema);
+export const Product = models.Product || model<IProduct>('Product', productSchema);

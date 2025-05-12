@@ -3,32 +3,26 @@ import { NextResponse } from 'next/server';
 
 export async function POST() {
   try {
-    console.log('Logout request received');
+    // Suppression du cookie d'authentification
+    (await
+      // Suppression du cookie d'authentification
+      cookies()).delete('token');
     
-    // Create a response
-    const response = NextResponse.json(
-      { success: true, message: 'Déconnexion réussie' },
-      { status: 200 }
-    );
-    
-    // Clear the token cookie with explicit settings
-    response.cookies.set({
-      name: 'token',
-      value: '',
-      expires: new Date(0),
-      path: '/',
-      httpOnly: true,
-      sameSite: 'lax',
+    return new NextResponse(JSON.stringify({ success: true }), {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json',
+      },
     });
-    
-    console.log('Token cookie cleared');
-    
-    return response;
   } catch (error) {
-    console.error('Logout error:', error);
-    return NextResponse.json(
-      { success: false, message: 'Erreur lors de la déconnexion' },
-      { status: 500 }
+    return new NextResponse(
+      JSON.stringify({ error: 'Erreur lors de la déconnexion' }),
+      {
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
     );
   }
 }

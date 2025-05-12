@@ -33,8 +33,7 @@ interface Product {
 }
 
 export default function ProductDetailsPage() {
-  const params = useParams();
-  const id = params?.id as string;
+  const { id } = useParams();
   const router = useRouter();
   const { addToCart } = useCart(); // Get the addToCart function from our context
 
@@ -48,7 +47,6 @@ export default function ProductDetailsPage() {
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [addedToCart, setAddedToCart] = useState(false);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
-  const [imageError, setImageError] = useState(false);
 
   const handleReviewSubmitted = () => {
     // Rafraîchir les données du produit après l'ajout d'un avis
@@ -70,18 +68,9 @@ export default function ProductDetailsPage() {
     const fetchProduct = async () => {
       try {
         const res = await fetch(`/api/products?id=${id}`);
-        if (!res.ok) {
-          throw new Error('Failed to fetch product');
-        }
         const data = await res.json();
-        if (!data.data) {
-          throw new Error('Product data not found');
-        }
-        console.log('Product data:', data.data); // Debug log
         setProduct(data.data);
       } catch (error) {
-        console.error('Error fetching product:', error);
-        toast.error('Erreur lors du chargement du produit');
       } finally {
         setLoading(false);
       }
@@ -187,8 +176,8 @@ export default function ProductDetailsPage() {
   const sizes = processSizes(product.taille);
   
   // Calculate discount price if promotion is active
-  const originalPrice = product.price || 0;
-  const discountPrice = product.promotion && product.promoPrice ? product.promoPrice : null;
+  const originalPrice = product.price;
+  const discountPrice = product.promotion ? product.price * 0.8 : null;
 
   const handleColorSelect = (color: string) => {
     setSelectedColor(color);
@@ -360,55 +349,33 @@ export default function ProductDetailsPage() {
         {/* Left column - Images */}
         <div>
           <div className="aspect-square rounded-xl overflow-hidden bg-gray-100 mb-4">
-            {product.imageUrls && product.imageUrls.length > 0 && !imageError ? (
-              <div className="relative w-full h-full">
-                <Image
-                  src={product.imageUrls[selectedImage]}
-                  alt={product.name}
-                  fill
-                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                  className="object-contain"
-                  priority
-                  onError={() => {
-                    console.error('Image load error');
-                    setImageError(true);
-                  }}
-                />
-              </div>
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-gray-400">
-                <div className="text-center">
-                  <div className="text-4xl mb-2">📷</div>
-                  <p>Aucune image disponible</p>
-                </div>
-              </div>
-            )}
+            <Image
+              src={product.imageUrls[selectedImage]}
+              alt={product.name}
+              width={800}
+              height={800}
+              className="object-contain w-full h-full"
+            />
           </div>
           
-          {product.imageUrls && product.imageUrls.length > 0 && !imageError ? (
-            <div className="grid grid-cols-4 gap-3">
-              {product.imageUrls.map((url, i) => (
-                <button
-                  key={i}
-                  onClick={() => setSelectedImage(i)}
-                  className={`relative aspect-square rounded-lg overflow-hidden border bg-gray-100
-                    ${selectedImage === i ? 'ring-2 ring-indigo-600' : 'hover:ring-1 hover:ring-indigo-300'}`}
-                >
-                  <Image 
-                    src={url} 
-                    alt={`${product.name} - image ${i+1}`} 
-                    fill
-                    sizes="(max-width: 768px) 25vw, (max-width: 1200px) 20vw, 15vw"
-                    className="object-cover"
-                    onError={() => {
-                      console.error('Thumbnail load error');
-                      setImageError(true);
-                    }}
-                  />
-                </button>
-              ))}
-            </div>
-          ) : null}
+          <div className="grid grid-cols-4 gap-3">
+            {product.imageUrls.map((url, i) => (
+              <button
+                key={i}
+                onClick={() => setSelectedImage(i)}
+                className={`aspect-square rounded-lg overflow-hidden border bg-gray-100
+                  ${selectedImage === i ? 'ring-2 ring-indigo-600' : 'hover:ring-1 hover:ring-indigo-300'}`}
+              >
+                <Image 
+                  src={url} 
+                  alt={`${product.name} - image ${i+1}`} 
+                  width={150} 
+                  height={150} 
+                  className="object-cover w-full h-full" 
+                />
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Right column - Product info */}
@@ -439,14 +406,12 @@ export default function ProductDetailsPage() {
             <div className="flex items-end gap-3 mb-4">
               {discountPrice ? (
                 <>
-                  <p className="text-2xl font-bold text-indigo-600">{Number(discountPrice).toFixed(2)} DA</p>
-                  <p className="text-lg text-gray-500 line-through">{Number(originalPrice).toFixed(2)} DA</p>
-                  <p className="text-sm font-medium bg-red-100 text-red-600 px-2 py-1 rounded">
-                    -{Math.round(((originalPrice - Number(discountPrice)) / originalPrice) * 100)}%
-                  </p>
+                  <p className="text-2xl font-bold text-indigo-600">{discountPrice.toFixed(2)} DA</p>
+                  <p className="text-lg text-gray-500 line-through">{originalPrice.toFixed(2)} DA</p>
+                  <p className="text-sm font-medium bg-red-100 text-red-600 px-2 py-1 rounded">-20%</p>
                 </>
               ) : (
-                <p className="text-2xl font-bold text-indigo-600">{Number(originalPrice).toFixed(2)} DA</p>
+                <p className="text-2xl font-bold text-indigo-600">{originalPrice.toFixed(2)} DA</p>
               )}
             </div>
             

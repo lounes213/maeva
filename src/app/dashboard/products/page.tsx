@@ -1,160 +1,102 @@
-// app/dashboard/products/page.tsx
 'use client';
-import { useState, useEffect } from 'react';
-import ProductTable from './components/ProductTable';
+
 import { Product } from '@/app/types/product';
-import NewProductForm from './components/NewProductForm';
-import CategoryManager from './components/CategoryManager';
-import DashboardHeader from '../components/DashboardHeader';
-import User from '@/models/User';
+import React, { useState, useEffect } from 'react';
+import Button from './components/updateProduct';
+import ProductTable from './components/ProductTable';
+import ProductForm from './components/NewProductForm';
+import Modal from './components/modal';
+import DashboardHeader from '@/app/dashboard/components/DashboardHeader';
+import { IoAddCircle } from 'react-icons/io5';
 
 const ProductsPage = () => {
   const [products, setProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<string[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
- const [user, setUser] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+  const [user, setUser] = useState(null);
+
+  const fetchProducts = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch('/api/products');
+      if (!response.ok) throw new Error('Failed to fetch products');
+      const data = await response.json();
+      setProducts(data.data);
+    } catch (error) {
+      console.error('Error fetching products:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const fetchUser = async () => {
+    try {
+      const response = await fetch('/api/auth/me');
+      if (response.ok) {
+        const userData = await response.json();
+        setUser(userData);
+      }
+    } catch (error) {
+      console.error('Erreur lors de la récupération de l\'utilisateur:', error);
+    }
+  };
 
   useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const response = await fetch('/api/auth/me');
-        if (response.ok) {
-          const userData = await response.json();
-          setUser(userData);
-        }
-      } catch (error) {
-        console.error('Erreur lors de la récupération de l\'utilisateur:', error);
-      }
-    };
-
+    fetchProducts();
     fetchUser();
   }, []);
 
-  const fetchProducts = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch('/api/products');
-      const { data } = await response.json();
-      setProducts(data);
-    } catch (err) {
-      setError('Failed to fetch products');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchCategories = async () => {
-    try {
-      const response = await fetch('/api/categories');
-      const { data } = await response.json();
-      setCategories(data || []);
-    } catch (err) {
-      console.error('Failed to fetch categories:', err);
-      // Don't set error state here to avoid blocking the UI
-    }
-  };
-
-  const handleCreate = async (data: Product) => {
-    try {
-      setLoading(true);
-      const response = await fetch('/api/products', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      });
-      if (!response.ok) throw new Error('Failed to create');
-      await fetchProducts();
-      setEditingProduct(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Creation failed');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleUpdate = async (data: Product) => {
-    if (!editingProduct) return;
-    try {
-      setLoading(true);
-      const response = await fetch(`/api/products?id=${editingProduct._id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      });
-      if (!response.ok) throw new Error('Failed to update');
-      await fetchProducts();
-      setEditingProduct(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Update failed');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    try {
-      setLoading(true);
-      const response = await fetch(`/api/products?id=${id}`, {
-        method: 'DELETE'
-      });
-      if (!response.ok) throw new Error('Failed to delete');
-      await fetchProducts();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Deletion failed');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Load initial data
-  useEffect(() => { 
-    fetchProducts();
-    fetchCategories();
-  }, []);
-
   return (
-    <div className="container mx-auto px-4 py-8 mt-23">
-    <DashboardHeader user={user}/>
-      {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-          {error}
+    <div className="min-h-screen bg-gray-50">
+      <DashboardHeader user={user} />
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12 py-8">
+        <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Produits</h1>
+              <p className="mt-1 text-sm text-gray-500">Gérez votre catalogue de produits</p>
+            </div>
+            <button 
+              onClick={() => setIsFormModalOpen(true)} 
+              className="inline-flex items-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors duration-150 ease-in-out"
+            >
+              <IoAddCircle className="text-xl mr-2" />
+              <span>Ajouter un Produit</span>
+            </button>
+          </div>
         </div>
-      )}
-      
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Gestion des produits</h1>
-        <button 
-          onClick={() => setEditingProduct({} as Product)}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded"
+
+        {isLoading ? (
+          <div className="flex justify-center items-center h-64">
+            <div className="relative">
+              <div className="animate-spin rounded-full h-16 w-16 border-4 border-gray-200 border-t-indigo-600"></div>
+              <p className="mt-4 text-sm text-gray-600">Chargement des produits...</p>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+            <div className="border-b border-gray-200 px-6 py-4">
+              <h2 className="text-lg font-medium text-gray-900">Liste des produits</h2>
+            </div>
+            <ProductTable products={products} refreshProducts={fetchProducts} />
+          </div>
+        )}
+
+        <Modal
+          isOpen={isFormModalOpen}
+          onClose={() => setIsFormModalOpen(false)}
+          title="Nouveau Produit"
         >
-          Ajouter un produit
-        </button>
+          <ProductForm
+            onSuccess={() => {
+              fetchProducts();
+              setIsFormModalOpen(false);
+            }}
+            onCancel={() => setIsFormModalOpen(false)}
+          />
+        </Modal>
       </div>
-
-      {/* Category Manager Component */}
-      <CategoryManager 
-        categories={categories} 
-        onCategoryAdded={fetchCategories} 
-      />
-
-      {editingProduct && (
-        <NewProductForm
-          product={editingProduct}
-          onSubmit={editingProduct._id ? handleUpdate : handleCreate}
-          onCancel={() => setEditingProduct(null)}
-          categories={categories}
-        />
-      )}
-
-      <ProductTable
-        products={products}
-        loading={loading}
-        onEdit={setEditingProduct}
-        onDelete={handleDelete}
-        categories={categories}
-      />
     </div>
   );
 };

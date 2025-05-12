@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import {dbConnect} from '@/lib/mongo';
+import dbConnect from '@/lib/mongo';
 import User from '@/models/User';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
@@ -52,9 +52,8 @@ export async function POST(req: NextRequest) {
         user: {
           id: user._id,
           email: user.email,
-          name: user.name || user.email.split('@')[0]
-        },
-        redirectTo: '/dashboard'
+          name: user.name
+        }
       },
       { status: 200 }
     );
@@ -65,8 +64,7 @@ export async function POST(req: NextRequest) {
       value: token,
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax', // Changed from 'strict' to 'lax' for better compatibility
-      path: '/', // Ensure cookie is available for all paths
+      sameSite: 'strict',
       maxAge: 60 * 60 * 24 // 24 heures
     });
 

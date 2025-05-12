@@ -1,424 +1,364 @@
 'use client';
-
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Modal from './modal';
-import ColorSelector from './createColor';
+import React, { useState } from 'react';
+import { useForm, useWatch } from 'react-hook-form';
+import toast from 'react-hot-toast';
+import Image from 'next/image';
 import { Product } from '@/app/types/product';
-import { pagesUploadImages } from './pagesUpload';
+import { FiUpload, FiX } from 'react-icons/fi';
+import CouleursPicker from './createColor';
 
-interface NewProductFormProps {
-  product: Product;
-  onSubmit: (data: Product) => void;
+interface ProductFormProps {
+  initialData?: Product | null;
+  onSuccess: () => void;
   onCancel: () => void;
-  categories?: string[];
 }
 
-export default function NewProductForm({ product, onSubmit, onCancel, categories = [] }: NewProductFormProps) {
-  const router = useRouter();
-  const [formData, setFormData] = useState<Omit<Product, '_id'>>({
-    name: product.name || '',
-    reference: product.reference || '',
-    description: product.description || '',
-    price: product.price || 0,
-    stock: product.stock || 0,
-    category: product.category || '',
-    tissu: product.tissu || '',
-    couleurs: product.couleurs || [],
-    taille: product.taille || [],
-    promotion: product.promotion || false,
-    promoPrice: product.promoPrice || 0,
-    imageUrls: product.imageUrls || [],
-  });
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState('');
+const ProductForm: React.FC<ProductFormProps> = ({ initialData, onSuccess, onCancel }) => {
+  const [isLoading, setIsLoading] = useState(false);
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
-  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
+  const [previewUrls, setPreviewUrls] = useState<string[]>(initialData?.images || []);
+  const [selectedColors, setSelectedColors] = useState<string[]>(initialData?.couleurs || []);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value, type } = e.target;
-    
-    if (type === 'checkbox') {
-      const checked = (e.target as HTMLInputElement).checked;
-      setFormData(prev => ({ ...prev, [name]: checked }));
-    } else if (name === 'price' || name === 'stock' || name === 'promoPrice') {
-      setFormData(prev => ({ ...prev, [name]: parseFloat(value) || 0 }));
-    } else {
-      setFormData(prev => ({ ...prev, [name]: value }));
+  const { register, handleSubmit, formState: { errors }, watch, setValue } = useForm({
+    defaultValues: initialData || {
+      name: '',
+      reference: '',
+      description: '',
+      price: 0,
+      stock: 0,
+      category: '',
+      tissu: '',
+      couleurs: [],
+      taille: [],
+      sold: 0,
+      promotion: false,
+      promoPrice: 0,
+      rating: 0,
+      reviewCount: 0
     }
-  };
-
-  const handleColorChange = (colors: string[]) => {
-    setFormData(prev => ({ ...prev, couleurs: colors }));
-  };
-
-  const handleSizeChange = (size: string) => {
-    setFormData(prev => {
-      const newSizes = prev.taille?.includes(size)
-        ? prev.taille.filter(s => s !== size)
-        : [...(prev.taille || []), size];
-      return { ...prev, taille: newSizes };
-    });
-  };
+  });
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files) return;
-    const files = Array.from(e.target.files);
-    setSelectedImages(files);
+    const files = Array.from(e.target.files || []);
+    setSelectedImages(prev => [...prev, ...files]);
     
-    // Create preview URLs
-    const urls = files.map(file => URL.createObjectURL(file));
-    setPreviewUrls(urls);
+    const newPreviewUrls = files.map(file => URL.createObjectURL(file));
+    setPreviewUrls(prev => [...prev, ...newPreviewUrls]);
   };
 
   const removeImage = (index: number) => {
-    const newSelectedImages = [...selectedImages];
-    const newPreviewUrls = [...previewUrls];
-    
-    newSelectedImages.splice(index, 1);
-    newPreviewUrls.splice(index, 1);
-    
-    setSelectedImages(newSelectedImages);
-    setPreviewUrls(newPreviewUrls);
+    setSelectedImages(prev => prev.filter((_, i) => i !== index));
+    setPreviewUrls(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    setError('');
+  const handleColorsChange = (colors: string[]) => {
+    setSelectedColors(colors);
+    setValue('couleurs', colors);
+  };
+
+  const onSubmit = async (data: any) => {
+    setIsLoading(true);
+    const formData = new FormData();
+
+    // Vérifier que le champ 'category' est renseigné
+    if (!data.category || data.category.trim() === '') {
+      toast.error('Le champ catégorie est requis.');
+      setIsLoading(false);
+      return;
+    }
+
+    // Convertir les champs numériques en nombres
+    const processedData = {
+      ...data,
+      price: parseFloat(data.price),
+      reviewCount: parseInt(data.reviewCount, 10),
+      sold: parseInt(data.sold, 10),
+      stock: parseInt(data.stock, 10),
+    };
+
+    // Ajouter les données au FormData
+    Object.keys(processedData).forEach(key => {
+      if (key === 'promoPrice' && !processedData.promotion) {
+        return; // Ne pas inclure promoPrice si promotion est false
+      }
+      formData.append(key, processedData[key]);
+    });
+
+    // Ajouter les fichiers d'images
+    selectedImages.forEach(image => {
+      formData.append('images', image);
+    });
 
     try {
-      // First upload images if any
-      let imageUrls = [...(formData.imageUrls || [])];
-      
-      if (selectedImages.length > 0) {
-        try {
-          console.log('Uploading images to Cloudinary...');
-          
-          // Use the pagesUploadImages helper function
-          const uploadedUrls = await pagesUploadImages(selectedImages);
-          
-          console.log('Successfully uploaded images:', uploadedUrls);
-          imageUrls = [...imageUrls, ...uploadedUrls];
-        } catch (uploadError) {
-          console.error('Error during image upload:', uploadError);
-          setError(`Image upload failed: ${uploadError instanceof Error ? uploadError.message : 'Unknown error'}`);
-          setIsSubmitting(false);
-          return;
-        }
+      const url = initialData ? `/api/products?id=${initialData._id}` : '/api/products';
+      const method = initialData ? 'PUT' : 'POST';
+
+      const response = await fetch(url, {
+        method,
+        body: formData
+      });
+
+      if (!response.ok) {
+        throw new Error('Erreur lors de l\'enregistrement du produit');
       }
 
-      // Then create the product with all data
-      const productData = {
-        ...formData,
-          
-        _id: product._id, // Preserve the _id if it exists
-        imageUrls,
-        price: parseFloat(formData.price.toString()),
-        stock: parseFloat(formData.stock.toString()),
-        promoPrice: formData.promotion ? parseFloat(formData.promoPrice?.toString() || "0") : undefined,
-      };
-
-      // Use the onSubmit prop to handle the form submission
-      await onSubmit(productData as Product);
-      
-      router.refresh();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An unknown error occurred');
+      toast.success(initialData ? 'Produit mis à jour avec succès' : 'Produit créé avec succès');
+      onSuccess();
+    } catch (error) {
+      console.error('Erreur lors de l\'enregistrement :', error);
+      toast.error('Une erreur est survenue');
     } finally {
-      setIsSubmitting(false);
+      setIsLoading(false);
     }
   };
 
   return (
-    <Modal isOpen={true} onClose={onCancel} title="Nouveau Produit" size="xl">
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-            {error}
-          </div>
-        )}
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <div className="grid grid-cols-2 gap-6">
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Nom</label>
+          <input
+            type="text"
+            {...register('name', { required: 'Le nom est requis' })}
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+          />
+          {errors.name && (
+            <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
+          )}
+        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Basic Information */}
-          <div className="space-y-4">
-            <h4 className="text-lg font-medium">Informations de base</h4>
-            
-            <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-                Nom du produit*
-              </label>
-              <input
-                type="text"
-                id="name"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                required
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-              />
-            </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Référence</label>
+          <input
+            type="text"
+            {...register('reference', { required: 'La référence est requise' })}
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+          />
+          {errors.reference && (
+            <p className="mt-1 text-sm text-red-600">{errors.reference.message}</p>
+          )}
+        </div>
+      </div>
 
-            <div>
-              <label htmlFor="reference" className="block text-sm font-medium text-gray-700">
-                Référence*
-              </label>
-              <input
-                type="text"
-                id="reference"
-                name="reference"
-                value={formData.reference}
-                onChange={handleChange}
-                required
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-              />
-            </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700">Description</label>
+        <textarea
+          {...register('description')}
+          rows={4}
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+        />
+      </div>
 
-            <div>
-              <label htmlFor="description" className="block text-sm font-medium text-gray-700">
-                Description*
-              </label>
-              <textarea
-                id="description"
-                name="description"
-                value={formData.description}
-                onChange={handleChange}
-                required
-                rows={3}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-              />
-            </div>
+      <div className="grid grid-cols-2 gap-6">
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Tissu</label>
+          <input
+            type="text"
+            {...register('tissu')}
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+          />
+        </div>
 
-            <div>
-              <label htmlFor="category" className="block text-sm font-medium text-gray-700">
-                Catégorie*
-              </label>
-              <select
-                id="category"
-                name="category"
-                value={formData.category}
-                onChange={handleChange}
-                required
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-              >
-                <option value="">Sélectionner une catégorie</option>
-                {categories.map(category => (
-                  <option key={category} value={category}>{category}</option>
-                ))}
-              </select>
-            </div>
-          </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Tailles (séparées par des virgules)</label>
+          <input
+            type="text"
+            {...register('taille')}
+            placeholder="XS, S, M, L, XL"
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+          />
+        </div>
+      </div>
 
-          {/* Pricing & Inventory */}
-          <div className="space-y-4">
-            <h4 className="text-lg font-medium">Prix et Stock</h4>
-            
-            <div>
-              <label htmlFor="price" className="block text-sm font-medium text-gray-700">
-                Prix (€)*
-              </label>
-              <input
-                type="number"
-                id="price"
-                name="price"
-                value={formData.price}
-                onChange={handleChange}
-                min="0"
-                step="0.01"
-                required
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-              />
-            </div>
+      <div className="grid grid-cols-3 gap-6">
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Prix</label>
+          <input
+            type="number"
+            step="0.01"
+            {...register('price', { required: 'Le prix est requis', min: 0 })}
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+          />
+          {errors.price && (
+            <p className="mt-1 text-sm text-red-600">{errors.price.message}</p>
+          )}
+        </div>
 
-            <div>
-              <label htmlFor="stock" className="block text-sm font-medium text-gray-700">
-                Stock*
-              </label>
-              <input
-                type="number"
-                id="stock"
-                name="stock"
-                value={formData.stock}
-                onChange={handleChange}
-                min="0"
-                required
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-              />
-            </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Stock</label>
+          <input
+            type="number"
+            {...register('stock', { required: 'Le stock est requis', min: 0 })}
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+          />
+          {errors.stock && (
+            <p className="mt-1 text-sm text-red-600">{errors.stock.message}</p>
+          )}
+        </div>
 
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="promotion"
-                name="promotion"
-                checked={formData.promotion}
-                onChange={handleChange}
-                className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-              />
-              <label htmlFor="promotion" className="ml-2 block text-sm text-gray-700">
-                En promotion
-              </label>
-            </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Vendus</label>
+          <input
+            type="number"
+            {...register('sold', { min: 0 })}
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+          />
+        </div>
+      </div>
 
-            {formData.promotion && (
-              <div>
-                <label htmlFor="promoPrice" className="block text-sm font-medium text-gray-700">
-                  Prix promotionnel (€)*
-                </label>
-                <input
-                  type="number"
-                  id="promoPrice"
-                  name="promoPrice"
-                  value={formData.promoPrice}
-                  onChange={handleChange}
-                  min="0"
-                  step="0.01"
-                  max={formData.price}
-                  required={formData.promotion}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                />
-              </div>
+      <div className="space-y-4">
+        <div className="flex items-center space-x-2">
+          <input
+            type="checkbox"
+            {...register('promotion')}
+            id="promotion"
+            className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+          />
+          <label htmlFor="promotion" className="text-sm font-medium text-gray-700">
+            Activer la promotion
+          </label>
+        </div>
+
+        {watch('promotion') && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Prix promotionnel</label>
+            <input
+              type="number"
+              step="0.01"
+              {...register('promoPrice', {
+                min: { value: 0, message: 'Le prix promotionnel doit être positif' },
+                max: { value: watch('price'), message: 'Le prix promotionnel doit être inférieur au prix normal' }
+              })}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+            />
+            {errors.promoPrice && (
+              <p className="mt-1 text-sm text-red-600">{errors.promoPrice.message}</p>
             )}
           </div>
+        )}
+      </div>
 
-          {/* Variants */}
-          <div className="space-y-4">
-            <h4 className="text-lg font-medium">Variantes</h4>
-            
-            <div>
-              <label htmlFor="tissu" className="block text-sm font-medium text-gray-700">
-                Tissu
-              </label>
-              <input
-                type="text"
-                id="tissu"
-                name="tissu"
-                value={formData.tissu}
-                onChange={handleChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Couleurs disponibles
-              </label>
-              <ColorSelector
-                selectedColors={formData.couleurs || []}
-                onChange={handleColorChange}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Tailles disponibles
-              </label>
-              <div className="flex flex-wrap gap-2">
-                {['XS', 'S', 'M', 'L', 'XL', 'XXL'].map(size => (
-                  <label key={size} className="inline-flex items-center">
-                    <input
-                      type="checkbox"
-                      value={size}
-                      checked={formData.taille?.includes(size) || false}
-                      onChange={() => handleSizeChange(size)}
-                      className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                    />
-                    <span className="ml-2 text-sm text-gray-700">{size}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Images */}
-          <div className="space-y-4">
-            <h4 className="text-lg font-medium">Images</h4>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Images du produit
-              </label>
-              <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
-                <div className="space-y-1 text-center">
-                  <svg
-                    className="mx-auto h-12 w-12 text-gray-400"
-                    stroke="currentColor"
-                    fill="none"
-                    viewBox="0 0 48 48"
-                    aria-hidden="true"
-                  >
-                    <path
-                      d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
-                      strokeWidth={2}
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                  <div className="flex text-sm text-gray-600">
-                    <label
-                      htmlFor="file-upload"
-                      className="relative cursor-pointer bg-white rounded-md font-medium text-indigo-600 hover:text-indigo-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-indigo-500"
-                    >
-                      <span>Uploader des fichiers</span>
-                      <input
-                        id="file-upload"
-                        name="file-upload"
-                        type="file"
-                        className="sr-only"
-                        multiple
-                        onChange={handleImageChange}
-                        accept="image/*"
-                      />
-                    </label>
-                    <p className="pl-1">ou glisser-déposer</p>
-                  </div>
-                  <p className="text-xs text-gray-500">PNG, JPG, GIF jusqu'à 10MB</p>
-                </div>
-              </div>
-              
-              {/* Image previews */}
-              {previewUrls.length > 0 && (
-                <div className="mt-4 grid grid-cols-3 gap-4">
-                  {previewUrls.map((url, index) => (
-                    <div key={index} className="relative">
-                      <img
-                        src={url}
-                        alt={`Preview ${index}`}
-                        className="h-24 w-full object-cover rounded"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeImage(index)}
-                        className="absolute top-0 right-0 bg-red-500 text-white rounded-full p-1"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
+      <div className="grid grid-cols-2 gap-6">
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Note moyenne (0-5)</label>
+          <input
+            type="number"
+            step="0.1"
+            min="0"
+            max="5"
+            {...register('rating')}
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+          />
         </div>
 
-        <div className="flex justify-end gap-3 pt-4">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-          >
-            Annuler
-          </button>
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
-          >
-            {isSubmitting ? 'Enregistrement...' : 'Enregistrer le produit'}
-          </button>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Nombre d'avis</label>
+          <input
+            type="number"
+            min="0"
+            {...register('reviewCount')}
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+          />
         </div>
-      </form>
-    </Modal>
+      </div>
+
+      <div>
+        <CouleursPicker onChange={handleColorsChange} />
+        {selectedColors.length > 0 && (
+          <div className="mt-2">
+            <p className="text-sm text-gray-500">Couleurs sélectionnées:</p>
+            <div className="flex flex-wrap gap-2 mt-1">
+              {selectedColors.map((color, index) => (
+                <div
+                  key={index}
+                  className="flex items-center bg-gray-100 rounded-full pr-2"
+                >
+                  <div
+                    className="w-6 h-6 rounded-full mr-1"
+                    style={{ backgroundColor: color }}
+                  />
+                  <span className="text-sm text-gray-600">{color}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">Images</label>
+        <div className="grid grid-cols-4 gap-4">
+          {previewUrls.map((url, index) => (
+            <div key={index} className="relative group">
+              <div className="aspect-w-1 aspect-h-1 w-full overflow-hidden rounded-lg bg-gray-100">
+                <Image
+                  src={url}
+                  alt={`Preview ${index + 1}`}
+                  layout="fill"
+                  objectFit="cover"
+                  className="object-center"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => removeImage(index)}
+                className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                <FiX className="w-4 h-4" />
+              </button>
+            </div>
+          ))}
+          <label className="cursor-pointer border-2 border-dashed border-gray-300 rounded-lg p-4 flex flex-col items-center justify-center hover:border-indigo-500 transition-colors">
+            <FiUpload className="w-8 h-8 text-gray-400" />
+            <span className="mt-2 text-sm text-gray-500">Ajouter des images</span>
+            <input
+              type="file"
+              multiple
+              accept="image/*"
+              onChange={handleImageChange}
+              className="hidden"
+            />
+          </label>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-6">
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Catégorie</label>
+          <select
+            {...register('category', { required: 'La catégorie est requise' })}
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+          >
+            <option value="">-- Sélectionnez une catégorie --</option>
+            <option value="vetements">Vêtements</option>
+            <option value="accessoires">Accessoires</option>
+            <option value="chaussures">Chaussures</option>
+          </select>
+          {errors.category && (
+            <p className="mt-1 text-sm text-red-600">{errors.category.message}</p>
+          )}
+        </div>
+      </div>
+
+      <div className="flex justify-end space-x-3">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="px-4 py-2 border rounded-md hover:bg-gray-50"
+          disabled={isLoading}
+        >
+          Annuler
+        </button>
+        <button
+          type="submit"
+          className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+          disabled={isLoading}
+        >
+          {isLoading ? 'Enregistrement...' : initialData ? 'Mettre à jour' : 'Créer'}
+        </button>
+      </div>
+    </form>
   );
-}
+};
+
+export default ProductForm;

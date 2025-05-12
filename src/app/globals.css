@@ -1,6 +1,4 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -837,48 +835,12 @@ textarea {
   }
   body {
     @apply bg-background text-foreground;
-  font-family: "Inter", sans-serif;
-  font-weight: 400;
-  line-height: 28px;
-  color: #6a6a6a;
-  font-size: 14px;
-    background-color: #eff2f1;
-    overflow-x: hidden;
-    position: relative;
   }
 }
 
-@layer components {
-.btn {
-    @apply font-semibold py-3 px-8 rounded-full text-white bg-[#2f2f2f] border-[#2f2f2f] transition-all duration-300;
-  }
-  .btn:hover {
-    @apply text-white bg-[#222222] border-[#222222];
-  }
-  .btn:active, .btn:focus {
-    @apply outline-none shadow-none;
-  }
-  .btn-primary {
-    @apply bg-[#3b5d50] border-[#3b5d50];
-  }
-  .btn-primary:hover {
-    @apply bg-[#314d43] border-[#314d43];
-  }
-  .btn-secondary {
-    @apply text-[#2f2f2f] bg-[#f9bf29] border-[#f9bf29];
-  }
-  .btn-secondary:hover {
-    @apply bg-[#f8b810] border-[#f8b810];
-  }
-  .btn-white-outline {
-    @apply bg-transparent border-2 border-white/30;
-  }
-  .btn-white-outline:hover {
-    @apply border-white text-white;
-  }
-}
 
-/* Utility classes */
+
+/* For the line-clamp effect */
 .line-clamp-2 {
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -886,6 +848,7 @@ textarea {
   overflow: hidden;
 }
 
+/* Smooth transitions */
 .transition-all {
   transition-property: all;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);

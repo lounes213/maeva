@@ -1,4 +1,4 @@
-import { headers } from "next/headers";
+import { headers } from "next/dist/server/request/headers";
 import { notFound } from "next/navigation";
 import { FiCalendar, FiUser, FiTag, FiArrowLeft } from "react-icons/fi";
 import { FaTwitter, FaFacebook, FaLinkedin } from "react-icons/fa";

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import {dbConnect} from '@/lib/mongo';
+import dbConnect from '@/lib/mongo';
 import Order from '@/app/models/Order';
 import { Product } from '@/app/models/Product';
 import { generateTrackingCode } from '@/app/types/order';

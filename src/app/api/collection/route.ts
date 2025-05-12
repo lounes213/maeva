@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import {dbConnect} from '@/lib/mongo';
+import dbConnect from '@/lib/mongo';
 import Collection from '@/app/models/collection';
 import path from 'path';
 import fs from 'fs/promises';
@@ -7,8 +7,11 @@ import { v4 as uuidv4 } from 'uuid';
 import mime from 'mime-types';
 import { ALLOWED_FILE_TYPES, MAX_FILE_SIZE } from '@/lib/constant';
 
-export const dynamic = 'force-dynamic';
-export const runtime = 'nodejs';
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
 
 async function handleImageUpload(imageFile: File | null): Promise<string | undefined> {
   if (!imageFile || imageFile.size === 0) return undefined;
