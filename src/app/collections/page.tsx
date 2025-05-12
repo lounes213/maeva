@@ -24,21 +24,21 @@ export default function CollectionsPage() {
       id: 'summer-2023',
       title: 'Collection Été 2023',
       description: 'Des pièces légères et colorées pour la saison estivale',
-      image: '/images/placeholder-collection.jpg',
+      image: '/logo.png', // Using logo as fallback
       link: '/shop?collection=summer-2023'
     },
     {
       id: 'traditional',
       title: 'Collection Traditionnelle',
       description: 'L\'élégance de la tradition algérienne dans des coupes modernes',
-      image: '/images/placeholder-collection.jpg',
+      image: '/logo.png', // Using logo as fallback
       link: '/shop?collection=traditional'
     },
     {
       id: 'modern',
       title: 'Collection Moderne',
       description: 'Des designs contemporains inspirés par notre héritage',
-      image: '/images/placeholder-collection.jpg',
+      image: '/logo.png', // Using logo as fallback
       link: '/shop?collection=modern'
     }
   ];
@@ -80,7 +80,13 @@ export default function CollectionsPage() {
                         src={collection.image}
                         alt={collection.title}
                         fill
-                        className="object-cover"
+                        className="object-contain p-4"
+                        onError={(e) => {
+                          // Fallback to a simple colored background if image fails to load
+                          const target = e.target as HTMLImageElement;
+                          target.onerror = null; // Prevent infinite loop
+                          target.style.display = 'none';
+                        }}
                       />
                     </div>
                     <div className="p-6">

@@ -8,9 +8,18 @@ import Header from '../components/header';
 import Footer from '../components/footer';
 import { ModernButton } from '@/components/ui/modern-button';
 
+// Define the type for wishlist items
+interface WishlistItem {
+  id: number;
+  name: string;
+  category: string;
+  price: number;
+  image: string;
+}
+
 // Placeholder for wishlist functionality
 export default function WishlistPage() {
-  const [wishlistItems, setWishlistItems] = useState([]);
+  const [wishlistItems, setWishlistItems] = useState<WishlistItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -23,7 +32,7 @@ export default function WishlistPage() {
     return () => clearTimeout(timer);
   }, []);
 
-  const removeFromWishlist = (productId) => {
+  const removeFromWishlist = (productId: number): void => {
     // This would remove the item from the wishlist
     setWishlistItems(wishlistItems.filter(item => item.id !== productId));
   };

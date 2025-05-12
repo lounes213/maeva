@@ -20,33 +20,44 @@ export default function ArtisansPage() {
     return () => clearTimeout(timer);
   }, []);
 
-  const artisans = [
+  // Define the type for artisans
+  interface Artisan {
+    id: number;
+    name: string;
+    specialty: string;
+    location: string;
+    image: string;
+    description: string;
+    products: string[];
+  }
+
+  const artisans: Artisan[] = [
     {
       id: 1,
       name: 'Amina Benali',
       specialty: 'Broderie traditionnelle',
       location: 'Alger',
-      image: '/images/placeholder-artisan.jpg',
+      image: '/logo.png', // Using logo as fallback
       description: 'Spécialisée dans la broderie traditionnelle algérienne depuis plus de 20 ans, Amina crée des pièces uniques qui allient tradition et modernité.',
-      products: ['/images/placeholder-product.jpg', '/images/placeholder-product.jpg', '/images/placeholder-product.jpg']
+      products: ['/logo.png', '/logo.png', '/logo.png'] // Using logo as fallback
     },
     {
       id: 2,
       name: 'Karim Hadj',
       specialty: 'Tissage',
       location: 'Constantine',
-      image: '/images/placeholder-artisan.jpg',
+      image: '/logo.png', // Using logo as fallback
       description: 'Maître tisserand, Karim perpétue un savoir-faire familial transmis de génération en génération. Ses créations sont reconnues pour leur qualité exceptionnelle.',
-      products: ['/images/placeholder-product.jpg', '/images/placeholder-product.jpg', '/images/placeholder-product.jpg']
+      products: ['/logo.png', '/logo.png', '/logo.png'] // Using logo as fallback
     },
     {
       id: 3,
       name: 'Nadia Messaoudi',
       specialty: 'Couture moderne',
       location: 'Oran',
-      image: '/images/placeholder-artisan.jpg',
+      image: '/logo.png', // Using logo as fallback
       description: 'Designer de mode contemporaine, Nadia s\'inspire des motifs traditionnels pour créer des vêtements modernes qui célèbrent l\'héritage algérien.',
-      products: ['/images/placeholder-product.jpg', '/images/placeholder-product.jpg', '/images/placeholder-product.jpg']
+      products: ['/logo.png', '/logo.png', '/logo.png'] // Using logo as fallback
     }
   ];
 
@@ -88,7 +99,13 @@ export default function ArtisansPage() {
                           src={artisan.image}
                           alt={artisan.name}
                           fill
-                          className="object-cover"
+                          className="object-contain p-4"
+                          onError={(e) => {
+                            // Fallback to a simple colored background if image fails to load
+                            const target = e.target as HTMLImageElement;
+                            target.onerror = null; // Prevent infinite loop
+                            target.style.display = 'none';
+                          }}
                         />
                       </div>
                     </div>
@@ -110,7 +127,13 @@ export default function ArtisansPage() {
                               src={product}
                               alt={`Création de ${artisan.name}`}
                               fill
-                              className="object-cover"
+                              className="object-contain p-2"
+                              onError={(e) => {
+                                // Fallback to a simple colored background if image fails to load
+                                const target = e.target as HTMLImageElement;
+                                target.onerror = null; // Prevent infinite loop
+                                target.style.display = 'none';
+                              }}
                             />
                           </div>
                         ))}

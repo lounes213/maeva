@@ -59,6 +59,7 @@ export default function Navigation() {
       ] 
     },
     { href: '/collections', label: 'Collections' },
+    { href: '/artisans', label: 'Artisans' },
     { href: '/about', label: 'À propos' },
     { href: '/blog', label: 'Blog' },
     { href: '/contact', label: 'Contact' },
