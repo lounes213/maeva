@@ -14,6 +14,7 @@ export async function uploadImages(files: File[]): Promise<string[]> {
       uploadFormData.append('files', file);
     });
 
+    // Use the Pages Router API endpoint instead of App Router
     const uploadResponse = await fetch('/api/upload', {
       method: 'POST',
       body: uploadFormData,

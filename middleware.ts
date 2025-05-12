@@ -57,8 +57,9 @@ export async function middleware(req: NextRequest) {
 export const config = {
   matcher: [
     '/dashboard/:path*',
-    '/api/:path*',
-    // Exclude OPTIONS requests for CORS preflight
+    // Exclude the upload API route
+    '/api/(?!upload).*',
+    // Exclude static files
     '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ]
 };
