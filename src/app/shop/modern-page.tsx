@@ -330,6 +330,12 @@ export default function ModernShopPage() {
           </h2>
           
           <div className="flex items-center gap-4">
+            <button 
+              onClick={clearFilters}
+              className="px-4 py-2 bg-amber-100 text-amber-800 rounded-md hover:bg-amber-200 transition-colors"
+            >
+              Réinitialiser les filtres
+            </button>
             <ProductSort
               options={sortOptions}
               value={sortOption}
@@ -339,40 +345,55 @@ export default function ModernShopPage() {
           </div>
         </div>
 
-        <div className="flex flex-col md:flex-row gap-8">
-          {/* Filters Sidebar */}
-          <div className="w-full md:w-72 flex-shrink-0">
-            <ProductFilters
-              categories={categories}
-              colors={colors}
-              sizes={sizes}
-              priceRange={{
-                min: 0,
-                max: maxPrice,
-                current: priceRange
+        {/* Simple Filters Row */}
+        <div className="w-full mb-8 flex flex-wrap gap-4 items-center">
+          {/* Price Range Filter */}
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-gray-700">Prix:</span>
+            <select 
+              className="border border-gray-300 rounded-md px-3 py-1.5 text-sm"
+              value={`${priceRange[0]}-${priceRange[1]}`}
+              onChange={(e) => {
+                const [min, max] = e.target.value.split('-').map(Number);
+                setPriceRange([min, max]);
               }}
-              selectedCategories={selectedCategories}
-              selectedColors={selectedColors}
-              selectedSizes={selectedSizes}
-              onCategoryChange={toggleCategory}
-              onColorChange={toggleColor}
-              onSizeChange={toggleSize}
-              onPriceChange={handlePriceChange}
-              onClearFilters={clearFilters}
-              totalProducts={products.length}
-              filteredCount={filteredProducts.length}
-            />
+            >
+              <option value={`0-${maxPrice}`}>Tous les prix</option>
+              <option value="0-1000">Moins de 1000 DA</option>
+              <option value="1000-3000">1000 DA - 3000 DA</option>
+              <option value="3000-5000">3000 DA - 5000 DA</option>
+              <option value={`5000-${maxPrice}`}>Plus de 5000 DA</option>
+            </select>
           </div>
-
-          {/* Products Grid */}
-          <div className="flex-1">
-            <ProductGrid
-              products={sortedProducts}
-              loading={loading}
-              emptyMessage={searchQuery ? `Aucun résultat pour "${searchQuery}"` : "Aucun produit ne correspond à vos filtres"}
-              columns={3}
-            />
-          </div>
+          
+          {/* Categories Filter */}
+          {categories.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {categories.map(category => (
+                <button
+                  key={category.id}
+                  onClick={() => toggleCategory(category.id)}
+                  className={`px-3 py-1.5 text-sm rounded-full transition-colors ${
+                    selectedCategories.includes(category.id)
+                      ? 'bg-amber-600 text-white'
+                      : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                  }`}
+                >
+                  {category.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        
+        {/* Products Grid - Full Width */}
+        <div className="w-full">
+          <ProductGrid
+            products={sortedProducts}
+            loading={loading}
+            emptyMessage={searchQuery ? `Aucun résultat pour "${searchQuery}"` : "Aucun produit ne correspond à vos filtres"}
+            columns={4}
+          />
         </div>
       </div>
       

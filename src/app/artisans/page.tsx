@@ -34,30 +34,30 @@ export default function ArtisansPage() {
   const artisans: Artisan[] = [
     {
       id: 1,
-      name: 'Amina Benali',
-      specialty: 'Broderie traditionnelle',
-      location: 'Alger',
-      image: '/logo.png', // Using logo as fallback
-      description: 'Spécialisée dans la broderie traditionnelle algérienne depuis plus de 20 ans, Amina crée des pièces uniques qui allient tradition et modernité.',
-      products: ['/logo.png', '/logo.png', '/logo.png'] // Using logo as fallback
+      name: 'MAEVA Bouira',
+      specialty: 'Artisanat traditionnel',
+      location: 'Bouira, Algérie',
+      image: '/logo.png',
+      description: 'MAEVA Bouira est une marque spécialisée dans la création de vêtements traditionnels algériens. Nos artisans perpétuent un savoir-faire ancestral tout en apportant une touche de modernité à chaque pièce.',
+      products: ['/logo.png', '/logo.png', '/logo.png']
     },
     {
       id: 2,
-      name: 'Karim Hadj',
-      specialty: 'Tissage',
-      location: 'Constantine',
-      image: '/logo.png', // Using logo as fallback
-      description: 'Maître tisserand, Karim perpétue un savoir-faire familial transmis de génération en génération. Ses créations sont reconnues pour leur qualité exceptionnelle.',
-      products: ['/logo.png', '/logo.png', '/logo.png'] // Using logo as fallback
+      name: 'Atelier MAEVA',
+      specialty: 'Couture traditionnelle',
+      location: 'Bouira, Algérie',
+      image: '/logo.png',
+      description: 'Notre atelier de couture est le cœur de notre marque. C\'est ici que nos artisans talentueux créent des pièces uniques qui allient tradition et élégance contemporaine.',
+      products: ['/logo.png', '/logo.png', '/logo.png']
     },
     {
       id: 3,
-      name: 'Nadia Messaoudi',
-      specialty: 'Couture moderne',
-      location: 'Oran',
-      image: '/logo.png', // Using logo as fallback
-      description: 'Designer de mode contemporaine, Nadia s\'inspire des motifs traditionnels pour créer des vêtements modernes qui célèbrent l\'héritage algérien.',
-      products: ['/logo.png', '/logo.png', '/logo.png'] // Using logo as fallback
+      name: 'Collection MAEVA',
+      specialty: 'Design moderne',
+      location: 'Bouira, Algérie',
+      image: '/logo.png',
+      description: 'Notre collection s\'inspire des motifs traditionnels algériens pour créer des vêtements modernes qui célèbrent notre riche héritage culturel tout en répondant aux tendances actuelles.',
+      products: ['/logo.png', '/logo.png', '/logo.png']
     }
   ];
 

@@ -49,15 +49,7 @@ export default function Navigation() {
 
   const navLinks: NavLink[] = [
     { href: '/', label: 'Accueil' },
-    { 
-      href: '/shop', 
-      label: 'Boutique',
-      children: [
-        { href: '/shop/women', label: 'Femmes' },
-        { href: '/shop/men', label: 'Hommes' },
-        { href: '/shop/accessories', label: 'Accessoires' }
-      ] 
-    },
+    { href: '/shop', label: 'Boutique' },
     { href: '/collections', label: 'Collections' },
     { href: '/artisans', label: 'Artisans' },
     { href: '/about', label: 'À propos' },
