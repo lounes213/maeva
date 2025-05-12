@@ -101,7 +101,8 @@ export async function POST(req: Request) {
       deliveryDate: formData.get('deliveryDate') as string || undefined,
       deliveryAddress: formData.get('deliveryAddress') as string || '',
       deliveryStatus: formData.get('deliveryStatus') as string || '',
-      imageUrls,
+      image: imageUrls.length === 1 ? imageUrls[0] : imageUrls,
+
     });
 
     return NextResponse.json({ 
