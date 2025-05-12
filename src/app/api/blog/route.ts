@@ -1,120 +1,114 @@
 import { NextRequest, NextResponse } from "next/server";
-import mongoose from "mongoose";
-import BlogPost from "@/app/models/blog";
-import path from 'path';
-import fs from 'fs';
-import { promises as fsp } from 'fs';
-import { v4 as uuidv4 } from 'uuid';
+import path from "path";
+import fs from "fs/promises";
+import { existsSync, mkdirSync } from "fs";
+import { v4 as uuidv4 } from "uuid";
 import dbConnect from "@/lib/mongo";
 import slugify from "@/lib/utils";
-import toast from "react-hot-toast";
+import BlogPost from "@/app/models/blog";
 
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const uploadDir = path.join(process.cwd(), "public/uploads/blog");
 
-// Amélioration des messages d'erreur avec des toasts spécifiques
+async function saveImage(file: File): Promise<string | null> {
+  if (file.size > MAX_FILE_SIZE) return null;
+
+  const buffer = await file.arrayBuffer();
+  const ext = path.extname(file.name);
+  const fileName = `${uuidv4()}${ext}`;
+  const filePath = path.join(uploadDir, fileName);
+
+  if (!existsSync(uploadDir)) {
+    mkdirSync(uploadDir, { recursive: true });
+  }
+
+  await fs.writeFile(filePath, Buffer.from(buffer));
+  return `/uploads/blog/${fileName}`;
+}
+
+async function deleteImageIfExists(imagePath: string) {
+  try {
+    const fullPath = path.join(process.cwd(), "public", imagePath);
+    if (existsSync(fullPath)) {
+      await fs.unlink(fullPath);
+    }
+  } catch (err) {
+    console.error("Error deleting image:", err);
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     await dbConnect();
 
-    const contentType = req.headers.get("content-type") || "";
+    const formData = await req.formData();
+    const title = formData.get("title") as string;
+    const content = formData.get("content") as string;
+    const slug = (formData.get("slug") as string) || slugify(title);
+    const excerpt = formData.get("excerpt") as string;
+    const category = formData.get("category") as string;
+    const tags = formData.get("tags")?.toString().split(",").map(t => t.trim()) || [];
 
-    if (contentType.includes("multipart/form-data")) {
-      const formData = await req.formData();
-
-      const title = formData.get('title') as string;
-      const content = formData.get('content') as string;
-      const slug = (formData.get('slug') as string) || slugify(title);
-      const excerpt = formData.get('excerpt') as string;
-      const category = formData.get('category') as string;
-      const tags = formData.get('tags')?.toString().split(',').map(t => t.trim()) || [];
-
-      if (!title || !content) {
-        toast.error("Le titre et le contenu sont obligatoires.");
-        return NextResponse.json({ error: "Title and content are required" }, { status: 400 });
-      }
-
-      const images = formData.getAll('images') as File[];
-      const imageUrls: string[] = [];
-
-      if (images.length > 0) {
-        const uploadDir = path.join(process.cwd(), 'public/uploads/blog');
-        if (!fs.existsSync(uploadDir)) {
-          fs.mkdirSync(uploadDir, { recursive: true });
-        }
-
-        for (const image of images) {
-          if (image.size > 5 * 1024 * 1024) continue;
-
-          const buffer = await image.arrayBuffer();
-          const ext = image.name.split('.').pop();
-          const fileName = `${uuidv4()}.${ext}`;
-          const filePath = path.join(uploadDir, fileName);
-
-          await fs.promises.writeFile(filePath, Buffer.from(buffer));
-          imageUrls.push(`/uploads/blog/${fileName}`);
-        }
-      }
-
-      const blogPost = new BlogPost({
-        title,
-        content,
-        slug,
-        excerpt,
-        category,
-        tags,
-        image: imageUrls[0] || undefined,
-      });
-
-      const savedPost = await blogPost.save();
-
-      return NextResponse.json(savedPost, { status: 201 });
+    if (!title || !content) {
+      return NextResponse.json({ error: "Title and content are required" }, { status: 400 });
     }
 
-    toast.error("Type de contenu non pris en charge.");
-    return NextResponse.json({ error: "Unsupported Content-Type" }, { status: 415 });
-  } catch (error: any) {
-    toast.error("Erreur lors de la création de l'article de blog.");
-    return NextResponse.json({ error: error.message || "Failed to create blog post" }, { status: 500 });
+    const images = formData.getAll("images") as File[];
+    const imageUrls: string[] = [];
+
+    for (const image of images) {
+      const imageUrl = await saveImage(image);
+      if (imageUrl) imageUrls.push(imageUrl);
+    }
+
+    const blogPost = new BlogPost({
+      title,
+      content,
+      slug,
+      excerpt,
+      category,
+      tags,
+      image: imageUrls[0] || undefined,
+    });
+
+    const savedPost = await blogPost.save();
+    return NextResponse.json(savedPost, { status: 201 });
+
+  } catch (err: any) {
+    console.error("POST Error:", err);
+    return NextResponse.json({ error: err.message || "Failed to create blog post" }, { status: 500 });
   }
 }
 
-// Amélioration des messages d'erreur avec des toasts spécifiques
 export async function GET(req: NextRequest) {
   try {
     await dbConnect();
 
     const { searchParams } = new URL(req.url);
-    const slug = searchParams.get('slug');
+    const slug = searchParams.get("slug");
 
     if (slug) {
       const post = await BlogPost.findOne({ slug });
-      if (!post) {
-        return NextResponse.json({ error: 'Blog post not found' }, { status: 404 });
-      }
+      if (!post) return NextResponse.json({ error: "Blog post not found" }, { status: 404 });
       return NextResponse.json(post);
     }
 
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '10');
-    const category = searchParams.get('category');
-    const tag = searchParams.get('tag');
+    const page = parseInt(searchParams.get("page") || "1");
+    const limit = parseInt(searchParams.get("limit") || "10");
+    const category = searchParams.get("category");
+    const tag = searchParams.get("tag");
 
     const query: any = {};
     if (category) query.category = category;
     if (tag) query.tags = tag;
 
     const skip = (page - 1) * limit;
+    const total = await BlogPost.countDocuments(query);
 
     const posts = await BlogPost.find(query)
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
-
-    const total = await BlogPost.countDocuments(query);
 
     return NextResponse.json({
       posts,
@@ -122,11 +116,13 @@ export async function GET(req: NextRequest) {
         total,
         page,
         limit,
-        pages: Math.ceil(total / limit)
-      }
+        pages: Math.ceil(total / limit),
+      },
     });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message || "Failed to get blog posts" }, { status: 500 });
+
+  } catch (err: any) {
+    console.error("GET Error:", err);
+    return NextResponse.json({ error: err.message || "Failed to fetch posts" }, { status: 500 });
   }
 }
 
@@ -135,119 +131,73 @@ export async function PUT(req: NextRequest) {
     await dbConnect();
 
     const { searchParams } = new URL(req.url);
-    const slug = searchParams.get('slug');
+    const slug = searchParams.get("slug");
+    if (!slug) return NextResponse.json({ error: "Slug is required" }, { status: 400 });
 
-    if (!slug) {
-      return NextResponse.json({ error: "Le slug est requis" }, { status: 400 });
-    }
-
-    const existingPost = await BlogPost.findOne({ slug });
-    if (!existingPost) {
-      return NextResponse.json({ error: "Article non trouvé" }, { status: 404 });
-    }
+    const post = await BlogPost.findOne({ slug });
+    if (!post) return NextResponse.json({ error: "Post not found" }, { status: 404 });
 
     const formData = await req.formData();
-    const fields: any = {};
+    const update: any = {};
 
-    // Traitement des champs textuels
     for (const [key, value] of formData.entries()) {
-      if (typeof value === 'string') {
-        fields[key] = value;
+      if (typeof value === "string") {
+        update[key] = value;
       }
     }
 
-    // Traitement des tags s'ils sont présents
-    if (fields.tags) {
-      fields.tags = fields.tags.split(',').map((tag: string) => tag.trim());
+    if (update.tags) {
+      update.tags = update.tags.split(",").map((tag: string) => tag.trim());
     }
 
-    // Génération du nouveau slug si le titre est modifié
-    if (fields.title && !fields.slug) {
-      fields.slug = slugify(fields.title);
+    if (update.title && !update.slug) {
+      update.slug = slugify(update.title);
     }
 
-    // Traitement des images
-    const images = formData.getAll('images') as File[];
-    if (images.length > 0) {
-      const uploadDir = path.join(process.cwd(), 'public/uploads/blog');
-      
-      if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
-      }
-
-      for (const image of images) {
-        if (image.size > 5 * 1024 * 1024) continue;
-
-        const buffer = await image.arrayBuffer();
-        const ext = image.name.split('.').pop();
-        const fileName = `${uuidv4()}.${ext}`;
-        const filePath = path.join(uploadDir, fileName);
-
-        await fs.promises.writeFile(filePath, Buffer.from(buffer));
-        fields.image = `/uploads/blog/${fileName}`;
-
-        if (existingPost.image && existingPost.image.startsWith('/uploads/')) {
-          const oldImagePath = path.join(process.cwd(), 'public', existingPost.image);
-          if (fs.existsSync(oldImagePath)) {
-            await fs.promises.unlink(oldImagePath);
-          }
+    const images = formData.getAll("images") as File[];
+    for (const image of images) {
+      const imageUrl = await saveImage(image);
+      if (imageUrl) {
+        if (post.image && post.image.startsWith("/uploads/")) {
+          await deleteImageIfExists(post.image);
         }
+        update.image = imageUrl;
       }
     }
 
-    const updatedPost = await BlogPost.findOneAndUpdate(
-      { slug },
-      fields,
-      { new: true, runValidators: true }
-    );
+    const updated = await BlogPost.findOneAndUpdate({ slug }, update, {
+      new: true,
+      runValidators: true,
+    });
 
-    if (!updatedPost) {
-      return NextResponse.json({ error: "Erreur lors de la mise à jour" }, { status: 500 });
-    }
+    return NextResponse.json(updated);
 
-    return NextResponse.json(updatedPost);
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error.message || "Erreur lors de la mise à jour de l'article" },
-      { status: 500 }
-    );
+  } catch (err: any) {
+    console.error("PUT Error:", err);
+    return NextResponse.json({ error: err.message || "Failed to update blog post" }, { status: 500 });
   }
 }
+
 export async function DELETE(req: NextRequest) {
   try {
     await dbConnect();
 
     const { searchParams } = new URL(req.url);
-    const slug = searchParams.get('slug');
+    const slug = searchParams.get("slug");
+    if (!slug) return NextResponse.json({ error: "Slug is required" }, { status: 400 });
 
-    if (!slug) {
-      return NextResponse.json({ error: "Slug parameter is required" }, { status: 400 });
+    const post = await BlogPost.findOneAndDelete({ slug });
+    if (!post) return NextResponse.json({ error: "Post not found" }, { status: 404 });
+
+    const isLocal = process.env.NODE_ENV === "development";
+    if (isLocal && post.image?.startsWith("/uploads/")) {
+      await deleteImageIfExists(post.image);
     }
 
-    const post = await BlogPost.findOne({ slug });
-    if (!post) {
-      return NextResponse.json({ error: 'Blog post not found' }, { status: 404 });
-    }
+    return NextResponse.json({ message: "Blog post deleted successfully" });
 
-    // Delete the database record
-    await BlogPost.findOneAndDelete({ slug });
-
-    // Only attempt to delete local image files if in development mode
-    const isLocal = process.env.NODE_ENV === 'development';
-    if (isLocal && post.image && post.image.startsWith('/uploads/')) {
-      const imagePath = path.join(process.cwd(), 'public', post.image);
-      if (fs.existsSync(imagePath)) {
-        try {
-          await fsp.unlink(imagePath);
-        } catch (error) {
-          console.error("Error deleting image file:", error);
-        }
-      }
-    }
-
-    return NextResponse.json({ message: 'Blog post deleted successfully' });
-  } catch (error: any) {
-    console.error("Error in DELETE handler:", error);
-    return NextResponse.json({ error: error.message || "Failed to delete blog post" }, { status: 500 });
+  } catch (err: any) {
+    console.error("DELETE Error:", err);
+    return NextResponse.json({ error: err.message || "Failed to delete blog post" }, { status: 500 });
   }
 }
