@@ -43,10 +43,10 @@ export function ProductCard({ product, variant = 'default', className = '' }: Pr
     }
     
     addToCart({
-      id: product._id,
+      _id: product._id,
       name: product.name,
       price: product.promotion && product.promoPrice ? product.promoPrice : product.price,
-      image: product.imageUrls?.[0] || '',
+      imageUrl: product.imageUrls?.[0] || '',
       quantity: 1
     });
     
