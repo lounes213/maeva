@@ -59,27 +59,29 @@ const onSubmit = async (data: any) => {
   setIsLoading(true);
   const formData = new FormData();
 
-  // Normalize taille and couleurs to arrays
-  if (typeof data.taille === 'string') {
-    data.taille = data.taille
-      .split(',')
-      .map((t: string) => t.trim())
-      .filter(Boolean);
-  }
+  // Normalize 'taille' and 'couleurs'
+  const normalizeArrayField = (field: any): string[] => {
+    if (Array.isArray(field)) {
+      return field.map((item) => item?.toString().trim()).filter(Boolean);
+    } else if (typeof field === 'string') {
+      return field.split(',').map((item) => item.trim()).filter(Boolean);
+    }
+    return [];
+  };
 
-  if (typeof data.couleurs === 'string') {
-    data.couleurs = data.couleurs
-      .split(',')
-      .map((c: string) => c.trim())
-      .filter(Boolean);
-  }
+  data.taille = normalizeArrayField(data.taille);
+  data.couleurs = normalizeArrayField(data.couleurs);
+
+  console.log('Processed data before FormData:', data);
 
   // Append all fields to FormData safely
   Object.keys(data).forEach((key) => {
     if ((key === 'couleurs' || key === 'taille')) {
-      const items = Array.isArray(data[key]) ? data[key] : [data[key]];
+      const items = Array.isArray(data[key]) ? data[key] : [];
       items.forEach((item: string) => {
-        if (item) formData.append(key, item);
+        if (typeof item === 'string') {
+          formData.append(key, item);
+        }
       });
     } else if (key !== 'images') {
       formData.append(key, data[key]);
@@ -87,7 +89,7 @@ const onSubmit = async (data: any) => {
   });
 
   // Append selected images
-  selectedImages.forEach((image) => {
+  selectedImages?.forEach((image) => {
     formData.append('images', image);
   });
 
@@ -99,7 +101,7 @@ const onSubmit = async (data: any) => {
 
     const response = await fetch(url, {
       method,
-      body: formData, // Do not set Content-Type manually for FormData
+      body: formData,
     });
 
     if (!response.ok) {
@@ -109,16 +111,12 @@ const onSubmit = async (data: any) => {
     }
 
     toast.success(
-      initialData
-        ? 'Produit mis à jour avec succès'
-        : 'Produit créé avec succès'
+      initialData ? 'Produit mis à jour avec succès' : 'Produit créé avec succès'
     );
     onSuccess();
   } catch (error) {
     console.error("Erreur lors de l'enregistrement :", error);
-    toast.error(
-      error instanceof Error ? error.message : 'Une erreur est survenue'
-    );
+    toast.error(error instanceof Error ? error.message : 'Une erreur est survenue');
   } finally {
     setIsLoading(false);
   }
