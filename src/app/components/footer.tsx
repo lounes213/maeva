@@ -1,9 +1,54 @@
 import Link from 'next/link';
-import React from 'react';
+import React, { useState } from 'react';
 import Image from 'next/image';
-import { Facebook, Instagram, Twitter, Youtube, Mail, Phone, MapPin, ArrowRight } from 'lucide-react';
+import { Facebook, Instagram, Twitter, Youtube, Mail, Phone, MapPin, ArrowRight, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { ModernButton } from '@/components/ui/modern-button';
+
+// Track Order Link Component with order code input
+function TrackOrderLink() {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [orderCode, setOrderCode] = useState('');
+  
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (orderCode.trim()) {
+      window.location.href = `/track-order/${orderCode.trim()}`;
+    }
+  };
+  
+  return (
+    <div>
+      {!isExpanded ? (
+        <button 
+          onClick={() => setIsExpanded(true)}
+          className="text-gray-400 hover:text-amber-500 transition-colors flex items-center group"
+        >
+          <ArrowRight size={16} className="mr-2 opacity-0 group-hover:opacity-100 transform -translate-x-2 group-hover:translate-x-0 transition-all" />
+          Suivi de Commande
+        </button>
+      ) : (
+        <form onSubmit={handleSubmit} className="mt-2">
+          <div className="flex items-center">
+            <Input
+              type="text"
+              value={orderCode}
+              onChange={(e) => setOrderCode(e.target.value)}
+              placeholder="N° de commande"
+              className="bg-gray-800 border-gray-700 text-gray-300 text-sm rounded-l-md focus:ring-amber-500 focus:border-amber-500 w-full"
+            />
+            <button
+              type="submit"
+              className="bg-amber-600 hover:bg-amber-700 text-white p-2 rounded-r-md"
+            >
+              <Search size={16} />
+            </button>
+          </div>
+        </form>
+      )}
+    </div>
+  );
+}
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
@@ -78,7 +123,6 @@ export default function Footer() {
                 { href: '/shipping', label: 'Livraison & Retours' },
                 { href: '/terms', label: 'Conditions Générales' },
                 { href: '/privacy', label: 'Politique de Confidentialité' },
-                { href: '/track-order', label: 'Suivi de Commande' },
               ].map((link) => (
                 <li key={link.href}>
                   <Link 
@@ -90,6 +134,9 @@ export default function Footer() {
                   </Link>
                 </li>
               ))}
+              <li>
+                <TrackOrderLink />
+              </li>
             </ul>
           </div>
           
