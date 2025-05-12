@@ -18,6 +18,7 @@ export async function uploadImages(files: File[]): Promise<string[]> {
     const uploadResponse = await fetch('/api/cloudinary-upload', {
       method: 'POST',
       body: uploadFormData,
+      credentials: 'include', // Include cookies in the request
       // Don't set Content-Type header when sending FormData
       // The browser will automatically set the correct multipart/form-data with boundary
     });

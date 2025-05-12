@@ -29,7 +29,8 @@ export async function middleware(req: NextRequest) {
     req.nextUrl.pathname === '/api/cloudinary-upload' ||
     req.nextUrl.pathname === '/api/products' ||
     req.nextUrl.pathname === '/api/blog' ||
-    req.nextUrl.pathname === '/api/categories';
+    req.nextUrl.pathname === '/api/categories' ||
+    req.nextUrl.pathname === '/api/orders';
   
   // Skip authentication for public routes
   if (isAuthRoute || isPublicApiRoute || req.nextUrl.pathname === '/admin/login') {
@@ -83,6 +84,6 @@ export const config = {
     '/dashboard',
     '/dashboard/:path*',
     // Only include specific API routes that need authentication
-    '/api/((?!cloudinary-upload|upload).)*',
+    '/api/((?!cloudinary-upload|upload|products|blog|categories).)*',
   ]
 };

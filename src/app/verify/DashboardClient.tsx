@@ -237,7 +237,7 @@ export default function DashboardClient({ user }: { user: any }) {
         // Try alternate API paths
         const apiPaths = {
           collections: ['/api/collection', '/api/collection'],
-          orders: ['/api/order', '/api/order'],
+          orders: ['/api/orders', '/api/orders'],
           contacts: ['/api/contact', '/api/contact']
         };
         
