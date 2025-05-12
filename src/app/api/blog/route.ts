@@ -1,74 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
-import path from "path";
-import fs from "fs/promises";
-import { existsSync, mkdirSync } from "fs";
-import { v4 as uuidv4 } from "uuid";
 import dbConnect from "@/lib/mongo";
 import slugify from "@/lib/utils";
 import BlogPost from "@/app/models/blog";
-
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-const uploadDir = path.join(process.cwd(), "public/uploads/blog");
-
-async function saveImage(file: File): Promise<string | null> {
-  if (file.size > MAX_FILE_SIZE) return null;
-
-  const buffer = await file.arrayBuffer();
-  const ext = path.extname(file.name);
-  const fileName = `${uuidv4()}${ext}`;
-  const filePath = path.join(uploadDir, fileName);
-
-  if (!existsSync(uploadDir)) {
-    mkdirSync(uploadDir, { recursive: true });
-  }
-
-  await fs.writeFile(filePath, Buffer.from(buffer));
-  return `/uploads/blog/${fileName}`;
-}
-
-async function deleteImageIfExists(imagePath: string) {
-  try {
-    const fullPath = path.join(process.cwd(), "public", imagePath);
-    if (existsSync(fullPath)) {
-      await fs.unlink(fullPath);
-    }
-  } catch (err) {
-    console.error("Error deleting image:", err);
-  }
-}
 
 export async function POST(req: NextRequest) {
   try {
     await dbConnect();
 
-    const formData = await req.formData();
-    const title = formData.get("title") as string;
-    const content = formData.get("content") as string;
-    const slug = (formData.get("slug") as string) || slugify(title);
-    const excerpt = formData.get("excerpt") as string;
-    const category = formData.get("category") as string;
-    const tags = formData.get("tags")?.toString().split(",").map(t => t.trim()) || [];
+    // Parse JSON body instead of formData
+    const data = await req.json();
+    const { title, content, slug, excerpt, category, tags, imageUrls } = data;
 
     if (!title || !content) {
       return NextResponse.json({ error: "Title and content are required" }, { status: 400 });
     }
 
-    const images = formData.getAll("images") as File[];
-    const imageUrls: string[] = [];
-
-    for (const image of images) {
-      const imageUrl = await saveImage(image);
-      if (imageUrl) imageUrls.push(imageUrl);
-    }
-
     const blogPost = new BlogPost({
       title,
       content,
-      slug,
+      slug: slug || slugify(title),
       excerpt,
       category,
-      tags,
-      image: imageUrls[0] || undefined,
+      tags: Array.isArray(tags) ? tags : tags?.split(",").map((t: string) => t.trim()) || [],
+      image: imageUrls && imageUrls.length > 0 ? imageUrls[0] : undefined,
     });
 
     const savedPost = await blogPost.save();
@@ -137,32 +91,30 @@ export async function PUT(req: NextRequest) {
     const post = await BlogPost.findOne({ slug });
     if (!post) return NextResponse.json({ error: "Post not found" }, { status: 404 });
 
-    const formData = await req.formData();
-    const update: any = {};
+    // Parse JSON body
+    const data = await req.json();
+    const { title, content, excerpt, category, tags, imageUrls } = data;
+    
+    const update: any = {
+      title,
+      content,
+      excerpt,
+      category
+    };
 
-    for (const [key, value] of formData.entries()) {
-      if (typeof value === "string") {
-        update[key] = value;
-      }
+    if (tags) {
+      update.tags = Array.isArray(tags) ? tags : tags.split(",").map((tag: string) => tag.trim());
     }
 
-    if (update.tags) {
-      update.tags = update.tags.split(",").map((tag: string) => tag.trim());
+    if (title && !data.slug) {
+      update.slug = slugify(title);
+    } else if (data.slug) {
+      update.slug = data.slug;
     }
 
-    if (update.title && !update.slug) {
-      update.slug = slugify(update.title);
-    }
-
-    const images = formData.getAll("images") as File[];
-    for (const image of images) {
-      const imageUrl = await saveImage(image);
-      if (imageUrl) {
-        if (post.image && post.image.startsWith("/uploads/")) {
-          await deleteImageIfExists(post.image);
-        }
-        update.image = imageUrl;
-      }
+    // Update image if new images were uploaded
+    if (imageUrls && imageUrls.length > 0) {
+      update.image = imageUrls[0];
     }
 
     const updated = await BlogPost.findOneAndUpdate({ slug }, update, {
@@ -189,11 +141,8 @@ export async function DELETE(req: NextRequest) {
     const post = await BlogPost.findOneAndDelete({ slug });
     if (!post) return NextResponse.json({ error: "Post not found" }, { status: 404 });
 
-    const isLocal = process.env.NODE_ENV === "development";
-    if (isLocal && post.image?.startsWith("/uploads/")) {
-      await deleteImageIfExists(post.image);
-    }
-
+    // No need to delete images from Cloudinary as they are managed separately
+    
     return NextResponse.json({ message: "Blog post deleted successfully" });
 
   } catch (err: any) {

@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, FormEvent, ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import toast from "react-hot-toast";
 import slugify from "@/lib/utils";
 
 interface FormDataState {
@@ -101,24 +102,54 @@ export default function CreateBlogForm({ blog, onCreated, onEdited }: CreateBlog
         throw new Error("Title and content are required");
       }
 
-      const postData = new FormData();
-      postData.append("title", formData.title);
-      postData.append("content", formData.content);
-      postData.append("slug", slugify(formData.title));
-      if (formData.excerpt) postData.append("excerpt", formData.excerpt);
-      if (formData.category) postData.append("category", formData.category);
-      if (formData.tags) postData.append("tags", formData.tags);
+      // Upload images to Cloudinary first
+      let imageUrls: string[] = [];
+      if (formData.images.length > 0) {
+        const uploadToast = toast.loading('Téléchargement des images en cours...');
+        try {
+          const { uploadMultipleToCloudinary } = await import('@/lib/cloudinary');
+          imageUrls = await uploadMultipleToCloudinary(formData.images);
+          
+          if (imageUrls.length === 0 && formData.images.length > 0) {
+            toast.error('Toutes les images ont échoué au téléchargement. Veuillez réessayer.');
+            toast.dismiss(uploadToast);
+            setIsSubmitting(false);
+            return;
+          }
+          
+          toast.success(`${imageUrls.length} image(s) téléchargée(s) avec succès`, {
+            id: uploadToast
+          });
+        } catch (error) {
+          console.error('Error uploading images:', error);
+          toast.error('Erreur lors du téléchargement des images', {
+            id: uploadToast
+          });
+          setIsSubmitting(false);
+          return;
+        }
+      }
 
-      formData.images.forEach((img) => {
-        postData.append("images", img);
-      });
+      // Prepare data for API
+      const blogData = {
+        title: formData.title,
+        content: formData.content,
+        slug: slugify(formData.title),
+        excerpt: formData.excerpt || "",
+        category: formData.category || "Uncategorized",
+        tags: formData.tags || "",
+        imageUrls: imageUrls
+      };
 
       const method = blog ? "PUT" : "POST";
       const url = blog ? `/api/blog?slug=${blog.slug}` : "/api/blog";
 
       const response = await fetch(url, {
         method,
-        body: postData,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(blogData),
       });
 
       if (!response.ok) {

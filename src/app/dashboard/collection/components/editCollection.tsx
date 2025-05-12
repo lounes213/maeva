@@ -141,26 +141,51 @@ export default function EditCollectionModal({
     setIsLoading(true);
 
     try {
-      const formData = new FormData();
-      formData.append('name', name);
-      formData.append('description', description);
-      formData.append('status', status);
-      formData.append('isFeatured', String(isFeatured));
-      formData.append('tags', tags.join(','));
-      
-      // Add each new image file
-      imageFiles.forEach((file, index) => {
-        formData.append(`images`, file);
-      });
-      
-      // Add list of images to remove
-      if (imagesToRemove.length > 0) {
-        formData.append('imagesToRemove', JSON.stringify(imagesToRemove));
+      // Upload new images to Cloudinary first
+      let newImageUrls: string[] = [];
+      if (imageFiles.length > 0) {
+        const uploadToast = toast.loading('Téléchargement des nouvelles images en cours...');
+        try {
+          const { uploadMultipleToCloudinary } = await import('@/lib/cloudinary');
+          newImageUrls = await uploadMultipleToCloudinary(imageFiles);
+          
+          if (newImageUrls.length === 0 && imageFiles.length > 0) {
+            toast.error('Toutes les images ont échoué au téléchargement. Veuillez réessayer.');
+            toast.dismiss(uploadToast);
+            setIsLoading(false);
+            return;
+          }
+          
+          toast.success(`${newImageUrls.length} image(s) téléchargée(s) avec succès`, {
+            id: uploadToast
+          });
+        } catch (error) {
+          console.error('Error uploading images:', error);
+          toast.error('Erreur lors du téléchargement des images', {
+            id: uploadToast
+          });
+          setIsLoading(false);
+          return;
+        }
       }
+      
+      // Prepare collection data
+      const collectionData = {
+        name,
+        description,
+        status,
+        isFeatured,
+        tags,
+        newImages: newImageUrls,
+        imagesToRemove
+      };
 
       const response = await fetch(`/api/collection?id=${collection._id}`, {
         method: 'PUT',
-        body: formData,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(collectionData),
       });
 
       if (!response.ok) {

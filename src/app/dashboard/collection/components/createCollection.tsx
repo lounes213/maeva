@@ -139,22 +139,53 @@ export default function CreateCollectionModal({ onCreateSuccess}:any) {
   }
 
   setIsLoading(true);
-  const formData = new FormData();
-  formData.append('name', form.name);
-  formData.append('description', form.description);
-  formData.append('status', form.status);
-  formData.append('isFeatured', String(form.isFeatured));
-  if (tags.length > 0) {
-    formData.append('tags', JSON.stringify(tags));
-  }
-  form.images.forEach((image) => {
-    formData.append('images', image);
-  });
-
+  
   try {
+    // Upload images to Cloudinary first
+    let imageUrls: string[] = [];
+    if (form.images.length > 0) {
+      const uploadToast = toast.loading('Téléchargement des images en cours...');
+      try {
+        const { uploadMultipleToCloudinary } = await import('@/lib/cloudinary');
+        imageUrls = await uploadMultipleToCloudinary(form.images);
+        
+        if (imageUrls.length === 0 && form.images.length > 0) {
+          toast.error('Toutes les images ont échoué au téléchargement. Veuillez réessayer.');
+          toast.dismiss(uploadToast);
+          setIsLoading(false);
+          return;
+        }
+        
+        toast.success(`${imageUrls.length} image(s) téléchargée(s) avec succès`, {
+          id: uploadToast
+        });
+      } catch (error) {
+        console.error('Error uploading images:', error);
+        toast.error('Erreur lors du téléchargement des images', {
+          id: uploadToast
+        });
+        setIsLoading(false);
+        return;
+      }
+    }
+    
+    // Prepare collection data
+    const collectionData = {
+      name: form.name,
+      description: form.description,
+      status: form.status,
+      isFeatured: form.isFeatured,
+      tags: tags.length > 0 ? tags : [],
+      images: imageUrls
+    };
+
+    // Send to API
     const res = await fetch('/api/collection', {
       method: 'POST',
-      body: formData,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(collectionData),
     });
 
     if (!res.ok) {
