@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="100px" height="32px" viewBox="0 0 100 32" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>Edahabia</title>
+    <g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="edahabia" fill-rule="nonzero">
+            <rect id="Rectangle" fill="#FFFFFF" x="0" y="0" width="100" height="32" rx="4"></rect>
+            <g id="Group" transform="translate(28.000000, 6.000000)">
+                <rect id="Rectangle" fill="#F7B600" x="0" y="0" width="44" height="20" rx="2"></rect>
+                <path d="M10,10 C10,7.2 12.2,5 15,5 C17.8,5 20,7.2 20,10 C20,12.8 17.8,15 15,15 C12.2,15 10,12.8 10,10 Z" id="Path" fill="#FFFFFF"></path>
+                <path d="M24,10 C24,7.2 26.2,5 29,5 C31.8,5 34,7.2 34,10 C34,12.8 31.8,15 29,15 C26.2,15 24,12.8 24,10 Z" id="Path" fill="#FFFFFF"></path>
+            </g>
+        </g>
+    </g>
+</svg>

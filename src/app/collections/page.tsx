@@ -7,41 +7,42 @@ import Header from '../components/header';
 import Footer from '../components/footer';
 import { ModernButton } from '@/components/ui/modern-button';
 
+interface Collection {
+  _id: string;
+  name: string;
+  description?: string;
+  image?: string[];
+  tags?: string[];
+  isFeatured?: boolean;
+  slug?: string;
+}
+
 export default function CollectionsPage() {
   const [isLoading, setIsLoading] = useState(true);
+  const [collections, setCollections] = useState<Collection[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Simulate loading
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 1000);
+    const fetchCollections = async () => {
+      try {
+        const res = await fetch('/api/collection');
+        
+        if (!res.ok) {
+          throw new Error('Failed to fetch collections');
+        }
+        
+        const data = await res.json();
+        setCollections(data.data || []);
+      } catch (err) {
+        console.error('Error fetching collections:', err);
+        setError('Une erreur est survenue lors du chargement des collections. Veuillez réessayer plus tard.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-    return () => clearTimeout(timer);
+    fetchCollections();
   }, []);
-
-  const collections = [
-    {
-      id: 'summer-2023',
-      title: 'Collection Été 2023',
-      description: 'Des pièces légères et colorées pour la saison estivale',
-      image: '/logo.png', // Using logo as fallback
-      link: '/shop?collection=summer-2023'
-    },
-    {
-      id: 'traditional',
-      title: 'Collection Traditionnelle',
-      description: 'L\'élégance de la tradition algérienne dans des coupes modernes',
-      image: '/logo.png', // Using logo as fallback
-      link: '/shop?collection=traditional'
-    },
-    {
-      id: 'modern',
-      title: 'Collection Moderne',
-      description: 'Des designs contemporains inspirés par notre héritage',
-      image: '/logo.png', // Using logo as fallback
-      link: '/shop?collection=modern'
-    }
-  ];
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -68,31 +69,70 @@ export default function CollectionsPage() {
               <div className="flex justify-center items-center h-64">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600"></div>
               </div>
+            ) : error ? (
+              <div className="text-center py-12">
+                <p className="text-red-600 mb-4">{error}</p>
+                <button 
+                  onClick={() => window.location.reload()} 
+                  className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors"
+                >
+                  Réessayer
+                </button>
+              </div>
+            ) : collections.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-gray-600 mb-4">Aucune collection n'est disponible pour le moment.</p>
+                <Link href="/shop">
+                  <ModernButton variant="primary">
+                    Voir tous nos produits
+                  </ModernButton>
+                </Link>
+              </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {collections.map((collection) => (
                   <div 
-                    key={collection.id}
+                    key={collection._id}
                     className="bg-white rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300"
                   >
                     <div className="relative h-64 w-full">
-                      <Image
-                        src={collection.image}
-                        alt={collection.title}
-                        fill
-                        className="object-contain p-4"
-                        onError={(e) => {
-                          // Fallback to a simple colored background if image fails to load
-                          const target = e.target as HTMLImageElement;
-                          target.onerror = null; // Prevent infinite loop
-                          target.style.display = 'none';
-                        }}
-                      />
+                      {collection.image && collection.image.length > 0 ? (
+                        <Image
+                          src={collection.image[0]}
+                          alt={collection.name}
+                          fill
+                          className="object-cover"
+                          onError={(e) => {
+                            // Fallback to a simple colored background if image fails to load
+                            const target = e.target as HTMLImageElement;
+                            target.onerror = null; // Prevent infinite loop
+                            target.style.display = 'none';
+                          }}
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-amber-100 flex items-center justify-center">
+                          <span className="text-amber-600 font-bold text-xl">{collection.name.charAt(0)}</span>
+                        </div>
+                      )}
+                      {collection.isFeatured && (
+                        <div className="absolute top-2 right-2 bg-amber-600 text-white text-xs px-2 py-1 rounded-full">
+                          Populaire
+                        </div>
+                      )}
                     </div>
                     <div className="p-6">
-                      <h3 className="text-xl font-bold text-gray-900 mb-2">{collection.title}</h3>
-                      <p className="text-gray-600 mb-4">{collection.description}</p>
-                      <Link href={collection.link}>
+                      <h3 className="text-xl font-bold text-gray-900 mb-2">{collection.name}</h3>
+                      <p className="text-gray-600 mb-4">{collection.description || "Découvrez notre collection exclusive de vêtements traditionnels algériens."}</p>
+                      {collection.tags && collection.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mb-4">
+                          {collection.tags.map((tag, index) => (
+                            <span key={index} className="bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded-full">
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      <Link href={`/collection/${collection._id}`}>
                         <ModernButton variant="primary" className="w-full">
                           Découvrir
                         </ModernButton>
