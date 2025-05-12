@@ -17,36 +17,60 @@ export async function middleware(req: NextRequest) {
     });
   }
 
+  // Get the token from cookies
   const token = req.cookies.get('token')?.value;
+  
+  // Define routes that don't need authentication
   const isAuthRoute = req.nextUrl.pathname === '/api/auth/login' || 
                      req.nextUrl.pathname === '/api/auth/register';
   
-  // Skip authentication for upload routes
-  if (req.nextUrl.pathname === '/api/upload' || req.nextUrl.pathname === '/api/cloudinary-upload') {
+  const isPublicApiRoute = 
+    req.nextUrl.pathname === '/api/upload' || 
+    req.nextUrl.pathname === '/api/cloudinary-upload' ||
+    req.nextUrl.pathname === '/api/products' ||
+    req.nextUrl.pathname === '/api/blog' ||
+    req.nextUrl.pathname === '/api/categories';
+  
+  // Skip authentication for public routes
+  if (isAuthRoute || isPublicApiRoute || req.nextUrl.pathname === '/admin/login') {
     return NextResponse.next();
   }
 
-  // Ne pas vérifier le token pour les routes d'authentification
-  if (isAuthRoute) {
-    return NextResponse.next();
-  }
-
-  // Vérifier si la route nécessite une authentification
+  // Check if the route requires authentication
   if (req.nextUrl.pathname.startsWith('/dashboard') || req.nextUrl.pathname.startsWith('/api/')) {
+    // If no token is present, redirect to login
     if (!token) {
+      console.log('No token found, redirecting to login');
+      
       if (req.nextUrl.pathname.startsWith('/api/')) {
         return NextResponse.json({ message: 'Non authentifié' }, { status: 401 });
       }
+      
+      // Prevent redirect loops
+      if (req.nextUrl.pathname === '/admin/login') {
+        return NextResponse.next();
+      }
+      
       return NextResponse.redirect(new URL('/admin/login', req.url));
     }
 
     try {
-      jwt.verify(token, JWT_SECRET);
+      // Verify the token
+      const decoded = jwt.verify(token, JWT_SECRET);
+      console.log('Token verified successfully:', decoded);
       return NextResponse.next();
     } catch (error) {
+      console.error('Token verification failed:', error);
+      
       if (req.nextUrl.pathname.startsWith('/api/')) {
         return NextResponse.json({ message: 'Token invalide' }, { status: 401 });
       }
+      
+      // Prevent redirect loops
+      if (req.nextUrl.pathname === '/admin/login') {
+        return NextResponse.next();
+      }
+      
       return NextResponse.redirect(new URL('/admin/login', req.url));
     }
   }

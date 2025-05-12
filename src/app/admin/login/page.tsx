@@ -16,21 +16,31 @@ export default function AdminLogin() {
     setIsLoading(true);
 
     try {
+      console.log('Attempting login with:', { email });
+      
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
 
+      console.log('Login response status:', response.status);
       const data = await response.json();
+      console.log('Login response data:', data);
 
       if (!response.ok) {
         throw new Error(data.message || 'Échec de la connexion');
       }
 
       toast.success('Connexion réussie');
-      router.push('/dashboard');
+      console.log('Login successful, redirecting to dashboard...');
+      
+      // Add a delay before redirecting
+      setTimeout(() => {
+        router.push('/dashboard');
+      }, 1000);
     } catch (err: any) {
+      console.error('Login error:', err);
       toast.error(err.message || 'Une erreur est survenue');
     } finally {
       setIsLoading(false);
