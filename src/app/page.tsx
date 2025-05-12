@@ -8,7 +8,7 @@ import Navigation from './components/header';
 import Footer from './components/footer';
 import { ProductCard } from '@/components/ui/product-card';
 import { ModernButton } from '@/components/ui/modern-button';
-import { HeroBanner } from '@/components/ui/hero-banner';
+import { DynamicHeroBanner } from '@/components/ui/dynamic-hero-banner';
 
 import BlogGrid from './components/blogGrid';
 import CollectionGrid from './collection/components/collectionGrid';
@@ -81,15 +81,15 @@ export default function HomePage() {
     <div className="bg-white">
       {/* Navigation */}
       <Navigation />
-   {/* Hero Banner with Algerian motifs and modern design */}
-   <HeroBanner
+   {/* Dynamic Hero Banner with latest collection image */}
+   <DynamicHeroBanner
      title="L'Élégance <amber>Algérienne</amber> Réinventée"
      subtitle="Découvrez notre collection exclusive de vêtements traditionnels modernisés, fabriqués à la main par nos artisans locaux."
      primaryButtonText="Explorer la collection"
      primaryButtonLink="/shop"
      secondaryButtonText="Notre histoire"
      secondaryButtonLink="/about"
-     imageSrc="/images/picture(1).jpg"
+     fallbackImageSrc="/images/picture(1).jpg"
      imageAlt="Modèle vêtement MAEVA"
      backgroundPattern="/images/geometric-pattern.png"
    />

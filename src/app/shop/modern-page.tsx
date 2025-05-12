@@ -345,8 +345,8 @@ export default function ModernShopPage() {
           </div>
         </div>
 
-        {/* Simple Filters Row */}
-        <div className="w-full mb-8 flex flex-wrap gap-4 items-center">
+        {/* Mobile Filters Row - Only visible on small screens */}
+        <div className="md:hidden w-full mb-8 flex flex-wrap gap-4 items-center">
           {/* Price Range Filter */}
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium text-gray-700">Prix:</span>
@@ -386,14 +386,42 @@ export default function ModernShopPage() {
           )}
         </div>
         
-        {/* Products Grid - Full Width */}
-        <div className="w-full">
-          <ProductGrid
-            products={sortedProducts}
-            loading={loading}
-            emptyMessage={searchQuery ? `Aucun résultat pour "${searchQuery}"` : "Aucun produit ne correspond à vos filtres"}
-            columns={4}
-          />
+        {/* Main Content with Sidebar */}
+        <div className="flex flex-col md:flex-row gap-8">
+          {/* Filters Sidebar - Hidden on mobile */}
+          <div className="hidden md:block w-64 flex-shrink-0">
+            <ProductFilters
+              categories={categories}
+              colors={colors}
+              sizes={sizes}
+              priceRange={{
+                min: 0,
+                max: maxPrice,
+                current: priceRange
+              }}
+              selectedCategories={selectedCategories}
+              selectedColors={selectedColors}
+              selectedSizes={selectedSizes}
+              onCategoryChange={toggleCategory}
+              onColorChange={toggleColor}
+              onSizeChange={toggleSize}
+              onPriceChange={handlePriceChange}
+              onClearFilters={clearFilters}
+              totalProducts={products.length}
+              filteredCount={filteredProducts.length}
+              className="sticky top-24"
+            />
+          </div>
+          
+          {/* Products Grid */}
+          <div className="flex-1">
+            <ProductGrid
+              products={sortedProducts}
+              loading={loading}
+              emptyMessage={searchQuery ? `Aucun résultat pour "${searchQuery}"` : "Aucun produit ne correspond à vos filtres"}
+              columns={3}
+            />
+          </div>
         </div>
       </div>
       
