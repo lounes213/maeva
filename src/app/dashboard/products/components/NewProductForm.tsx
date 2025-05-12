@@ -40,31 +40,46 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData, onSuccess, onCan
 
 
 const uploadToCloudinary = async (file: File): Promise<string> => {
-  const formData = new FormData();
-  formData.append('file', file);
+  try {
+    // Check if file is valid
+    if (!file || !(file instanceof File) || file.size === 0) {
+      throw new Error('Invalid file object');
+    }
 
-  const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
-  const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+    const formData = new FormData();
+    formData.append('file', file);
 
-  if (!uploadPreset || !cloudName) {
-    throw new Error('Missing Cloudinary config in environment variables');
+    const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
+    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+
+    if (!uploadPreset || !cloudName) {
+      console.error('Missing Cloudinary config:', { uploadPreset, cloudName });
+      throw new Error('Missing Cloudinary configuration in environment variables');
+    }
+
+    formData.append('upload_preset', uploadPreset);
+    formData.append('cloud_name', cloudName);
+
+    console.log(`Uploading file ${file.name} (${file.size} bytes) to Cloudinary...`);
+    
+    const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+      method: 'POST',
+      body: formData,
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error('Cloudinary upload error:', data);
+      throw new Error(data.error?.message || 'Cloudinary upload failed');
+    }
+
+    console.log('Cloudinary upload successful:', data.secure_url);
+    return data.secure_url;
+  } catch (error) {
+    console.error('Error in uploadToCloudinary:', error);
+    throw error;
   }
-
-  formData.append('upload_preset', uploadPreset);
-  formData.append('cloud_name', cloudName);
-
-  const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
-    method: 'POST',
-    body: formData,
-  });
-
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(data.error?.message || 'Cloudinary upload failed');
-  }
-
-  return data.secure_url;
 };
 
 
@@ -92,9 +107,18 @@ const onSubmit = async (data: any) => {
   try {
     // Upload images first
     const uploadedImageUrls: string[] = [];
-    for (const image of selectedImages) {
-      const url = await uploadToCloudinary(image);
-      uploadedImageUrls.push(url);
+    
+    // Only process images if there are any selected
+    if (selectedImages.length > 0) {
+      for (const image of selectedImages) {
+        try {
+          const url = await uploadToCloudinary(image);
+          uploadedImageUrls.push(url);
+        } catch (uploadError) {
+          console.error('Error uploading image to Cloudinary:', uploadError);
+          throw new Error('Échec du téléchargement des images. Veuillez réessayer.');
+        }
+      }
     }
 
     // Normalize fields
@@ -104,9 +128,17 @@ const onSubmit = async (data: any) => {
       return [];
     };
 
-    data.taille = normalizeArrayField(data.taille);
-    data.couleurs = normalizeArrayField(data.couleurs);
-    data.images = uploadedImageUrls;
+    // Create a clean data object to send to the API
+    const productData = {
+      ...data,
+      taille: normalizeArrayField(data.taille),
+      couleurs: normalizeArrayField(data.couleurs),
+      // Only include images if we have uploaded URLs
+      ...(uploadedImageUrls.length > 0 && { images: uploadedImageUrls })
+    };
+
+    // Log the data being sent to the API for debugging
+    console.log('Processed data before sending to API:', productData);
 
     // Send to backend as JSON
     const url = initialData ? `/api/products?id=${initialData._id}` : '/api/products';
@@ -115,12 +147,12 @@ const onSubmit = async (data: any) => {
     const response = await fetch(url, {
       method,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
+      body: JSON.stringify(productData),
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Server Error Response:', errorText);
+      const errorData = await response.text();
+      console.error('Server Error Response:', errorData);
       throw new Error("Erreur lors de l'enregistrement du produit");
     }
 
