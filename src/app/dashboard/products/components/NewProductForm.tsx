@@ -56,21 +56,28 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData, onSuccess, onCan
     setValue('couleurs', colors);
   };
 
-  const onSubmit = async (data: any) => {
+const onSubmit = async (data: any) => {
   setIsLoading(true);
   const formData = new FormData();
 
-  // Append all fields
+  // Normalize taille and couleurs if they're comma-separated strings
+  if (typeof data.taille === 'string') {
+    data.taille = data.taille.split(',').map((t: string) => t.trim()).filter(Boolean);
+  }
+  if (typeof data.couleurs === 'string') {
+    data.couleurs = data.couleurs.split(',').map((c: string) => c.trim()).filter(Boolean);
+  }
+
+  // Append all fields to FormData
   Object.keys(data).forEach(key => {
-    if (key === 'couleurs' || key === 'taille') {
-      // Handle arrays
+    if ((key === 'couleurs' || key === 'taille') && Array.isArray(data[key])) {
       data[key].forEach((item: string) => formData.append(key, item));
     } else if (key !== 'images') {
       formData.append(key, data[key]);
     }
   });
 
-  // Append images
+  // Append selected images
   selectedImages.forEach(image => {
     formData.append('images', image);
   });
@@ -81,12 +88,13 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData, onSuccess, onCan
 
     const response = await fetch(url, {
       method,
-      body: formData // No Content-Type header for FormData
+      body: formData, // Do not set Content-Type manually for FormData
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Erreur lors de l\'enregistrement du produit');
+      const errorText = await response.text();
+      console.error('Server Error Response:', errorText);
+      throw new Error('Erreur lors de l\'enregistrement du produit');
     }
 
     toast.success(initialData ? 'Produit mis à jour avec succès' : 'Produit créé avec succès');
