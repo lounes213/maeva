@@ -83,7 +83,7 @@ export default function HomePage() {
       <Navigation />
    {/* Dynamic Hero Banner with latest collection image */}
    <DynamicHeroBanner
-     title="L'Élégance <amber>Algérienne</amber> Réinventée"
+     title="L'Élégance Algérienne Réinventée"
      subtitle="Découvrez notre collection exclusive de vêtements traditionnels modernisés, fabriqués à la main par nos artisans locaux."
      primaryButtonText="Explorer la collection"
      primaryButtonLink="/shop"
