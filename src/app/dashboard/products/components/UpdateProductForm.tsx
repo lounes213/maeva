@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 import ColorSelector from './createColor';
-import { uploadImages } from './uploadImages';
+import { directUploadImages } from './directUpload';
 
 interface Product {
   _id: string;
@@ -99,7 +99,7 @@ const UpdateProductForm = ({ product, onSuccess, onCancel, categories }: UpdateP
       if (selectedImages.length > 0) {
         try {
           console.log('Uploading new images...');
-          const newImageUrls = await uploadImages(selectedImages);
+          const newImageUrls = await directUploadImages(selectedImages);
           allImageUrls = [...allImageUrls, ...newImageUrls];
           console.log('All image URLs after upload:', allImageUrls);
         } catch (uploadError: any) {
