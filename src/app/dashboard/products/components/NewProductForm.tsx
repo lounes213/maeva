@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Modal from './modal';
 import ColorSelector from './createColor';
 import { Product } from '@/app/types/product';
+import { uploadImages } from './uploadImages';
 
 interface NewProductFormProps {
   product: Product;
@@ -91,22 +92,34 @@ export default function NewProductForm({ product, onSubmit, onCancel, categories
       let imageUrls = [...(formData.imageUrls || [])];
       
       if (selectedImages.length > 0) {
-        const uploadFormData = new FormData();
-        selectedImages.forEach(file => {
-          uploadFormData.append('files', file);
-        });
+        try {
+          const uploadFormData = new FormData();
+          selectedImages.forEach(file => {
+            uploadFormData.append('files', file);
+          });
 
-        const uploadResponse = await fetch('/api/upload', {
-          method: 'POST',
-          body: uploadFormData,
-        });
+          console.log('Uploading images to Cloudinary...');
+          
+          const uploadResponse = await fetch('/api/upload', {
+            method: 'POST',
+            body: uploadFormData,
+          });
 
-        if (!uploadResponse.ok) {
-          throw new Error('Failed to upload images');
+          if (!uploadResponse.ok) {
+            const errorData = await uploadResponse.text();
+            console.error('Upload response error:', uploadResponse.status, errorData);
+            throw new Error(`Failed to upload images: ${uploadResponse.status} ${errorData}`);
+          }
+
+          const uploadedUrls = await uploadResponse.json();
+          console.log('Successfully uploaded images:', uploadedUrls);
+          imageUrls = [...imageUrls, ...uploadedUrls];
+        } catch (uploadError) {
+          console.error('Error during image upload:', uploadError);
+          setError(`Image upload failed: ${uploadError instanceof Error ? uploadError.message : 'Unknown error'}`);
+          setIsSubmitting(false);
+          return;
         }
-
-        const uploadedUrls = await uploadResponse.json();
-        imageUrls = [...imageUrls, ...uploadedUrls];
       }
 
       // Then create the product with all data

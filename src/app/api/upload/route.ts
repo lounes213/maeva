@@ -9,6 +9,10 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
+// This is the correct way to configure the route for Next.js App Router
+export const dynamic = 'force-dynamic';
+export const maxDuration = 60; // Set maximum duration for the API route (in seconds)
+
 export async function POST(request: Request) {
   try {
     const formData = await request.formData();

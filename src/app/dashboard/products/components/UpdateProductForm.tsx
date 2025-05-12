@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 import ColorSelector from './createColor';
+import { uploadImages } from './uploadImages';
 
 interface Product {
   _id: string;
@@ -92,37 +93,43 @@ const UpdateProductForm = ({ product, onSuccess, onCancel, categories }: UpdateP
     setLoading(true);
 
     try {
-      const submitData = new FormData();
+      // First upload any new images
+      let allImageUrls = [...(formData.imageUrls || [])];
       
-      // Add all form fields
-      Object.entries(formData).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
-          if (Array.isArray(value)) {
-            submitData.append(key, value.join(','));
-          } else {
-            submitData.append(key, value.toString());
-          }
+      if (selectedImages.length > 0) {
+        try {
+          console.log('Uploading new images...');
+          const newImageUrls = await uploadImages(selectedImages);
+          allImageUrls = [...allImageUrls, ...newImageUrls];
+          console.log('All image URLs after upload:', allImageUrls);
+        } catch (uploadError: any) {
+          console.error('Error uploading images:', uploadError);
+          toast.error(`Failed to upload images: ${uploadError.message}`);
+          setLoading(false);
+          return;
         }
-      });
+      }
+      
+      // Prepare product data with updated image URLs
+      const productData = {
+        ...formData,
+        imageUrls: allImageUrls
+      };
+      
+      console.log('Submitting product data:', productData);
 
-      // Add new images
-      selectedImages.forEach(file => {
-        submitData.append('images', file);
-      });
-
-      console.log('Submitting form data:', {
-        fields: Object.fromEntries(submitData.entries()),
-        images: selectedImages.map(img => img.name)
-      });
-
+      // Send the update request
       const response = await fetch(`/api/products?id=${product._id}`, {
         method: 'PUT',
-        body: submitData,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(productData),
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to update product');
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to update product');
       }
 
       const data = await response.json();

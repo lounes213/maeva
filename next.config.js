@@ -3,17 +3,9 @@ const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
   
-  // Add this for file uploads
-  api: {
-    bodyParser: {
-      sizeLimit: '20mb', // Set your preferred limit
-    },
-    responseLimit: '20mb',
-  },
-  
   // Image configuration
   images: {
-    domains: ['maeva-gamma.vercel.app', 'localhost'],
+    domains: ['maeva-gamma.vercel.app', 'localhost', 'res.cloudinary.com'],
     remotePatterns: [
       {
         protocol: 'https',
