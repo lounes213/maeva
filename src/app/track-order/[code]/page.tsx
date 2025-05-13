@@ -35,74 +35,102 @@ export default function TrackOrderByCodePage() {
       return;
     }
 
-    // Simulate API call with timeout
-    const timer = setTimeout(() => {
-      // This is a mock response - in a real app, you would fetch this from your API
-      if (orderCode.trim()) {
-        // For demo purposes, we'll return a mock order based on the first character of the order ID
-        const firstChar = orderCode.charAt(0).toLowerCase();
+    const fetchOrderData = async () => {
+      setIsLoading(true);
+      try {
+        const response = await fetch(`/api/orders/track?code=${orderCode}`);
+        const result = await response.json();
         
-        if (firstChar === 'p') {
-          setOrderStatus({
-            status: 'processing',
-            orderNumber: orderCode,
-            date: '15 Mai 2023',
-            items: 2,
-            estimatedDelivery: '20 Mai 2023',
-            shippingAddress: 'Rue Ahmed Ben Bella, Alger, Algérie',
-            statusHistory: [
-              { status: 'Commande reçue', date: '15 Mai 2023, 14:30' },
-              { status: 'Paiement confirmé', date: '15 Mai 2023, 14:35' },
-              { status: 'En cours de préparation', date: '15 Mai 2023, 16:20' }
-            ]
+        if (response.ok && result.success) {
+          const orderData = result.data;
+          
+          // Format date
+          const createdDate = new Date(orderData.createdAt);
+          const formattedDate = createdDate.toLocaleDateString('fr-FR', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
           });
-        } else if (firstChar === 's') {
-          setOrderStatus({
-            status: 'shipped',
-            orderNumber: orderCode,
-            date: '12 Mai 2023',
-            items: 3,
-            trackingNumber: 'YT123456789DZ',
-            estimatedDelivery: '18 Mai 2023',
-            shippingAddress: 'Rue des Frères Bouadou, Tizi Ouzou, Algérie',
-            statusHistory: [
-              { status: 'Commande reçue', date: '12 Mai 2023, 10:15' },
-              { status: 'Paiement confirmé', date: '12 Mai 2023, 10:20' },
-              { status: 'En cours de préparation', date: '12 Mai 2023, 14:30' },
-              { status: 'Expédiée', date: '14 Mai 2023, 09:45', location: 'Centre de distribution Alger' },
-              { status: 'En transit', date: '15 Mai 2023, 11:20', location: 'En route vers Tizi Ouzou' }
-            ]
+          
+          // Map API data to our component state format
+          let mappedStatus: 'processing' | 'shipped' | 'delivered' | 'cancelled' | 'not-found';
+          
+          // Map the delivery status from the API to our component's status format
+          switch (orderData.deliveryStatus) {
+            case 'processing':
+              mappedStatus = 'processing';
+              break;
+            case 'shipped':
+            case 'in_transit':
+            case 'out_for_delivery':
+              mappedStatus = 'shipped';
+              break;
+            case 'delivered':
+              mappedStatus = 'delivered';
+              break;
+            case 'cancelled':
+            case 'returned':
+              mappedStatus = 'cancelled';
+              break;
+            default:
+              mappedStatus = 'processing';
+          }
+          
+          // Format tracking history
+          const formattedHistory = orderData.trackingHistory.map((event: any) => {
+            const eventDate = new Date(event.date);
+            const formattedEventDate = eventDate.toLocaleDateString('fr-FR', {
+              day: 'numeric',
+              month: 'long',
+              year: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit'
+            });
+            
+            // Map status to French
+            let statusText;
+            switch (event.status) {
+              case 'processing':
+                statusText = 'En cours de traitement';
+                break;
+              case 'shipped':
+                statusText = 'Expédiée';
+                break;
+              case 'in_transit':
+                statusText = 'En transit';
+                break;
+              case 'out_for_delivery':
+                statusText = 'En cours de livraison';
+                break;
+              case 'delivered':
+                statusText = 'Livrée';
+                break;
+              case 'cancelled':
+                statusText = 'Annulée';
+                break;
+              case 'returned':
+                statusText = 'Retournée';
+                break;
+              default:
+                statusText = event.status;
+            }
+            
+            return {
+              status: statusText,
+              date: formattedEventDate,
+              location: event.location
+            };
           });
-        } else if (firstChar === 'd') {
+          
           setOrderStatus({
-            status: 'delivered',
-            orderNumber: orderCode,
-            date: '5 Mai 2023',
-            items: 1,
-            trackingNumber: 'YT987654321DZ',
-            shippingAddress: 'Boulevard Krim Belkacem, Oran, Algérie',
-            statusHistory: [
-              { status: 'Commande reçue', date: '5 Mai 2023, 09:30' },
-              { status: 'Paiement confirmé', date: '5 Mai 2023, 09:35' },
-              { status: 'En cours de préparation', date: '5 Mai 2023, 11:20' },
-              { status: 'Expédiée', date: '6 Mai 2023, 10:15', location: 'Centre de distribution Alger' },
-              { status: 'En transit', date: '7 Mai 2023, 08:45', location: 'En route vers Oran' },
-              { status: 'En cours de livraison', date: '8 Mai 2023, 09:30', location: 'Oran' },
-              { status: 'Livrée', date: '8 Mai 2023, 14:20', location: 'Oran' }
-            ]
-          });
-        } else if (firstChar === 'c') {
-          setOrderStatus({
-            status: 'cancelled',
-            orderNumber: orderCode,
-            date: '2 Mai 2023',
-            items: 4,
-            shippingAddress: 'Rue Didouche Mourad, Constantine, Algérie',
-            statusHistory: [
-              { status: 'Commande reçue', date: '2 Mai 2023, 16:45' },
-              { status: 'Paiement confirmé', date: '2 Mai 2023, 16:50' },
-              { status: 'Annulée par le client', date: '3 Mai 2023, 10:15' }
-            ]
+            status: mappedStatus,
+            orderNumber: orderData.trackingCode,
+            date: formattedDate,
+            items: orderData.items.length,
+            trackingNumber: orderData.shipping?.trackingNumber,
+            estimatedDelivery: orderData.shipping?.estimatedDelivery,
+            shippingAddress: orderData.customer?.address,
+            statusHistory: formattedHistory.reverse() // Most recent first
           });
         } else {
           setOrderStatus({
@@ -112,19 +140,20 @@ export default function TrackOrderByCodePage() {
             items: 0
           });
         }
-      } else {
+      } catch (error) {
+        console.error('Error fetching order data:', error);
         setOrderStatus({
           status: 'not-found',
           orderNumber: orderCode,
           date: '',
           items: 0
         });
+      } finally {
+        setIsLoading(false);
       }
-      
-      setIsLoading(false);
-    }, 1500);
+    };
 
-    return () => clearTimeout(timer);
+    fetchOrderData();
   }, [orderCode, router]);
 
   const renderStatusIcon = (status: string) => {

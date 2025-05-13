@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { FiCheckCircle, FiTruck } from 'react-icons/fi';
 import Link from 'next/link';
-import Image from 'next/image';
 import { toast } from 'react-hot-toast';
 
 export default function ConfirmPage() {
