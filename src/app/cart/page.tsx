@@ -26,6 +26,7 @@ export default function CartPage() {
   const [couponDiscount, setCouponDiscount] = useState(0);
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
   const [couponError, setCouponError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
   const handleQuantityChange = (productId: string, newQuantity: number) => {
@@ -56,15 +57,104 @@ export default function CartPage() {
     }, 800);
   };
 
-  const handleCheckout = async () => {
-    try {
-      const customer = {
-        name: 'John Doe', // Remplacez par les données réelles du client
-        address: '123 Main Street',
-        contact: '1234567890',
-        email: 'johndoe@example.com',
-      };
+  // Add state for customer information
+  const [customerInfo, setCustomerInfo] = useState({
+    name: '',
+    address: '',
+    contact: '',
+    email: '',
+  });
+  
+  // Add state for checkout step
+  const [checkoutStep, setCheckoutStep] = useState(1); // 1: Cart, 2: Customer Info
+  
+  // Add state for form validation
+  const [formErrors, setFormErrors] = useState({
+    name: '',
+    address: '',
+    contact: '',
+    email: '',
+  });
+  
+  // Handle customer info change
+  const handleCustomerInfoChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value } = e.target;
+    setCustomerInfo(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    
+    // Clear error when user types
+    if (formErrors[name as keyof typeof formErrors]) {
+      setFormErrors(prev => ({
+        ...prev,
+        [name]: ''
+      }));
+    }
+  };
+  
+  // Validate form
+  const validateForm = () => {
+    const errors = {
+      name: '',
+      address: '',
+      contact: '',
+      email: '',
+    };
+    let isValid = true;
+    
+    if (!customerInfo.name.trim()) {
+      errors.name = 'Le nom est requis';
+      isValid = false;
+    }
+    
+    if (!customerInfo.address.trim()) {
+      errors.address = 'L\'adresse est requise';
+      isValid = false;
+    }
+    
+    if (!customerInfo.contact.trim()) {
+      errors.contact = 'Le numéro de téléphone est requis';
+      isValid = false;
+    }
+    
+    if (!customerInfo.email.trim()) {
+      errors.email = 'L\'email est requis';
+      isValid = false;
+    } else if (!/\S+@\S+\.\S+/.test(customerInfo.email)) {
+      errors.email = 'Format d\'email invalide';
+      isValid = false;
+    }
+    
+    setFormErrors(errors);
+    return isValid;
+  };
+  
+  // Handle proceed to checkout
+  const handleProceedToCheckout = () => {
+    setCheckoutStep(2);
+    // Scroll to top
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+  
+  // Handle back to cart
+  const handleBackToCart = () => {
+    setCheckoutStep(1);
+  };
 
+  const handleCheckout = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!validateForm()) {
+      toast.error('Veuillez remplir tous les champs obligatoires');
+      return;
+    }
+    
+    try {
+      setIsLoading(true);
+      
       const payment = {
         subtotal: totalPrice,
         discount: couponDiscount,
@@ -98,7 +188,7 @@ export default function CartPage() {
           },
           body: JSON.stringify({
             items: mappedItems,
-            customer,
+            customer: customerInfo,
             shipping,
             payment,
           }),
@@ -113,7 +203,7 @@ export default function CartPage() {
         // Sauvegarder les détails de la commande dans le localStorage
         localStorage.setItem('lastOrder', JSON.stringify({
           trackingCode: data.trackingCode,
-          customer: customer,
+          customer: customerInfo,
           shipping: shipping,
           payment: payment,
           items: mappedItems
@@ -128,10 +218,13 @@ export default function CartPage() {
         console.error('Erreur lors de la commande :', error);
         const errorMessage = error instanceof Error ? error.message : 'Une erreur inconnue est survenue.';
         toast.error(errorMessage);
+      } finally {
+        setIsLoading(false);
       }
     } catch (error) {
       console.error('Erreur lors de la création de la commande :', error);
       toast.error('Erreur lors de la création de la commande');
+      setIsLoading(false);
     }
   };
 
@@ -186,238 +279,379 @@ export default function CartPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      <h1 className="text-3xl font-bold mb-8 text-center md:text-left">Votre Panier</h1>
-      <div className="lg:grid lg:grid-cols-12 lg:gap-8">
-        {/* Cart Items Section */}
-        <div className="lg:col-span-8">
-          <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-            <div className="hidden md:flex justify-between text-sm font-semibold text-gray-500 pb-3 border-b">
-              <span className="w-2/5">Produit</span>
-              <span className="w-1/5 text-center">Prix</span>
-              <span className="w-1/5 text-center">Quantité</span>
-              <span className="w-1/5 text-right">Total</span>
-            </div>
-            
-            <div className="space-y-6 mt-4">
-              {cartItems.map((item) => (
-                <div key={`${item._id}-${item.color}-${item.size}`} className="flex flex-col md:flex-row md:items-center py-4 border-b border-gray-200">
-                  {/* Product Image & Info */}
-                  <div className="flex md:w-2/5">
-                    <div className="w-24 h-24 bg-gray-100 rounded-md overflow-hidden relative">
-                      {item.imageUrl && (
-                        <div className="relative w-full h-full">
-                          <Image 
-                            src={item.imageUrl} 
-                            alt={item.name}
-                            fill
-                            sizes="96px"
-                            className="object-cover"
-                          />
-                        </div>
-                      )}
-                    </div>
-                    <div className="ml-4 flex flex-col justify-center">
-                      <h3 className="font-medium text-gray-800">{item.name}</h3>
-                      {(item.color || item.size) && (
-                        <div className="text-sm text-gray-500 mt-1">
-                          {item.color && <span>Couleur: {item.color}</span>}
-                          {item.color && item.size && <span> | </span>}
-                          {item.size && <span>Taille: {item.size}</span>}
-                        </div>
-                      )}
-                      <button 
-                        onClick={() => removeFromCart(item._id)}
-                        className="text-sm text-red-500 hover:text-red-700 mt-2 inline-flex items-center"
-                      >
-                        <FiTrash2 className="w-4 h-4 mr-1" />
-                        Supprimer
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Price */}
-                  <div className="md:w-1/5 flex justify-between md:justify-center items-center mt-4 md:mt-0">
-                    <span className="md:hidden text-gray-500">Prix:</span>
-                    <span className="font-medium">DA{item.price.toFixed(2)}</span>
-                  </div>
-
-                  {/* Quantity */}
-                  <div className="md:w-1/5 flex justify-between md:justify-center items-center mt-4 md:mt-0">
-                    <span className="md:hidden text-gray-500">Quantité:</span>
-                    <div className="flex items-center border border-gray-300 rounded-md">
-                      <button 
-                        onClick={() => handleQuantityChange(item._id, item.quantity - 1)}
-                        className="px-3 py-1 text-gray-600 hover:bg-gray-100 rounded-l-md"
-                        aria-label="Diminuer la quantité"
-                      >
-                        <FiMinus className="w-3 h-3" />
-                      </button>
-                      <span className="px-3 py-1 text-center w-10 select-none">{item.quantity}</span>
-                      <button 
-                        onClick={() => handleQuantityChange(item._id, item.quantity + 1)}
-                        className="px-3 py-1 text-gray-600 hover:bg-gray-100 rounded-r-md"
-                        aria-label="Augmenter la quantité"
-                      >
-                        <FiPlus className="w-3 h-3" />
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Total for this item */}
-                  <div className="md:w-1/5 flex justify-between md:justify-end items-center mt-4 md:mt-0">
-                    <span className="md:hidden text-gray-500">Total:</span>
-                    <span className="font-medium">DA{(item.price * item.quantity).toFixed(2)}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-            
-            <div className="flex flex-col sm:flex-row justify-between mt-8 pt-4 border-t border-gray-200">
-              <button
-                onClick={() => router.push('/shop')}
-                className="flex items-center justify-center text-amber-600 hover:text-amber-800 mb-4 sm:mb-0"
-              >
-                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
-                </svg>
-                Continuer mes achats
-              </button>
-              <button 
-                onClick={clearCart}
-                className="text-red-500 hover:text-red-700 flex items-center justify-center"
-              >
-                <FiTrash2 className="w-4 h-4 mr-1" />
-                Vider le panier
-              </button>
-            </div>
-          </div>
-        </div>
-        
-        {/* Order Summary Section */}
-        <div className="lg:col-span-4 mt-8 lg:mt-0">
-          <div className="bg-white rounded-lg p-6 shadow-sm">
-            <h2 className="text-lg font-bold text-gray-800 mb-4">Récapitulatif</h2>
-            
-            <div className="space-y-3 text-sm">
-              <div className="flex justify-between">
-                <span className="text-gray-600">Sous-total ({totalItems} article{totalItems > 1 ? 's' : ''})</span>
-                <span className="font-medium">DA{totalPrice.toFixed(2)}</span>
+      <h1 className="text-3xl font-bold mb-8 text-center md:text-left">
+        {checkoutStep === 1 ? 'Votre Panier' : 'Finaliser votre commande'}
+      </h1>
+      
+      {checkoutStep === 1 ? (
+        // Step 1: Cart Items
+        <div className="lg:grid lg:grid-cols-12 lg:gap-8">
+          {/* Cart Items Section */}
+          <div className="lg:col-span-8">
+            <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+              <div className="hidden md:flex justify-between text-sm font-semibold text-gray-500 pb-3 border-b">
+                <span className="w-2/5">Produit</span>
+                <span className="w-1/5 text-center">Prix</span>
+                <span className="w-1/5 text-center">Quantité</span>
+                <span className="w-1/5 text-right">Total</span>
               </div>
               
-              {couponDiscount > 0 && (
-                <div className="flex justify-between text-green-600">
-                  <span>Réduction</span>
-                  <span>-DA{couponDiscount.toFixed(2)}</span>
-                </div>
-              )}
-              
-              <div className="flex justify-between">
-                <span className="text-gray-600">Livraison</span>
-                <span className="font-medium">
-                  {selectedShipping.price === 0 ? 'Gratuite' : `DA${selectedShipping.price.toFixed(2)}`}
-                </span>
-              </div>
-              
-              <div className="pt-3 mt-3 border-t border-gray-200">
-                <div className="flex justify-between">
-                  <span className="font-bold">Total</span>
-                  <span className="font-bold">DA{(totalPrice + selectedShipping.price - couponDiscount).toFixed(2)}</span>
-                </div>
-                <p className="text-xs text-gray-500 mt-1">Taxes incluses</p>
-              </div>
-            </div>
-            
-            {/* Shipping Options */}
-            <div className="mt-6">
-              <h3 className="font-medium text-gray-800 mb-3">Mode de livraison</h3>
-              <div className="space-y-2">
-                {[
-                  { id: 'free', name: 'Livraison standard', price: 0, days: '5-7 jours ouvrables' },
-                  { id: 'standard', name: 'Livraison rapide', price: 500, days: '3-5 jours ouvrables' },
-                  { id: 'express', name: 'Livraison express', price: 1000, days: '1-2 jours ouvrables' }
-                ].map((option) => (
-                  <label key={option.id} className="flex items-center p-3 border rounded-md cursor-pointer hover:bg-gray-50 transition-colors">
-                    <input
-                      type="radio"
-                      name="shipping"
-                      value={option.id}
-                      checked={selectedShipping.id === option.id}
-                      onChange={() => setSelectedShipping(option)}
-                      className="text-amber-600 focus:ring-amber-500 h-4 w-4"
-                    />
-                    <div className="ml-3 flex-1">
-                      <div className="font-medium text-gray-800">{option.name}</div>
-                      <div className="text-sm text-gray-500">{option.days}</div>
+              <div className="space-y-6 mt-4">
+                {cartItems.map((item) => (
+                  <div key={`${item._id}-${item.color}-${item.size}`} className="flex flex-col md:flex-row md:items-center py-4 border-b border-gray-200">
+                    {/* Product Image & Info */}
+                    <div className="flex md:w-2/5">
+                      <div className="w-24 h-24 bg-gray-100 rounded-md overflow-hidden relative">
+                        {item.imageUrl && (
+                          <div className="relative w-full h-full">
+                            <Image 
+                              src={item.imageUrl} 
+                              alt={item.name}
+                              fill
+                              sizes="96px"
+                              className="object-cover"
+                            />
+                          </div>
+                        )}
+                      </div>
+                      <div className="ml-4 flex flex-col justify-center">
+                        <h3 className="font-medium text-gray-800">{item.name}</h3>
+                        {(item.color || item.size) && (
+                          <div className="text-sm text-gray-500 mt-1">
+                            {item.color && <span>Couleur: {item.color}</span>}
+                            {item.color && item.size && <span> | </span>}
+                            {item.size && <span>Taille: {item.size}</span>}
+                          </div>
+                        )}
+                        <button 
+                          onClick={() => removeFromCart(item._id)}
+                          className="text-sm text-red-500 hover:text-red-700 mt-2 inline-flex items-center"
+                        >
+                          <FiTrash2 className="w-4 h-4 mr-1" />
+                          Supprimer
+                        </button>
+                      </div>
                     </div>
-                    <div className="font-medium">
-                      {option.price === 0 ? 'Gratuite' : `DA${option.price.toFixed(2)}`}
+
+                    {/* Price */}
+                    <div className="md:w-1/5 flex justify-between md:justify-center items-center mt-4 md:mt-0">
+                      <span className="md:hidden text-gray-500">Prix:</span>
+                      <span className="font-medium">DA{item.price.toFixed(2)}</span>
                     </div>
-                  </label>
+
+                    {/* Quantity */}
+                    <div className="md:w-1/5 flex justify-between md:justify-center items-center mt-4 md:mt-0">
+                      <span className="md:hidden text-gray-500">Quantité:</span>
+                      <div className="flex items-center border border-gray-300 rounded-md">
+                        <button 
+                          onClick={() => handleQuantityChange(item._id, item.quantity - 1)}
+                          className="px-3 py-1 text-gray-600 hover:bg-gray-100 rounded-l-md"
+                          aria-label="Diminuer la quantité"
+                        >
+                          <FiMinus className="w-3 h-3" />
+                        </button>
+                        <span className="px-3 py-1 text-center w-10 select-none">{item.quantity}</span>
+                        <button 
+                          onClick={() => handleQuantityChange(item._id, item.quantity + 1)}
+                          className="px-3 py-1 text-gray-600 hover:bg-gray-100 rounded-r-md"
+                          aria-label="Augmenter la quantité"
+                        >
+                          <FiPlus className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Total for this item */}
+                    <div className="md:w-1/5 flex justify-between md:justify-end items-center mt-4 md:mt-0">
+                      <span className="md:hidden text-gray-500">Total:</span>
+                      <span className="font-medium">DA{(item.price * item.quantity).toFixed(2)}</span>
+                    </div>
+                  </div>
                 ))}
               </div>
-            </div>
-            
-            {/* Coupon Code */}
-            <div className="mt-6">
-              <h3 className="font-medium text-gray-800 mb-3">Code promo</h3>
-              <div className="flex">
-                <input
-                  type="text"
-                  value={couponCode}
-                  onChange={(e) => setCouponCode(e.target.value)}
-                  placeholder="Entrez votre code promo"
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-l-md focus:ring-amber-500 focus:border-amber-500"
-                />
+              
+              <div className="flex flex-col sm:flex-row justify-between mt-8 pt-4 border-t border-gray-200">
                 <button
-                  onClick={handleApplyCoupon}
-                  disabled={isApplyingCoupon || !couponCode}
-                  className="bg-amber-600 text-white px-4 py-2 rounded-r-md hover:bg-amber-700 disabled:bg-amber-400"
+                  onClick={() => router.push('/shop')}
+                  className="flex items-center justify-center text-amber-600 hover:text-amber-800 mb-4 sm:mb-0"
                 >
-                  {isApplyingCoupon ? 'Application...' : 'Appliquer'}
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                  </svg>
+                  Continuer mes achats
+                </button>
+                <button 
+                  onClick={clearCart}
+                  className="text-red-500 hover:text-red-700 flex items-center justify-center"
+                >
+                  <FiTrash2 className="w-4 h-4 mr-1" />
+                  Vider le panier
                 </button>
               </div>
-              {couponError && <p className="text-sm text-red-500 mt-2">{couponError}</p>}
-              {couponDiscount > 0 && <p className="text-sm text-green-600 mt-2">Code promo appliqué avec succès !</p>}
-              <p className="text-xs text-gray-500 mt-2">Essayez le code "SAVE10" pour 10% de réduction</p>
-            </div>
-            
-            {/* Checkout Button */}
-            <div className="mt-8">
-              <button 
-                onClick={handleCheckout}
-                className="w-full bg-amber-600 text-white font-medium py-3 px-4 rounded-md hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 transition-colors"
-              >
-                Commander
-              </button>
             </div>
           </div>
           
-          {/* Trust badges */}
-          <div className="mt-6 bg-white rounded-lg p-6 shadow-sm">
-            <h3 className="font-medium text-gray-800 mb-4">Achats sécurisés</h3>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="flex flex-col items-center">
-                <svg className="w-8 h-8 text-amber-500 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
-                </svg>
-                <span className="text-xs text-gray-600 text-center">Paiement sécurisé</span>
+          {/* Order Summary Section */}
+          <div className="lg:col-span-4 mt-8 lg:mt-0">
+            <div className="bg-white rounded-lg p-6 shadow-sm">
+              <h2 className="text-lg font-bold text-gray-800 mb-4">Récapitulatif</h2>
+              
+              <div className="space-y-3 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Sous-total ({totalItems} article{totalItems > 1 ? 's' : ''})</span>
+                  <span className="font-medium">DA{totalPrice.toFixed(2)}</span>
+                </div>
+                
+                {couponDiscount > 0 && (
+                  <div className="flex justify-between text-green-600">
+                    <span>Réduction</span>
+                    <span>-DA{couponDiscount.toFixed(2)}</span>
+                  </div>
+                )}
+                
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Livraison</span>
+                  <span className="font-medium">
+                    {selectedShipping.price === 0 ? 'Gratuite' : `DA${selectedShipping.price.toFixed(2)}`}
+                  </span>
+                </div>
+                
+                <div className="pt-3 mt-3 border-t border-gray-200">
+                  <div className="flex justify-between">
+                    <span className="font-bold">Total</span>
+                    <span className="font-bold">DA{(totalPrice + selectedShipping.price - couponDiscount).toFixed(2)}</span>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">Taxes incluses</p>
+                </div>
               </div>
-              <div className="flex flex-col items-center">
-                <svg className="w-8 h-8 text-amber-500 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
-                </svg>
-                <span className="text-xs text-gray-600 text-center">Plusieurs options de paiement</span>
+              
+              {/* Shipping Options */}
+              <div className="mt-6">
+                <h3 className="font-medium text-gray-800 mb-3">Mode de livraison</h3>
+                <div className="space-y-2">
+                  {[
+                    { id: 'free', name: 'Livraison standard', price: 0, days: '5-7 jours ouvrables' },
+                    { id: 'standard', name: 'Livraison rapide', price: 500, days: '3-5 jours ouvrables' },
+                    { id: 'express', name: 'Livraison express', price: 1000, days: '1-2 jours ouvrables' }
+                  ].map((option) => (
+                    <label key={option.id} className="flex items-center p-3 border rounded-md cursor-pointer hover:bg-gray-50 transition-colors">
+                      <input
+                        type="radio"
+                        name="shipping"
+                        value={option.id}
+                        checked={selectedShipping.id === option.id}
+                        onChange={() => setSelectedShipping(option)}
+                        className="text-amber-600 focus:ring-amber-500 h-4 w-4"
+                      />
+                      <div className="ml-3 flex-1">
+                        <div className="font-medium text-gray-800">{option.name}</div>
+                        <div className="text-sm text-gray-500">{option.days}</div>
+                      </div>
+                      <div className="font-medium">
+                        {option.price === 0 ? 'Gratuite' : `DA${option.price.toFixed(2)}`}
+                      </div>
+                    </label>
+                  ))}
+                </div>
               </div>
-              <div className="flex flex-col items-center">
-                <svg className="w-8 h-8 text-amber-500 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
-                </svg>
-                <span className="text-xs text-gray-600 text-center">Retours faciles</span>
+              
+              {/* Coupon Code */}
+              <div className="mt-6">
+                <h3 className="font-medium text-gray-800 mb-3">Code promo</h3>
+                <div className="flex">
+                  <input
+                    type="text"
+                    value={couponCode}
+                    onChange={(e) => setCouponCode(e.target.value)}
+                    placeholder="Entrez votre code promo"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-l-md focus:ring-amber-500 focus:border-amber-500"
+                  />
+                  <button
+                    onClick={handleApplyCoupon}
+                    disabled={isApplyingCoupon || !couponCode}
+                    className="bg-amber-600 text-white px-4 py-2 rounded-r-md hover:bg-amber-700 disabled:bg-amber-400"
+                  >
+                    {isApplyingCoupon ? 'Application...' : 'Appliquer'}
+                  </button>
+                </div>
+                {couponError && <p className="text-sm text-red-500 mt-2">{couponError}</p>}
+                {couponDiscount > 0 && <p className="text-sm text-green-600 mt-2">Code promo appliqué avec succès !</p>}
+                <p className="text-xs text-gray-500 mt-2">Essayez le code "SAVE10" pour 10% de réduction</p>
+              </div>
+              
+              {/* Checkout Button */}
+              <div className="mt-8">
+                <button 
+                  onClick={handleProceedToCheckout}
+                  className="w-full bg-amber-600 text-white font-medium py-3 px-4 rounded-md hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 transition-colors"
+                >
+                  Passer à la commande
+                </button>
+              </div>
+            </div>
+            
+            {/* Trust badges */}
+            <div className="mt-6 bg-white rounded-lg p-6 shadow-sm">
+              <h3 className="font-medium text-gray-800 mb-4">Achats sécurisés</h3>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="flex flex-col items-center">
+                  <svg className="w-8 h-8 text-amber-500 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                  </svg>
+                  <span className="text-xs text-gray-600 text-center">Paiement sécurisé</span>
+                </div>
+                <div className="flex flex-col items-center">
+                  <svg className="w-8 h-8 text-amber-500 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+                  </svg>
+                  <span className="text-xs text-gray-600 text-center">Plusieurs options de paiement</span>
+                </div>
+                <div className="flex flex-col items-center">
+                  <svg className="w-8 h-8 text-amber-500 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
+                  </svg>
+                  <span className="text-xs text-gray-600 text-center">Retours faciles</span>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      ) : (
+        // Step 2: Customer Information
+        <div className="max-w-3xl mx-auto">
+          <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+            <form onSubmit={handleCheckout}>
+              <h2 className="text-lg font-bold text-gray-800 mb-6">Informations de livraison</h2>
+              
+              <div className="space-y-4">
+                <div>
+                  <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+                    Nom complet <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    id="name"
+                    name="name"
+                    value={customerInfo.name}
+                    onChange={handleCustomerInfoChange}
+                    className={`w-full px-4 py-2 border ${formErrors.name ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500`}
+                    placeholder="Entrez votre nom complet"
+                  />
+                  {formErrors.name && <p className="mt-1 text-sm text-red-500">{formErrors.name}</p>}
+                </div>
+                
+                <div>
+                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                    Email <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    value={customerInfo.email}
+                    onChange={handleCustomerInfoChange}
+                    className={`w-full px-4 py-2 border ${formErrors.email ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500`}
+                    placeholder="Entrez votre adresse email"
+                  />
+                  {formErrors.email && <p className="mt-1 text-sm text-red-500">{formErrors.email}</p>}
+                </div>
+                
+                <div>
+                  <label htmlFor="contact" className="block text-sm font-medium text-gray-700 mb-1">
+                    Numéro de téléphone <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="tel"
+                    id="contact"
+                    name="contact"
+                    value={customerInfo.contact}
+                    onChange={handleCustomerInfoChange}
+                    className={`w-full px-4 py-2 border ${formErrors.contact ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500`}
+                    placeholder="Entrez votre numéro de téléphone"
+                  />
+                  {formErrors.contact && <p className="mt-1 text-sm text-red-500">{formErrors.contact}</p>}
+                </div>
+                
+                <div>
+                  <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-1">
+                    Adresse de livraison <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    id="address"
+                    name="address"
+                    value={customerInfo.address}
+                    onChange={handleCustomerInfoChange}
+                    rows={3}
+                    className={`w-full px-4 py-2 border ${formErrors.address ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500`}
+                    placeholder="Entrez votre adresse complète"
+                  />
+                  {formErrors.address && <p className="mt-1 text-sm text-red-500">{formErrors.address}</p>}
+                </div>
+              </div>
+              
+              <div className="mt-8 border-t border-gray-200 pt-6">
+                <h2 className="text-lg font-bold text-gray-800 mb-4">Récapitulatif de la commande</h2>
+                
+                <div className="space-y-3 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Sous-total ({totalItems} article{totalItems > 1 ? 's' : ''})</span>
+                    <span className="font-medium">DA{totalPrice.toFixed(2)}</span>
+                  </div>
+                  
+                  {couponDiscount > 0 && (
+                    <div className="flex justify-between text-green-600">
+                      <span>Réduction</span>
+                      <span>-DA{couponDiscount.toFixed(2)}</span>
+                    </div>
+                  )}
+                  
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Livraison ({selectedShipping.name})</span>
+                    <span className="font-medium">
+                      {selectedShipping.price === 0 ? 'Gratuite' : `DA${selectedShipping.price.toFixed(2)}`}
+                    </span>
+                  </div>
+                  
+                  <div className="pt-3 mt-3 border-t border-gray-200">
+                    <div className="flex justify-between">
+                      <span className="font-bold">Total</span>
+                      <span className="font-bold">DA{(totalPrice + selectedShipping.price - couponDiscount).toFixed(2)}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="mt-8 flex flex-col sm:flex-row justify-between gap-4">
+                <button
+                  type="button"
+                  onClick={handleBackToCart}
+                  className="px-6 py-3 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  Retour au panier
+                </button>
+                
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="px-6 py-3 bg-amber-600 text-white rounded-md hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 transition-colors disabled:bg-amber-400 flex items-center justify-center"
+                >
+                  {isLoading ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Traitement en cours...
+                    </>
+                  ) : (
+                    'Confirmer la commande'
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
