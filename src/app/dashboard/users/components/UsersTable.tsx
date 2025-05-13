@@ -101,6 +101,9 @@ export default function UsersTable() {
     if (!selectedUser) return;
 
     try {
+      // Show loading toast
+      const loadingToast = toast.loading('Modification en cours...');
+      
       const response = await fetch(`/api/users/${selectedUser._id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -110,6 +113,9 @@ export default function UsersTable() {
           ...(formData.password && { password: formData.password })
         }),
       });
+
+      // Dismiss loading toast
+      toast.dismiss(loadingToast);
 
       if (response.ok) {
         toast.success('Utilisateur modifié avec succès');
@@ -183,7 +189,51 @@ export default function UsersTable() {
               <TableRow key={user._id}>
                 <TableCell>{user.email}</TableCell>
                 <TableCell>
-                  {user.role === 'admin' ? 'Administrateur' : 'Utilisateur'}
+                  <div className="flex items-center">
+                    <span className={`px-2 py-1 rounded-full text-xs ${
+                      user.role === 'admin' ? 'bg-amber-100 text-amber-800' : 'bg-blue-100 text-blue-800'
+                    }`}>
+                      {user.role === 'admin' ? 'Administrateur' : 'Utilisateur'}
+                    </span>
+                    <button 
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        const newRole = user.role === 'admin' ? 'user' : 'admin';
+                        
+                        // Show loading toast
+                        const loadingToast = toast.loading('Modification du rôle...');
+                        
+                        try {
+                          const response = await fetch(`/api/users/${user._id}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              email: user.email,
+                              role: newRole
+                            }),
+                          });
+                          
+                          // Dismiss loading toast
+                          toast.dismiss(loadingToast);
+                          
+                          if (response.ok) {
+                            toast.success(`Rôle modifié en ${newRole === 'admin' ? 'Administrateur' : 'Utilisateur'}`);
+                            fetchUsers();
+                          } else {
+                            const error = await response.json();
+                            toast.error(error.message || 'Erreur lors de la modification du rôle');
+                          }
+                        } catch (error) {
+                          toast.dismiss(loadingToast);
+                          console.error('Erreur:', error);
+                          toast.error('Erreur lors de la modification du rôle');
+                        }
+                      }}
+                      className="ml-2 text-xs text-gray-500 hover:text-gray-700 underline"
+                    >
+                      Changer
+                    </button>
+                  </div>
                 </TableCell>
                 <TableCell>
                   {new Date(user.createdAt).toLocaleDateString()}
