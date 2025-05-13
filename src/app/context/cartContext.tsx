@@ -13,12 +13,19 @@ export interface CartItem {
   size?: string;
 }
 
+// Define CartItemIdentifier type for removing specific items
+export interface CartItemIdentifier {
+  _id: string;
+  color?: string;
+  size?: string;
+}
+
 // Create the context
 const CartContext = createContext<{
   cartItems: CartItem[];
   addToCart: (product: CartItem) => void;
-  removeFromCart: (productId: string) => void;
-  updateQuantity: (productId: string, quantity: number) => void;
+  removeFromCart: (productId: string, color?: string, size?: string) => void;
+  updateQuantity: (productId: string, quantity: number, color?: string, size?: string) => void;
   clearCart: () => void;
   totalItems: number;
   totalPrice: number;
@@ -77,14 +84,63 @@ export function CartProvider({ children }: { children: ReactNode }) {
   };
 
   // Remove from cart
-  const removeFromCart = (productId: string) => {
-    setCartItems(prev => prev.filter(item => item._id !== productId));
+  const removeFromCart = (productId: string, color?: string, size?: string) => {
+    setCartItems(prev => prev.filter(item => {
+      // Si la couleur et la taille sont spécifiées, on vérifie les trois critères
+      if (color !== undefined && size !== undefined) {
+        return !(item._id === productId && item.color === color && item.size === size);
+      }
+      // Si seulement la couleur est spécifiée
+      else if (color !== undefined) {
+        return !(item._id === productId && item.color === color);
+      }
+      // Si seulement la taille est spécifiée
+      else if (size !== undefined) {
+        return !(item._id === productId && item.size === size);
+      }
+      // Si ni la couleur ni la taille ne sont spécifiées, on vérifie uniquement l'ID
+      // mais seulement pour le premier élément correspondant
+      else {
+        // Trouver l'index du premier élément avec cet ID
+        const indexToRemove = prev.findIndex(i => i._id === productId);
+        // Si cet élément est celui qu'on est en train de traiter, on le supprime
+        return prev.indexOf(item) !== indexToRemove;
+      }
+    }));
   };
 
   // Update quantity
-  const updateQuantity = (productId: string, quantity: number) => {
+  const updateQuantity = (productId: string, quantity: number, color?: string, size?: string) => {
     setCartItems(prev => 
-      prev.map(item => item._id === productId ? {...item, quantity} : item)
+      prev.map(item => {
+        // Si la couleur et la taille sont spécifiées, on vérifie les trois critères
+        if (color !== undefined && size !== undefined) {
+          return (item._id === productId && item.color === color && item.size === size) 
+            ? {...item, quantity} 
+            : item;
+        }
+        // Si seulement la couleur est spécifiée
+        else if (color !== undefined) {
+          return (item._id === productId && item.color === color) 
+            ? {...item, quantity} 
+            : item;
+        }
+        // Si seulement la taille est spécifiée
+        else if (size !== undefined) {
+          return (item._id === productId && item.size === size) 
+            ? {...item, quantity} 
+            : item;
+        }
+        // Si ni la couleur ni la taille ne sont spécifiées, on met à jour le premier élément correspondant
+        else {
+          // Trouver l'index du premier élément avec cet ID
+          const indexToUpdate = prev.findIndex(i => i._id === productId);
+          // Si cet élément est celui qu'on est en train de traiter, on le met à jour
+          return prev.indexOf(item) === indexToUpdate && item._id === productId
+            ? {...item, quantity}
+            : item;
+        }
+      })
     );
   };
 

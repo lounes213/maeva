@@ -29,9 +29,9 @@ export default function CartPage() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
-  const handleQuantityChange = (productId: string, newQuantity: number) => {
+  const handleQuantityChange = (productId: string, newQuantity: number, color?: string, size?: string) => {
     if (newQuantity > 0 && newQuantity <= 20) {
-      updateQuantity(productId, newQuantity);
+      updateQuantity(productId, newQuantity, color, size);
     }
   };
 
@@ -134,9 +134,8 @@ export default function CartPage() {
   
   // Handle proceed to checkout
   const handleProceedToCheckout = () => {
-    setCheckoutStep(2);
-    // Scroll to top
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    // Rediriger vers la page checkout
+    router.push('/checkout');
   };
   
   // Handle back to cart
@@ -324,7 +323,7 @@ export default function CartPage() {
                           </div>
                         )}
                         <button 
-                          onClick={() => removeFromCart(item._id)}
+                          onClick={() => removeFromCart(item._id, item.color, item.size)}
                           className="text-sm text-red-500 hover:text-red-700 mt-2 inline-flex items-center"
                         >
                           <FiTrash2 className="w-4 h-4 mr-1" />
@@ -344,7 +343,7 @@ export default function CartPage() {
                       <span className="md:hidden text-gray-500">Quantité:</span>
                       <div className="flex items-center border border-gray-300 rounded-md">
                         <button 
-                          onClick={() => handleQuantityChange(item._id, item.quantity - 1)}
+                          onClick={() => handleQuantityChange(item._id, item.quantity - 1, item.color, item.size)}
                           className="px-3 py-1 text-gray-600 hover:bg-gray-100 rounded-l-md"
                           aria-label="Diminuer la quantité"
                         >
@@ -352,7 +351,7 @@ export default function CartPage() {
                         </button>
                         <span className="px-3 py-1 text-center w-10 select-none">{item.quantity}</span>
                         <button 
-                          onClick={() => handleQuantityChange(item._id, item.quantity + 1)}
+                          onClick={() => handleQuantityChange(item._id, item.quantity + 1, item.color, item.size)}
                           className="px-3 py-1 text-gray-600 hover:bg-gray-100 rounded-r-md"
                           aria-label="Augmenter la quantité"
                         >

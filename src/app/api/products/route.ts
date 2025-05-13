@@ -28,16 +28,56 @@ export async function GET(req: Request) {
     await dbConnect();
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
+    const search = searchParams.get('search');
+    const category = searchParams.get('category');
+    const limit = parseInt(searchParams.get('limit') || '20');
+    const page = parseInt(searchParams.get('page') || '1');
 
+    // Si un ID est fourni, retourner un produit spécifique
     if (id) {
       const product = await Product.findById(id);
       if (!product) return errorResponse('Produit non trouvé', 404);
       return NextResponse.json({ success: true, data: product });
     }
 
-    const products = await Product.find({}).sort({ createdAt: -1 });
-    return NextResponse.json({ success: true, data: products });
+    // Construire la requête de recherche
+    const query: any = {};
+
+    // Ajouter la recherche textuelle si fournie
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } },
+        { 'categories.name': { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    // Filtrer par catégorie si fournie
+    if (category) {
+      query['categories.slug'] = category;
+    }
+
+    // Calculer le nombre total de produits correspondant à la requête
+    const total = await Product.countDocuments(query);
+    
+    // Récupérer les produits avec pagination
+    const products = await Product.find(query)
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit);
+
+    return NextResponse.json({ 
+      success: true, 
+      products,
+      pagination: {
+        total,
+        page,
+        limit,
+        pages: Math.ceil(total / limit)
+      }
+    });
   } catch (error) {
+    console.error('Erreur lors de la récupération des produits:', error);
     return errorResponse('Échec de la récupération des produits');
   }
 }
