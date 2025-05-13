@@ -170,7 +170,7 @@ const onSubmit = async (data: FormData) => {
                 content: 'vviva1069@gmail.com',
                 action: {
                   text: 'Envoyer un email',
-                  href: 'vviva1069@gmail.com'
+                  href: 'mailto:vviva1069@gmail.com'
                 }
               },
               { 

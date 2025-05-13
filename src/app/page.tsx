@@ -83,7 +83,7 @@ export default function HomePage() {
       <Navigation />
    {/* Dynamic Hero Banner with latest collection image */}
    <DynamicHeroBanner
-     title="L'Élégance Algérienne Réinventée"
+     title="L'Élégance <amber> Algérienne Réinventée"
      subtitle="Découvrez notre collection exclusive de vêtements traditionnels modernisés, fabriqués à la main par nos artisans locaux."
      primaryButtonText="Explorer la collection"
      primaryButtonLink="/shop"
@@ -211,7 +211,7 @@ export default function HomePage() {
                   className="w-full h-auto"
                 />
                 <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white p-4">
-                  <p className="text-sm">Artisan de Tlemcen travaillant sur une pièce MAEVA</p>
+                  <p className="text-sm">Artisans  travaillant sur une pièce MAEVA</p>
                 </div>
               </div>
             </div>

@@ -445,7 +445,7 @@ export default function ModernShopPage() {
                 transition={{ duration: 0.5, delay: index * 0.1 }}
               >
                 <Image
-                  src={`/images/category-${index + 1}.jpg`}
+                  src={index === 0 ? '/images/image1.jpg' : index === 1 ? '/images/image2.jpg' : '/images/image3.jpg'}
                   alt={category.label}
                   fill
                   className="object-cover transition-transform duration-700 group-hover:scale-110"

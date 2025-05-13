@@ -1,5 +1,5 @@
 import { FiAward, FiTruck, FiShield, FiHeart, FiMapPin, FiUsers } from 'react-icons/fi';
-import { FaInstagram, FaFacebook, FaTwitter } from 'react-icons/fa';
+import { FaInstagram, FaFacebook, FaTwitter, FaTiktok } from 'react-icons/fa';
 import Image from 'next/image';
 import Navigation from '../components/header';
 
@@ -130,7 +130,7 @@ export default function AboutPage() {
                 MAEVA : <span className="text-amber-600">L'Héritage en Mouvement</span>
               </h2>
               <p className="text-lg text-gray-600 mb-6">
-                Fondée en 2010 à Alger, MAEVA puise son inspiration dans le riche patrimoine vestimentaire algérien,
+                Fondée en 2010 Bouira, MAEVA puise son inspiration dans le riche patrimoine vestimentaire algérien,
                 tout en y insufflant une touche contemporaine. Chaque pièce raconte une histoire, mêlant tradition et modernité.
               </p>
               <p className="text-lg text-gray-600 mb-8">
@@ -186,14 +186,14 @@ export default function AboutPage() {
                 </div>
                 <p className="text-gray-600 mb-4 px-4">{member.bio}</p>
                 <div className="flex justify-center space-x-4">
-                  <a href="#" className="text-gray-500 hover:text-amber-600 transition-colors">
+                  <a href="https://www.instagram.com/maevaweddingdz?igsh=MXB5cnVvY3drNThyMw==" className="text-gray-500 hover:text-amber-600 transition-colors">
                     <FaInstagram className="w-5 h-5" />
                   </a>
-                  <a href="#" className="text-gray-500 hover:text-amber-600 transition-colors">
+                  <a href="src/app/contact/page.tsx" className="text-gray-500 hover:text-amber-600 transition-colors">
                     <FaFacebook className="w-5 h-5" />
                   </a>
-                  <a href="#" className="text-gray-500 hover:text-amber-600 transition-colors">
-                    <FaTwitter className="w-5 h-5" />
+                  <a href="https://www.tiktok.com/@mava.wedding.dz?_t=ZM-8vh8jPv2EkA&_r=1" className="text-gray-500 hover:text-amber-600 transition-colors">
+                    <FaTiktok className="w-5 h-5" />
                   </a>
                 </div>
               </div>

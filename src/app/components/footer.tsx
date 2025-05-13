@@ -1,54 +1,22 @@
 'use client';
 
 import Link from 'next/link';
-import React, { useState } from 'react';
+import React from 'react';
 import Image from 'next/image';
-import { Facebook, Instagram, Twitter, Youtube, Mail, Phone, MapPin, ArrowRight, Search } from 'lucide-react';
-import { Input } from '@/components/ui/input';
+import { Facebook, Instagram, Twitter, Youtube, Mail, Phone, MapPin, ArrowRight } from 'lucide-react';
 import { ModernButton } from '@/components/ui/modern-button';
+import { FaTiktok } from 'react-icons/fa';
 
-// Track Order Link Component with order code input
+// Track Order Link Component - Direct link to track order page
 function TrackOrderLink() {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [orderCode, setOrderCode] = useState('');
-  
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (orderCode.trim()) {
-      window.location.href = `/track-order/${orderCode.trim()}`;
-    }
-  };
-  
   return (
-    <div>
-      {!isExpanded ? (
-        <button 
-          onClick={() => setIsExpanded(true)}
-          className="text-gray-400 hover:text-amber-500 transition-colors flex items-center group"
-        >
-          <ArrowRight size={16} className="mr-2 opacity-0 group-hover:opacity-100 transform -translate-x-2 group-hover:translate-x-0 transition-all" />
-          Suivi de Commande
-        </button>
-      ) : (
-        <form onSubmit={handleSubmit} className="mt-2">
-          <div className="flex items-center">
-            <Input
-              type="text"
-              value={orderCode}
-              onChange={(e) => setOrderCode(e.target.value)}
-              placeholder="N° de commande"
-              className="bg-gray-800 border-gray-700 text-gray-300 text-sm rounded-l-md focus:ring-amber-500 focus:border-amber-500 w-full"
-            />
-            <button
-              type="submit"
-              className="bg-amber-600 hover:bg-amber-700 text-white p-2 rounded-r-md"
-            >
-              <Search size={16} />
-            </button>
-          </div>
-        </form>
-      )}
-    </div>
+    <Link 
+      href="/track-order" 
+      className="text-gray-400 hover:text-amber-500 transition-colors flex items-center group"
+    >
+      <ArrowRight size={16} className="mr-2 opacity-0 group-hover:opacity-100 transform -translate-x-2 group-hover:translate-x-0 transition-all" />
+      Suivi de Commande
+    </Link>
   );
 }
 
@@ -77,18 +45,16 @@ export default function Footer() {
               MAEVA est une marque algérienne spécialisée dans la création de vêtements traditionnels modernisés, alliant savoir-faire artisanal et design contemporain.
             </p>
             <div className="flex space-x-4">
-              <a href="#" className="text-gray-400 hover:text-amber-500 transition-colors">
+              <a href="https://www.facebook.com/share/1CGKXJDXmK/" className="text-gray-400 hover:text-amber-500 transition-colors">
                 <Facebook size={20} />
               </a>
-              <a href="#" className="text-gray-400 hover:text-amber-500 transition-colors">
+              <a href="https://www.instagram.com/maevaweddingdz?igsh=MXB5cnVvY3drNThyMw==" className="text-gray-400 hover:text-amber-500 transition-colors">
                 <Instagram size={20} />
               </a>
-              <a href="#" className="text-gray-400 hover:text-amber-500 transition-colors">
-                <Twitter size={20} />
+              <a href="https://www.tiktok.com/@mava.wedding.dz?_t=ZM-8vh8jPv2EkA&_r=1" className="text-gray-400 hover:text-amber-500 transition-colors">
+                <FaTiktok size={20} />
               </a>
-              <a href="#" className="text-gray-400 hover:text-amber-500 transition-colors">
-                <Youtube size={20} />
-              </a>
+             
             </div>
           </div>
           

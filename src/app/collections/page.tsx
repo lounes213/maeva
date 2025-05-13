@@ -145,29 +145,7 @@ export default function CollectionsPage() {
           </div>
         </section>
         
-        {/* Newsletter Section */}
-        <section className="py-16 bg-amber-50">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <h2 className="text-3xl font-bold text-gray-900 font-serif mb-4">
-              Restez informé
-            </h2>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-8">
-              Inscrivez-vous à notre newsletter pour être le premier à découvrir nos nouvelles collections
-            </p>
-            <div className="max-w-md mx-auto">
-              <div className="flex">
-                <input
-                  type="email"
-                  placeholder="Votre adresse email"
-                  className="flex-1 px-4 py-3 rounded-l-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-amber-500"
-                />
-                <button className="bg-amber-600 hover:bg-amber-700 text-white px-6 py-3 rounded-r-lg transition-colors">
-                  S'inscrire
-                </button>
-              </div>
-            </div>
-          </div>
-        </section>
+
       </main>
       
       <Footer />
