@@ -1,7 +1,11 @@
 'use client';
 
+// Configuration pour éviter le prérendu statique
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 import { useState, useEffect, useCallback } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import Header from '../components/header';
@@ -17,14 +21,24 @@ interface Product {
 }
 
 export default function SearchPage() {
+  const router = useRouter();
   const searchParams = useSearchParams();
-  const query = searchParams.get('q') || '';
-  const [searchQuery, setSearchQuery] = useState(query);
+  const query = searchParams?.get('q') || '';
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isClient, setIsClient] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // Vérifier si nous sommes côté client
+  useEffect(() => {
+    setIsClient(true);
+    setSearchQuery(query);
+  }, [query]);
+
   const fetchProducts = useCallback(async () => {
+    if (!isClient) return;
+    
     try {
       setLoading(true);
       setError('');
@@ -44,49 +58,55 @@ export default function SearchPage() {
     } finally {
       setLoading(false);
     }
-  }, [query]);
+  }, [query, isClient]);
   
   useEffect(() => {
-    if (query) {
+    if (isClient && query) {
       fetchProducts();
-    } else {
-      setLoading(false);
-      setProducts([]);
     }
-  }, [query, fetchProducts]);
+  }, [isClient, query, fetchProducts]);
 
   const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (searchQuery.trim()) {
-      // Rediriger vers la même page avec le nouveau paramètre de recherche
-      window.location.href = `/search?q=${encodeURIComponent(searchQuery.trim())}`;
+    if (searchQuery?.trim()) {
+      // Utiliser le router pour la navigation côté client
+      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
     }
   };
 
   return (
-    <div>
+      <div>
       <Header />
       
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
         <div className="max-w-3xl mx-auto mb-10">
-          <h1 className="text-3xl font-bold text-center mb-6">Recherche</h1>
+            <h1 className="text-3xl font-bold text-center mb-6">Recherche</h1>
           
-          <form onSubmit={handleSearch} className="flex gap-2">
-            <Input
-              type="text"
-              placeholder="Que recherchez-vous ?"
-              value={searchQuery}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
-              className="flex-1"
-            />
-            <Button type="submit">
-              <Search className="w-4 h-4 mr-2" />
-              Rechercher
-            </Button>
-          </form>
+          {!isClient && (
+            <div className="flex gap-2">
+              <div className="flex-1 h-10 bg-gray-100 rounded-md animate-pulse"></div>
+              <div className="w-32 h-10 bg-gray-100 rounded-md animate-pulse"></div>
+            </div>
+          )}
+          
+          {isClient && (
+            <form onSubmit={handleSearch} className="flex gap-2">
+              <Input
+                type="text"
+                placeholder="Que recherchez-vous ?"
+                value={searchQuery}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
+                className="flex-1"
+              />
+              <Button type="submit">
+                <Search className="w-4 h-4 mr-2" />
+                Rechercher
+              </Button>
+            </form>
+          )}
         </div>
         
-        {query && (
+        {isClient && query && (
           <div className="mb-8">
             <h2 className="text-xl font-semibold mb-2">
               Résultats pour "{query}"
@@ -97,7 +117,11 @@ export default function SearchPage() {
           </div>
         )}
         
-        {loading ? (
+        {!isClient ? (
+          <div className="flex justify-center items-center py-20">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-amber-600"></div>
+          </div>
+        ) : loading ? (
           <div className="flex justify-center items-center py-20">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-amber-600"></div>
           </div>
