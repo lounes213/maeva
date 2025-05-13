@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -9,24 +9,22 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Search } from 'lucide-react';
 
+interface Product {
+  _id: string;
+  name: string;
+  price: number;
+  images?: string[];
+}
+
 export default function SearchPage() {
   const searchParams = useSearchParams();
   const query = searchParams.get('q') || '';
   const [searchQuery, setSearchQuery] = useState(query);
-  const [products, setProducts] = useState([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    if (query) {
-      fetchProducts();
-    } else {
-      setLoading(false);
-      setProducts([]);
-    }
-  }, [query]);
-
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
     try {
       setLoading(true);
       setError('');
@@ -40,15 +38,24 @@ export default function SearchPage() {
       
       const data = await response.json();
       setProducts(data.products || []);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Erreur de recherche:', error);
       setError('Une erreur est survenue lors de la recherche. Veuillez réessayer.');
     } finally {
       setLoading(false);
     }
-  };
+  }, [query]);
+  
+  useEffect(() => {
+    if (query) {
+      fetchProducts();
+    } else {
+      setLoading(false);
+      setProducts([]);
+    }
+  }, [query, fetchProducts]);
 
-  const handleSearch = (e) => {
+  const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (searchQuery.trim()) {
       // Rediriger vers la même page avec le nouveau paramètre de recherche
@@ -69,7 +76,7 @@ export default function SearchPage() {
               type="text"
               placeholder="Que recherchez-vous ?"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
               className="flex-1"
             />
             <Button type="submit">
