@@ -259,18 +259,14 @@ export default function TrackOrderPage() {
             <div className="border rounded-lg p-4">
               <h3 className="font-semibold mb-3 flex items-center gap-2">
                 <FiMapPin className="text-gray-600" />
-                Shipping Information
+                Informations de livraison
               </h3>
               <div className="space-y-2 text-sm">
-                <p><span className="font-medium">Name:</span> {order.customer.name}</p>
-                <p><span className="font-medium">Address:</span> {order.customer.address}</p>
-                <p><span className="font-medium">Contact:</span> {order.customer.contact}</p>
-                {order.customer.email && (
-                  <p><span className="font-medium">Email:</span> {order.customer.email}</p>
-                )}
+                <p><span className="font-medium">Destinataire:</span> {order.customer.name}</p>
+                <p><span className="font-medium">Adresse:</span> {order.customer.address}</p>
                 <p className="flex items-center gap-2 mt-3">
                   <FiClock className="text-gray-400" />
-                  <span className="font-medium">Estimated Delivery:</span> {order.shipping.estimatedDelivery}
+                  <span className="font-medium">Livraison estimée:</span> {order.shipping.estimatedDelivery}
                 </p>
               </div>
             </div>
