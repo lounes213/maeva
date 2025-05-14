@@ -34,3 +34,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Conflicting files
+/src/app/search/route.ts
+/src/app/search/page.tsx
+/src/app/search/page.config.js
