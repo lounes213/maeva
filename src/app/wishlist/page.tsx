@@ -3,10 +3,12 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Heart, ShoppingBag, Trash2, AlertCircle } from 'lucide-react';
+import { Heart, ShoppingBag, Trash2, AlertCircle, Check } from 'lucide-react';
 import Header from '../components/header';
 import Footer from '../components/footer';
 import { ModernButton } from '@/components/ui/modern-button';
+import { useCart } from '@/app/context/cartContext';
+import toast, { Toaster } from 'react-hot-toast';
 
 // Define the type for wishlist items
 interface WishlistItem {
@@ -23,6 +25,8 @@ interface WishlistItem {
 export default function WishlistPage() {
   const [wishlistItems, setWishlistItems] = useState<WishlistItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { addToCart } = useCart();
+  const [addedToCart, setAddedToCart] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     const fetchWishlistItems = async () => {
@@ -39,15 +43,24 @@ export default function WishlistPage() {
         const res = await fetch('/api/products');
         const data = await res.json();
         
-        if (data.data && Array.isArray(data.data)) {
-          // Filter products to only include those in the wishlist
-          const wishlistProducts = data.data.filter((product: WishlistItem) => 
-            wishlistIds.includes(product._id)
-          );
-          setWishlistItems(wishlistProducts);
+        let allProducts: WishlistItem[] = [];
+        
+        // Check if data.products exists (new API format) or fall back to data.data (old format)
+        if (data.products && Array.isArray(data.products)) {
+          allProducts = data.products;
+        } else if (data.data && Array.isArray(data.data)) {
+          allProducts = data.data;
+        } else {
+          throw new Error('Format de réponse API inattendu');
         }
+        
+        // Filter products to only include those in the wishlist
+        const wishlistProducts = allProducts.filter((product: WishlistItem) => 
+          wishlistIds.includes(product._id)
+        );
+        setWishlistItems(wishlistProducts);
       } catch (error) {
-        console.error('Error fetching wishlist items:', error);
+        // Silent error handling
       } finally {
         setIsLoading(false);
       }
@@ -69,9 +82,35 @@ export default function WishlistPage() {
     // Update state to reflect the change
     setWishlistItems(wishlistItems.filter(item => item._id !== productId));
   };
+  
+  const handleAddToCart = (item: WishlistItem): void => {
+    // Create a cart item from the wishlist item
+    const cartItem = {
+      _id: item._id,
+      name: item.name,
+      price: item.promotion && item.promoPrice ? item.promoPrice : item.price,
+      imageUrl: item.imageUrls && item.imageUrls.length > 0 ? item.imageUrls[0] : '/images/placeholder.jpg',
+      quantity: 1
+    };
+    
+    // Add to cart
+    addToCart(cartItem);
+    
+    // Mark as added to cart
+    setAddedToCart(prev => ({ ...prev, [item._id]: true }));
+    
+    // Show success toast
+    toast.success('Produit ajouté au panier');
+    
+    // Reset the button after 2 seconds
+    setTimeout(() => {
+      setAddedToCart(prev => ({ ...prev, [item._id]: false }));
+    }, 2000);
+  };
 
   return (
     <div className="min-h-screen flex flex-col">
+      <Toaster position="top-center" />
       <Header />
       
       <main className="flex-grow pt-24">
@@ -134,9 +173,24 @@ export default function WishlistPage() {
                             Voir le produit
                           </ModernButton>
                         </Link>
-                        <ModernButton variant="primary" size="sm" className="flex items-center">
-                          <ShoppingBag className="mr-2 h-4 w-4" />
-                          Ajouter au panier
+                        <ModernButton 
+                          variant="primary" 
+                          size="sm" 
+                          className="flex items-center"
+                          onClick={() => handleAddToCart(item)}
+                          disabled={addedToCart[item._id]}
+                        >
+                          {addedToCart[item._id] ? (
+                            <>
+                              <Check className="mr-2 h-4 w-4" />
+                              Ajouté
+                            </>
+                          ) : (
+                            <>
+                              <ShoppingBag className="mr-2 h-4 w-4" />
+                              Ajouter au panier
+                            </>
+                          )}
                         </ModernButton>
                       </div>
                     </div>

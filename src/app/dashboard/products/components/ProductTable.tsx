@@ -205,7 +205,6 @@ const ProductTable: React.FC<ProductTableProps> = ({ products, refreshProducts }
                         const parsedReviews = JSON.parse(product.reviews);
                         return Array.isArray(parsedReviews) ? parsedReviews.length : 0;
                       } catch (error) {
-                        console.error('Error parsing reviews:', error);
                         return 0;
                       }
                     })() : 0})

@@ -29,7 +29,6 @@ const ProductsPage = () => {
       }
       
       const data = await response.json();
-      console.log('API response:', data); // Debug log
       
       // Check if data.products exists (new API format) or fall back to data.data (old format)
       if (data.products && Array.isArray(data.products)) {
