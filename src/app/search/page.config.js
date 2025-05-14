@@ -1,3 +1,2 @@
-// Configuration pour la page de recherche
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
+// This file is deprecated and will be removed
+// Configuration has been moved to config.js
