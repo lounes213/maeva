@@ -73,6 +73,7 @@ export default function Navigation() {
     if (searchQuery.trim()) {
       router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
       setSearchOpen(false);
+      setMobileOpen(false);
       setSearchQuery('');
     }
   };
