@@ -68,7 +68,8 @@ export async function GET(req: Request) {
 
     return NextResponse.json({ 
       success: true, 
-      products,
+      data: products, // Use 'data' for backward compatibility
+      products, // Keep 'products' for newer code
       pagination: {
         total,
         page,
