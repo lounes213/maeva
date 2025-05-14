@@ -24,6 +24,11 @@ interface Product {
   imageUrls?: string[];
   images?: string[];
   category?: string;
+  tissu?: string;
+  couleurs?: string[];
+  taille?: string[];
+  sold?: number;
+  reviews?: string;
 }
 
 export default function SearchPage() {
@@ -69,17 +74,17 @@ export default function SearchPage() {
           const searchTerms = query.toLowerCase().split(' ').filter(term => term.length > 0);
           
           const filteredProducts = allProducts.filter(product => {
-            const nameMatch = product.name && searchTerms.some(term => 
+            const nameMatch = product.name ? searchTerms.some(term => 
               product.name.toLowerCase().includes(term)
-            );
+            ) : false;
             
-            const descriptionMatch = product.description && searchTerms.some(term => 
+            const descriptionMatch = product.description ? searchTerms.some(term => 
               product.description.toLowerCase().includes(term)
-            );
+            ) : false;
             
-            const categoryMatch = product.category && searchTerms.some(term => 
-              product.category.toLowerCase().includes(term)
-            );
+            const categoryMatch = product.category ? searchTerms.some(term => 
+              product.category!.toLowerCase().includes(term)
+            ) : false;
             
             return nameMatch || descriptionMatch || categoryMatch;
           });
@@ -231,7 +236,7 @@ export default function SearchPage() {
                           <Star
                             key={i}
                             className={`w-4 h-4 ${
-                              i < Math.floor(product.rating)
+                              i < Math.floor(product.rating || 0)
                                 ? 'text-amber-500 fill-amber-500'
                                 : 'text-gray-300'
                             }`}

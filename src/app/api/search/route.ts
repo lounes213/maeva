@@ -11,6 +11,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ 
         success: true, 
         products: [],
+        data: [], // Include data for backward compatibility
         message: 'No search query provided'
       });
     }
@@ -36,6 +37,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ 
       success: true, 
       products,
+      data: products, // Include data for backward compatibility
       count: products.length,
       query
     });
