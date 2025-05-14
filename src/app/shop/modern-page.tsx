@@ -134,39 +134,57 @@ export default function ModernShopPage() {
   }, []);
 
   // Extract filter options from products
-  const categories = Array.from(new Set(products.map(p => p.category)))
-    .map(category => ({
-      id: category,
-      label: category.charAt(0).toUpperCase() + category.slice(1).toLowerCase(),
-      count: products.filter(p => p.category === category).length
-    }));
+  const categories = products && products.length > 0 
+    ? products && products.length > 0 
+    ? Array.from(new Set(products.map(p => p.category)))
+      .filter(Boolean)
+        .filter(Boolean)
+      .map(category => ({
+          id: category,
+          label: category.charAt(0).toUpperCase() + category.slice(1).toLowerCase(),
+          count: products.filter(p => p.category === category).length
+        })
+    : [])
+    : [];
 
-  const colors = Array.from(new Set(
-    products.flatMap(p => processColors(p.couleurs || []))
-  )).map(color => {
-    const colorInfo = getColorModel(color);
-    return {
-      id: color,
-      label: colorInfo.french,
-      hex: colorInfo.hex,
-      count: products.filter(p => 
-        processColors(p.couleurs || []).includes(color)
-      ).length
-    };
-  });
+  const colors = products && products.length > 0
+    ? products && products.length > 0
+    ? Array.from(new Set(
+            products.flatMap(p => processColors(p.couleurs || []))
+      ))
+      .filter(Boolean)
+        ))
+      .filter(Boolean)
+      .map(color => {
+            const colorInfo = getColorModel(color);
+            return {
+              id: color,
+              label: colorInfo.french,
+              hex: colorInfo.hex,
+              count: products.filter(p => 
+                processColors(p.couleurs || []).includes(color)
+              ).length
+            };    })
+    : []      })
+    : [];
 
-  const sizes = Array.from(new Set(
-    products.flatMap(p => processSizes(p.taille || []))
-  )).map(size => ({
-    id: size,
-    label: size,
-    count: products.filter(p => 
-      processSizes(p.taille || []).includes(size)
-    ).length
-  }));
+  const sizes = products && products.length > 0
+    ? products && products.length > 0
+    ? Array.from(new Set(
+            products.flatMap(p => processSizes(p.taille || []))
+      ))
+      .filter(Boolean)
+      .map(size => ({
+            id: size,
+                label: size,
+            count: products.filter(p => 
+              processSizes(p.taille || []).includes(size)
+        ).length
+      }))
+    : [];
 
   // Filter products based on selected filters and search query
-  const filteredProducts = products.filter(product => {
+  const filteredProducts = products && products.length > 0 ? products && products.length > 0 ? products.filter(product => {
     // Price filter
     if (product.price < priceRange[0] || product.price > priceRange[1]) return false;
     
@@ -200,7 +218,7 @@ export default function ModernShopPage() {
     }
     
     return true;
-  });
+  }) : [] : [];
 
   // Sort products based on selected sort option
   const sortedProducts = [...filteredProducts].sort((a, b) => {

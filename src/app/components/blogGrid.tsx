@@ -35,6 +35,22 @@ export default function BlogGrid() {
   }, []);
 
   if (loading) return <p className="text-center text-gray-500">Chargement des articles...</p>;
+  
+  if (!posts || posts.length === 0) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-gray-500">Aucun article de blog disponible pour le moment.</p>
+      </div>
+    );
+  }
+  
+  if (!posts || posts.length === 0) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-gray-500">Aucun article de blog disponible pour le moment.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 p-4">

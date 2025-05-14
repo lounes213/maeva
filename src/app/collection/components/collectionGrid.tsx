@@ -36,6 +36,22 @@ export default function CollectionGrid() {
     return <div className="text-center py-10">Loading collections...</div>;
   }
 
+  if (!collections || collections.length === 0) {
+    return (
+      <div className="text-center py-10">
+        <p className="text-gray-500">Aucune collection disponible pour le moment.</p>
+      </div>
+    );
+  }
+
+  if (!collections || collections.length === 0) {
+    return (
+      <div className="text-center py-10">
+        <p className="text-gray-500">Aucune collection disponible pour le moment.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
       {collections.map((collection) => (

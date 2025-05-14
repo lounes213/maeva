@@ -168,8 +168,8 @@ export default function HomePage() {
                   </div>
                 </div>
               ))}
-            </div>
-          ) : (
+       featuredProducts && featuredProducts.length > 0 ?      </div>
+          ) : featuredProducts && featuredProducts.length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
               {featuredProducts.map((product) => (
                 <div key={product._id} className="animate-slide-up" style={{ animationDelay: `${featuredProducts.indexOf(product) * 0.1}s` }}>
@@ -178,7 +178,15 @@ export default function HomePage() {
                     variant="featured" 
                   />
                 </div>
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-gray-500">Aucun produit en vedette disponible pour le moment.</p>
+            </div>
               ))}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-gray-500">Aucun produit en vedette disponible pour le moment.</p>
             </div>
           )}
           
