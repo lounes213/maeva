@@ -64,7 +64,8 @@ function SortableImage({ id, src, index, removeImage }: { id: string; src: strin
         src={src}
         alt={`Preview ${index}`}
         fill
-        style={{ objectFit: 'cover' }}
+        sizes="96px"
+        className="object-cover"
       />
       <button
         type="button"

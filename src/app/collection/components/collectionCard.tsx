@@ -37,8 +37,9 @@ const CollectionCard = memo(({ collection }: CollectionCardProps) => {
           <Image
             src={imageUrl}
             alt={collection.name}
-            layout="fill"
-            objectFit="cover"
+            fill
+            sizes="(max-width: 768px) 100vw, 33vw"
+            className="object-cover"
             priority  // Ensures this image is prioritized
             placeholder="blur"  // Placeholder for image loading
             blurDataURL="data:image/svg+xml;base64,..." // Optional small base64 blur image

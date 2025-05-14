@@ -373,9 +373,9 @@ const onSubmit = async (data: any) => {
                 <Image
                   src={url}
                   alt={`Preview ${index + 1}`}
-                  layout="fill"
-                  objectFit="cover"
-                  className="object-center"
+                  fill
+                  sizes="(max-width: 768px) 100vw, 33vw"
+                  className="object-cover object-center"
                 />
               </div>
               <button

@@ -200,7 +200,15 @@ const ProductTable: React.FC<ProductTableProps> = ({ products, refreshProducts }
                     ))}
                   </div>
                   <span className="ml-2 text-sm text-gray-500">
-                    ({product.reviews ? JSON.parse(product.reviews).length : 0})
+                    ({product.reviews ? (() => {
+                      try {
+                        const parsedReviews = JSON.parse(product.reviews);
+                        return Array.isArray(parsedReviews) ? parsedReviews.length : 0;
+                      } catch (error) {
+                        console.error('Error parsing reviews:', error);
+                        return 0;
+                      }
+                    })() : 0})
                   </span>
                 </div>
               </td>
@@ -246,8 +254,9 @@ const ProductTable: React.FC<ProductTableProps> = ({ products, refreshProducts }
                     <Image
                       src={image}
                       alt={`${selectedProduct.name} - image ${index + 1}`}
-                      layout="fill"
-                      objectFit="cover"
+                      fill
+                      sizes="(max-width: 768px) 100vw, 50vw"
+                      className="object-cover"
                     />
                   </div>
                 ))}

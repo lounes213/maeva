@@ -321,7 +321,8 @@ export default function CreateBlogForm({ blog, onCreated, onEdited }: CreateBlog
                       src={src} 
                       alt={`preview-${index}`} 
                       fill 
-                      style={{ objectFit: 'cover' }} 
+                      sizes="(max-width: 768px) 100vw, 25vw"
+                      className="object-cover"
                     />
                   </div>
                   <button

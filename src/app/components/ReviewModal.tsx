@@ -153,7 +153,8 @@ const ReviewModal = ({ isOpen, onClose, productId, onSuccess }: ReviewModalProps
                             src={url}
                             alt={`Preview ${index + 1}`}
                             fill
-                            style={{ objectFit: 'cover' }}
+                            sizes="(max-width: 768px) 100vw, 25vw"
+                            className="object-cover"
                           />
                         </div>
                         <button

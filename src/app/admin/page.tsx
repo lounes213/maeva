@@ -80,9 +80,9 @@ export default function Home() {
           <Image
             src="/logo.png"
             alt="Welcome to MAIVA Boutique"
-            layout="fill"
-            objectFit="cover"
-            className="rounded-2xl shadow-lg"
+            fill
+            sizes="(max-width: 768px) 100vw, 50vw"
+            className="rounded-2xl shadow-lg object-cover"
             priority
           />
         </div>
